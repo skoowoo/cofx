@@ -2,90 +2,132 @@ package flowfile
 
 import (
 	"bufio"
-	"bytes"
-	"container/list"
+	"errors"
 	"io"
+	"strings"
 )
-
-type NameType string
-type LoadPathType string
-type BlockType string
-
-const (
-	LOAD_BLOCK BlockType = "LOAD"
-	SET_BLOCK  BlockType = "SET"
-	RUN_BLOCK  BlockType = "RUN"
-	VAR_BLOCK  BlockType = "VAR"
-	NONE_BLOCK BlockType = "NONE"
-)
-
-type ActionConfig struct {
-	name      NameType
-	aliasName NameType
-	path      LoadPathType
-}
 
 // Parse parse a 'flowfile'
-func Parse(rd io.Reader) (runq *list.List, actions map[NameType]*ActionConfig, err error) {
-	// run queue of a flow
-	runq = list.New()
-	if runq == nil {
-		panic("new list error")
-	}
-	// save action's configs of a flow in Flowfile
-	actions = make(map[NameType]*ActionConfig)
+func Parse(rd io.Reader) error {
+	return nil
+}
 
-	currentBlock := NONE_BLOCK
+func ParseBlocks(rd io.Reader) (*BlockStore, error) {
+	blockstore := NewBlockStore()
 
 	scanner := bufio.NewScanner(rd)
 	for {
 		if !scanner.Scan() {
 			break
 		}
-		currentBlock = parseLine(runq, actions, currentBlock, scanner.Bytes())
-	}
-
-	return
-}
-
-func parseLine(runq *list.List, actions map[NameType]*ActionConfig, block BlockType, line []byte) BlockType {
-	line = bytes.TrimSpace(line)
-	words := bytes.Fields(line)
-	if len(words) == 0 {
-		return block
-	}
-	for _, wd := range words {
-		switch block {
-		case LOAD_BLOCK:
-			// find the action's load path, and parse it
-			name, path := parseLoadPath(string(w))
-
-		case SET_BLOCK:
-		case RUN_BLOCK:
-		case NONE_BLOCK:
-			// In the global, try to find the keywords
-			//
-			keyword := string(wd)
-
-			switch keyword {
-			case "load":
-				block = LOAD_BLOCK
-			case "set":
-				block = SET_BLOCK
-			case "run":
-				block = RUN_BLOCK
-			case "var":
-				block = VAR_BLOCK
-			default:
-				// todo, error
-			}
+		err := splitLineToTokens(blockstore, scanner.Text())
+		if err != nil {
+			return nil, err
 		}
 	}
+	return blockstore, nil
 }
 
-// load path utils
-func parseLoadPath(path string) (name NameType, path LoadPathType, err error) {
-	return
+func splitLineToTokens(blockstore *BlockStore, line string) error {
+	line = strings.TrimSpace(line)
+	words := strings.Fields(line)
+
+	// This is a new line
+	if blockstore.parsingBlock != nil {
+		blockstore.parsingBlock.parsingBlockLineNum += 1
+	}
+
+	for i, wd := range words {
+		token := &Token{
+			word:         wd,
+			seqNumInLine: int8(i + 1),
+		}
+
+		switch blockstore.parsingBlockKind {
+		case _block_load:
+			// eg. load path
+			//
+			b := blockstore.parsingBlock
+			token.BlockLineNum = b.parsingBlockLineNum
+			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
+		case _block_set:
+			b := blockstore.parsingBlock
+			token.BlockLineNum = b.parsingBlockLineNum
+			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
+		case _block_var:
+
+		case _block_run:
+
+		case _block_none:
+			// In the global, outside block
+			//
+			var kind BlockKind
+			switch wd {
+			case "load":
+				kind = _block_load
+				token.keyword = true
+			case "set":
+				kind = _block_set
+				token.keyword = true
+			case "var":
+				kind = _block_var
+				token.keyword = true
+			case "run":
+				kind = _block_run
+				token.keyword = true
+			default:
+				// TODO, extension
+				//
+				return errors.New("Invalid token word")
+			}
+
+			b := &Block{
+				tokens:              make(map[BlockLineNum]TokenList),
+				kind:                kind,
+				parsingBlockLineNum: 1,
+			}
+			token.BlockLineNum = b.parsingBlockLineNum
+			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
+			blockstore.Store(b)
+			blockstore.parsingBlock = b
+			blockstore.parsingBlockKind = kind
+		}
+	}
+
+	// Check if all tokens of the line are valid
+	//
+	var all TokenList
+	if b := blockstore.parsingBlock; b != nil {
+		all = b.tokens[b.parsingBlockLineNum]
+	}
+
+	// The lind ends, check the state
+	switch blockstore.parsingBlockKind {
+	case _block_load:
+		// block_load is a single line block, close it
+		blockstore.parsingBlockKind = _block_none
+		blockstore.parsingBlock = nil
+
+		if err := checkLoadLine(all); err != nil {
+			return err
+		}
+	case _block_set:
+		// block_set is a multi lines block
+		if len(all) == 1 && all[0].word == "end" {
+			blockstore.parsingBlockKind = _block_none
+			blockstore.parsingBlock = nil
+			return nil
+		}
+		// todo, check ...
+	}
+	return nil
+}
+
+func checkLoadLine(all TokenList) error {
+	if len(all) != 2 {
+		return errors.New("invalid load line")
+	}
+	return nil
 }
 
 // keywords utils
@@ -119,5 +161,5 @@ func IsInvalid(b byte) error {
 	case b == '$':
 		return nil
 	}
-	return newInvalidCharacter()
+	return errors.New("Invlaid character")
 }
