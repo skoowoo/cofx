@@ -99,6 +99,9 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 	var all TokenList
 	if b := blockstore.parsingBlock; b != nil {
 		all = b.tokens[b.parsingBlockLineNum]
+		if err := verifyAllTokensInLine(all); err != nil {
+			return err
+		}
 	}
 
 	// The lind ends, check the state
@@ -107,10 +110,6 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 		// block_load is a single line block, close it
 		blockstore.parsingBlockKind = _block_none
 		blockstore.parsingBlock = nil
-
-		if err := checkLoadLine(all); err != nil {
-			return err
-		}
 	case _block_set:
 		// block_set is a multi lines block
 		if len(all) == 1 && all[0].word == "end" {
@@ -119,13 +118,6 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 			return nil
 		}
 		// todo, check ...
-	}
-	return nil
-}
-
-func checkLoadLine(all TokenList) error {
-	if len(all) != 2 {
-		return errors.New("invalid load line")
 	}
 	return nil
 }

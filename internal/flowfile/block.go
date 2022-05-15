@@ -1,6 +1,39 @@
 package flowfile
 
-import "container/list"
+import (
+	"container/list"
+	"errors"
+	"math"
+)
+
+type Directive struct {
+	name      string
+	tokensMin int8 // Include the directive token
+	tokensMax int8 // Include the directive token
+}
+
+var directiveLines = map[string]Directive{
+	"load":  {"load", 2, 2},
+	"set":   {"set", 2, 2},
+	"input": {"input", 2, math.MaxInt8},
+	"loop":  {"loop", 3, 3},
+	"run":   {"run", 2, math.MaxInt8},
+}
+
+func verifyAllTokensInLine(tokens TokenList) error {
+	if len(tokens) == 0 {
+		return errors.New("no token")
+	}
+	dname := tokens[0].word
+	directive, ok := directiveLines[dname]
+	if !ok {
+		return errors.New("not found directive: " + dname)
+	}
+	if num := len(tokens); num < int(directive.tokensMin) || num > int(directive.tokensMax) {
+		return errors.New("token number is error")
+	}
+	return nil
+}
 
 type Token struct {
 	word         string
