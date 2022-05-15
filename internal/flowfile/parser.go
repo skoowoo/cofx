@@ -31,7 +31,10 @@ func ParseBlocks(rd io.Reader) (*BlockStore, error) {
 func splitLineToTokens(blockstore *BlockStore, line string) error {
 	line = strings.TrimSpace(line)
 	words := strings.Fields(line)
-
+	if len(words) == 0 {
+		// This is empty line, so skip it
+		return nil
+	}
 	// This is a new line
 	if blockstore.parsingBlock != nil {
 		blockstore.parsingBlock.parsingBlockLineNum += 1
@@ -78,7 +81,7 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 			default:
 				// TODO, extension
 				//
-				return errors.New("Invalid token word")
+				return errors.New("invalid token word")
 			}
 
 			b := &Block{
@@ -153,5 +156,5 @@ func IsInvalid(b byte) error {
 	case b == '$':
 		return nil
 	}
-	return errors.New("Invlaid character")
+	return errors.New("invlaid character")
 }

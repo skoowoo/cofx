@@ -10,6 +10,7 @@ type Directive struct {
 	name      string
 	tokensMin int8 // Include the directive token
 	tokensMax int8 // Include the directive token
+
 }
 
 var directiveLines = map[string]Directive{
@@ -18,11 +19,12 @@ var directiveLines = map[string]Directive{
 	"input": {"input", 2, math.MaxInt8},
 	"loop":  {"loop", 3, 3},
 	"run":   {"run", 2, math.MaxInt8},
+	"end":   {"end", 1, 1},
 }
 
 func verifyAllTokensInLine(tokens TokenList) error {
 	if len(tokens) == 0 {
-		return errors.New("no token")
+		return errors.New("no token to verify")
 	}
 	dname := tokens[0].word
 	directive, ok := directiveLines[dname]
@@ -33,6 +35,9 @@ func verifyAllTokensInLine(tokens TokenList) error {
 		return errors.New("token number is error")
 	}
 	return nil
+}
+
+type TokenKind struct {
 }
 
 type Token struct {
