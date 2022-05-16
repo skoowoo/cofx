@@ -29,7 +29,7 @@ set @action2
 end
 
 // 串行执行
-run @action1 m=n
+run @action1
 run @action2
 run @action3
 `

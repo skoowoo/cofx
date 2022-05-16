@@ -90,6 +90,21 @@ func (bs *BlockStore) Store(b *Block) {
 	bs.l.PushBack(b)
 }
 
+func (bs *BlockStore) AppendToParsingBlock(t *Token) *Block {
+	b := bs.parsingBlock
+	b.tokens[t.BlockLineNum] = append(b.tokens[t.BlockLineNum], t)
+	return b
+}
+
+func (bs *BlockStore) FinishParsingBlock() {
+	bs.parsingBlock = nil
+	bs.parsingBlockKind = _block_none
+}
+
+func (bs *BlockStore) ParsingBlockIsFinished() bool {
+	return bs.parsingBlock == nil && bs.parsingBlockKind == _block_none
+}
+
 func (bs *BlockStore) Done() {
 	bs.parsingBlock = nil
 	bs.parsingBlockKind = _block_none

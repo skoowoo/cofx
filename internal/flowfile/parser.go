@@ -29,12 +29,17 @@ func ParseBlocks(rd io.Reader) (*BlockStore, error) {
 }
 
 func splitLineToTokens(blockstore *BlockStore, line string) error {
+	if (blockstore.parsingBlockKind == _block_none && blockstore.parsingBlock != nil) || (blockstore.parsingBlockKind != _block_none && blockstore.parsingBlock == nil) {
+		panic("Fatal error")
+	}
+
 	line = strings.TrimSpace(line)
 	words := strings.Fields(line)
 	if len(words) == 0 {
 		// This is empty line, so skip it
 		return nil
 	}
+
 	// This is a new line
 	if blockstore.parsingBlock != nil {
 		blockstore.parsingBlock.parsingBlockLineNum += 1
@@ -45,43 +50,28 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 			word:         wd,
 			seqNumInLine: int8(i + 1),
 		}
+		var (
+			kind     BlockKind
+			newblock bool
+		)
+		switch wd {
+		case "load":
+			kind = _block_load
+			newblock = true
+		case "set":
+			kind = _block_set
+			newblock = true
+		case "var":
+			kind = _block_var
+			newblock = true
+		case "run":
+			kind = _block_run
+			newblock = true
+		}
 
-		switch blockstore.parsingBlockKind {
-		case _block_load:
-			// eg. load path
-			//
-			b := blockstore.parsingBlock
-			token.BlockLineNum = b.parsingBlockLineNum
-			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
-		case _block_set:
-			b := blockstore.parsingBlock
-			token.BlockLineNum = b.parsingBlockLineNum
-			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
-		case _block_var:
-
-		case _block_run:
-
-		case _block_none:
-			// In the global, outside block
-			//
-			var kind BlockKind
-			switch wd {
-			case "load":
-				kind = _block_load
-				token.keyword = true
-			case "set":
-				kind = _block_set
-				token.keyword = true
-			case "var":
-				kind = _block_var
-				token.keyword = true
-			case "run":
-				kind = _block_run
-				token.keyword = true
-			default:
-				// TODO, extension
-				//
-				return errors.New("invalid token word")
+		if newblock {
+			if !blockstore.ParsingBlockIsFinished() {
+				return errors.New("parsing block is not finished, can't create a new block")
 			}
 
 			b := &Block{
@@ -89,11 +79,32 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 				kind:                kind,
 				parsingBlockLineNum: 1,
 			}
-			token.BlockLineNum = b.parsingBlockLineNum
-			b.tokens[token.BlockLineNum] = append(b.tokens[token.BlockLineNum], token)
 			blockstore.Store(b)
 			blockstore.parsingBlock = b
 			blockstore.parsingBlockKind = kind
+
+			token.BlockLineNum = b.parsingBlockLineNum
+			token.keyword = true
+			blockstore.AppendToParsingBlock(token)
+			continue
+		}
+
+		switch blockstore.parsingBlockKind {
+		case _block_load:
+			// eg. load path
+			//
+			token.BlockLineNum = blockstore.parsingBlock.parsingBlockLineNum
+			blockstore.AppendToParsingBlock(token)
+		case _block_set:
+			token.BlockLineNum = blockstore.parsingBlock.parsingBlockLineNum
+			blockstore.AppendToParsingBlock(token)
+		case _block_var:
+
+		case _block_run:
+			token.BlockLineNum = blockstore.parsingBlock.parsingBlockLineNum
+			blockstore.AppendToParsingBlock(token)
+		case _block_none:
+			return errors.New("token not in a block: " + wd)
 		}
 	}
 
@@ -111,16 +122,15 @@ func splitLineToTokens(blockstore *BlockStore, line string) error {
 	switch blockstore.parsingBlockKind {
 	case _block_load:
 		// block_load is a single line block, close it
-		blockstore.parsingBlockKind = _block_none
-		blockstore.parsingBlock = nil
+		blockstore.FinishParsingBlock()
+	case _block_run:
+		blockstore.FinishParsingBlock()
 	case _block_set:
 		// block_set is a multi lines block
 		if len(all) == 1 && all[0].word == "end" {
-			blockstore.parsingBlockKind = _block_none
-			blockstore.parsingBlock = nil
+			blockstore.FinishParsingBlock()
 			return nil
 		}
-		// todo, check ...
 	}
 	return nil
 }
