@@ -1,21 +1,9 @@
-package flowfile
+package flowl
 
 const (
 	emptyFile = iota
 	invalidCharacter
 )
-
-func newEmptyfileErr() *FlowfileError {
-	return &FlowfileError{
-		emptyFile,
-	}
-}
-
-func newInvalidCharacterErr() *FlowfileError {
-	return &FlowfileError{
-		invalidCharacter,
-	}
-}
 
 type FlowfileError struct {
 	errcode int
