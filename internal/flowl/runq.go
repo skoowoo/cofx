@@ -3,6 +3,7 @@ package flowl
 import (
 	"container/list"
 	"errors"
+	"strings"
 )
 
 // RunQueue
@@ -44,7 +45,7 @@ func (rq *RunQueue) processLoad(b *Block) error {
 		loader     ActionLoader
 		actionName string
 	)
-	if l := newGopkgLoad(location.value); l != nil {
+	if l := newGoLoad(location.value); l != nil {
 		loader = l
 		actionName = l.actionName
 	} else if l := newCommandLoad(location.value); l != nil {
@@ -113,20 +114,25 @@ func (a *Action) Output() map[string]string {
 
 // Loader
 //
-// gopkg
-type GopkgLoad struct {
+// go
+// load go://action
+type GoLoad struct {
 	location   string
 	actionName string
 }
 
-func newGopkgLoad(loc string) *GopkgLoad {
-	// todo
-	return &GopkgLoad{
-		location: loc,
+func newGoLoad(loc string) *GoLoad {
+	if !strings.HasPrefix(loc, "go://") {
+		return nil
+	}
+	name := strings.TrimPrefix(loc, "go://")
+	return &GoLoad{
+		location:   loc,
+		actionName: name,
 	}
 }
 
-func (l *GopkgLoad) Load() {
+func (l *GoLoad) Load() {
 
 }
 

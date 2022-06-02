@@ -23,10 +23,10 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
-	load file:///root/action1
-	load http://url/action2
-	load https://github.com/path/action3
-	load action4
+	load command://root/action1
+	load command://url/action2
+	load command://path/action3
+	load go://action4
 	 
 	set @action1 {
 		input k1 v1
