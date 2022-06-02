@@ -23,10 +23,10 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
-	load command://root/action1
-	load command://url/action2
-	load command://path/action3
-	load go://action4
+	load cmd:root/action1
+	load cmd:url/action2
+	load cmd:path/action3
+	load go:action4
 	 
 	set @action1 {
 		input k1 v1
@@ -261,4 +261,39 @@ run 3 {
 		assert.Error(t, err)
 	}
 
+}
+
+//
+// Test Run queue and blockstore
+func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
+	rd := strings.NewReader(data)
+	rq, bs, err := Parse(rd)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var blocks []*Block
+	bs.Foreach(func(b *Block) error {
+		blocks = append(blocks, b)
+		return nil
+	})
+	return blocks, bs, rq, nil
+}
+
+func TestParseFull(t *testing.T) {
+	const testingdata string = `
+	load go:action1
+	load go:action2
+	load cmd:/tmp/action3
+	`
+
+	blocks, bs, rq, err := loadTestingdata2(testingdata)
+	assert.NoError(t, err)
+	assert.NotNil(t, blocks)
+	assert.NotNil(t, bs)
+	assert.NotNil(t, rq)
+
+	assert.Len(t, rq.Actions, 3)
+
+	assert.Equal(t, "action1", rq.Actions["action1"].Name)
+	assert.Equal(t, "action3", rq.Actions["action3"].Name)
 }
