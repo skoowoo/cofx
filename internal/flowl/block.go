@@ -255,7 +255,7 @@ func (b *Block) String() string {
 	return fmt.Sprintf("block - kind:%s, bracket:%d, status:%s, len:%d", b.kind, b.bracket, b.status, len(b.directives))
 }
 
-// Blocklist store all blocks in the flowfile
+// Blocklist store all blocks in the flowl
 //
 type BlockStore struct {
 	l       *list.List
@@ -291,20 +291,15 @@ func (bs *BlockStore) ParsingBlockIsFinished() bool {
 	return bs.parsing == nil
 }
 
-func (bs *BlockStore) Done() {
-	bs.parsing = nil
-}
-
-func (bs *BlockStore) BlockNum() int {
-	return bs.l.Len()
-}
-
-func (bs *BlockStore) Foreach(do func(*Block)) {
+func (bs *BlockStore) Foreach(do func(*Block) error) error {
 	l := bs.l
 	for e := l.Front(); e != nil; e = e.Next() {
 		b := e.Value.(*Block)
-		do(b)
+		if err := do(b); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (bs *BlockStore) String() string {

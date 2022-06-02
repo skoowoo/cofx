@@ -14,8 +14,9 @@ func loadTestingdata(data string) ([]*Block, error) {
 		return nil, err
 	}
 	var blocks []*Block
-	bs.Foreach(func(b *Block) {
+	bs.Foreach(func(b *Block) error {
 		blocks = append(blocks, b)
+		return nil
 	})
 	return blocks, nil
 }

@@ -7,9 +7,20 @@ import (
 	"strings"
 )
 
-// Parse parse a 'flowfile'
-func Parse(rd io.Reader) error {
+// Parse parse a 'flowl' file
+func ParseFile(file string) error {
 	return nil
+}
+
+func Parse(rd io.Reader) (runq *RunQueue, bs *BlockStore, err error) {
+	if bs, err = ParseBlocks(rd); err != nil {
+		return
+	}
+	runq = NewRunQueue()
+	if err = runq.Generate(bs); err != nil {
+		return
+	}
+	return
 }
 
 func ParseBlocks(rd io.Reader) (*BlockStore, error) {
@@ -49,6 +60,7 @@ func processOneLine(bs *BlockStore, line string) error {
 	if err := dir.Init(); err != nil {
 		return err
 	}
+	// logrus.Debugf("%s\n", dir)
 
 	var block *Block
 	if dir.IsDefineBlock() {
@@ -71,12 +83,10 @@ func processOneLine(bs *BlockStore, line string) error {
 			return err
 		}
 	}
+	//logrus.Debugf("%s\n", block)
 
 	// The lind ends, check the state
-	switch bs.ParsingBlock().status {
-	case _block_status_begin:
-		break
-	case _block_status_end:
+	if bs.ParsingBlock().status == _block_status_end {
 		bs.FinishParsingBlock()
 	}
 	return nil
