@@ -44,38 +44,73 @@ func (rq *RunQueue) Generate(bs *BlockStore) error {
 }
 
 func (rq *RunQueue) processLoad(b *Block) error {
-	location := b.directives[0].tokens[1]
-	var (
-		loader FunctionLoader
-		name   string
-	)
-	if l := newGoLoader(location.value); l != nil {
+	// First directive and it's second token is 'load location'
+	location := b.directives[0].tokens[1].text
+	var loader FunctionLoader
+	if l := newGoLoader(location); l != nil {
 		loader = l
-		name = l.funcName
-	} else if l := newCmdLoader(location.value); l != nil {
+	} else if l := newCmdLoader(location); l != nil {
 		loader = l
-		name = l.funcName
 	} else {
-		return errors.New("not found loader: " + location.value)
+		return errors.New("not found loader: " + location)
 	}
 
-	_, ok := rq.Functions[name]
+	_, ok := rq.Functions[loader.Name()]
 	if !ok {
-		rq.Functions[name] = &Function{
-			Name:   name,
-			Loader: loader,
-		}
+		rq.Functions[loader.Name()] = NewFunction(loader.Name(), loader, nil)
 	} else {
-		return errors.New("repeat to load: " + name)
+		return errors.New("repeat to load: " + loader.Name())
 	}
 	return nil
 }
 
 func (rq *RunQueue) processSet(b *Block) error {
+	// First directive and it's second token is function's name
+	fname := b.directives[0].tokens[1].text
+	fc, ok := rq.Functions[fname]
+	if !ok {
+		return errors.New("in loaded functions, not found: " + fname)
+	}
+	for _, dir := range b.directives {
+		if dir.name == Keyword("input") {
+			k, v := dir.tokens[1].text, dir.tokens[2].text
+			fc.InputArg(k, v)
+		}
+		// todo, handle others
+	}
 	return nil
 }
 
 func (rq *RunQueue) processRun(b *Block) error {
+	if len(b.directives) == 1 {
+		// First directive and it's second token is function's name with prefix '@'
+		fname := b.directives[0].tokens[1].subtext[1]
+		fc, ok := rq.Functions[fname]
+		if !ok {
+			return errors.New("in loaded functions, not found: " + fname)
+		}
+		rq.Queue.PushBack(fc)
+		return nil
+	}
+
+	// parallel run
+	var last *Function
+	for _, dir := range b.directives {
+		if dir.name != Keyword("@") {
+			continue
+		}
+		fname := dir.tokens[0].subtext[1]
+		fc, ok := rq.Functions[fname]
+		if !ok {
+			return errors.New("in loaded functions, not found: " + fname)
+		}
+		if last == nil {
+			rq.Queue.PushBack(fc) // it's first
+		} else {
+			last.parallel = fc
+		}
+		last = fc
+	}
 	return nil
 }
 
@@ -85,34 +120,43 @@ func (rq *RunQueue) processRun(b *Block) error {
 // Function is the unit of task running
 type FunctionLoader interface {
 	Load()
+	Name() string
 }
 
 type FunctionRunner interface {
 }
 
 type Function struct {
-	Name   string
-	Loader FunctionLoader
-	Runner FunctionRunner
-	input  map[string]string
-	output map[string]string
+	Name         string
+	Loader       FunctionLoader
+	Runner       FunctionRunner
+	args         map[string]string
+	returnValues map[string]string
+
+	parallel *Function
 }
 
 func NewFunction(name string, loader FunctionLoader, runner FunctionRunner) *Function {
 	return &Function{
-		Name:   name,
-		Loader: loader,
-		Runner: runner,
+		Name:         name,
+		Loader:       loader,
+		Runner:       runner,
+		args:         make(map[string]string),
+		returnValues: make(map[string]string),
 	}
 }
 
-func (a *Function) Input(k, v string) *Function {
-	a.input[k] = v
-	return a
+func (f *Function) InputArg(k, v string) *Function {
+	f.args[k] = v
+	return f
 }
 
-func (a *Function) Output() map[string]string {
-	return a.output
+func (f *Function) Args() map[string]string {
+	return f.args
+}
+
+func (f *Function) ReturnValues() map[string]string {
+	return f.returnValues
 }
 
 // Loader
@@ -139,6 +183,10 @@ func (l *GoLoader) Load() {
 	// todo
 }
 
+func (l *GoLoader) Name() string {
+	return l.funcName
+}
+
 // Cmd
 type CmdLoader struct {
 	location string
@@ -159,6 +207,10 @@ func newCmdLoader(loc string) *CmdLoader {
 
 func (l *CmdLoader) Load() {
 	// todo
+}
+
+func (l *CmdLoader) Name() string {
+	return l.funcName
 }
 
 // Runner

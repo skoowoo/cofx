@@ -49,10 +49,17 @@ func processOneLine(bs *BlockStore, line string) error {
 
 	dir := &Directive{}
 	for _, wd := range words {
-		t := &Token{
-			value: wd,
+		var subtext []string
+		if strings.HasPrefix(wd, Keyword("@")) {
+			subtext = []string{Keyword("@"), strings.TrimPrefix(wd, Keyword("@"))}
+		} else {
+			subtext = []string{wd}
 		}
-		if IsKeyword(t.value) {
+		t := &Token{
+			text:    wd,
+			subtext: subtext,
+		}
+		if IsKeyword(t.text) {
 			t.SetKeyWord()
 		}
 		dir.Put(t)
@@ -60,7 +67,6 @@ func processOneLine(bs *BlockStore, line string) error {
 	if err := dir.Init(); err != nil {
 		return err
 	}
-	// logrus.Debugf("%s\n", dir)
 
 	var block *Block
 	if dir.IsDefineBlock() {
@@ -83,7 +89,6 @@ func processOneLine(bs *BlockStore, line string) error {
 			return err
 		}
 	}
-	//logrus.Debugf("%s\n", block)
 
 	// The lind ends, check the state
 	if bs.ParsingBlock().status == _block_status_end {

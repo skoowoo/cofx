@@ -74,8 +74,8 @@ load https://github.com/path/function3
 		tokens := b.directives[0].tokens
 		assert.Len(t, tokens, 2)
 
-		assert.Equal(t, "load", tokens[0].value)
-		assert.Equal(t, path, tokens[1].value)
+		assert.Equal(t, "load", tokens[0].text)
+		assert.Equal(t, path, tokens[1].text)
 
 		assert.True(t, tokens[0].keyword)
 		assert.False(t, tokens[1].keyword)
@@ -169,8 +169,8 @@ run @function3
 		tokens := b.directives[0].tokens
 		assert.Len(t, tokens, 2)
 
-		assert.Equal(t, "run", tokens[0].value)
-		assert.Equal(t, arg, tokens[1].value)
+		assert.Equal(t, "run", tokens[0].text)
+		assert.Equal(t, arg, tokens[1].text)
 
 		assert.True(t, tokens[0].keyword)
 		assert.False(t, tokens[1].keyword)
@@ -284,6 +284,21 @@ func TestParseFull(t *testing.T) {
 	load go:function1
 	load go:function2
 	load cmd:/tmp/function3
+	load cmd:/tmp/function4
+	load cmd:/tmp/function5
+
+	set function1 {
+		input k1 v1
+		input k2 v2
+	}
+
+	run @function1
+	run	@function2
+	run	@function3
+	run {
+		@function4
+		@function5
+	}
 	`
 
 	blocks, bs, rq, err := loadTestingdata2(testingdata)
@@ -292,8 +307,11 @@ func TestParseFull(t *testing.T) {
 	assert.NotNil(t, bs)
 	assert.NotNil(t, rq)
 
-	assert.Len(t, rq.Functions, 3)
+	assert.Len(t, rq.Functions, 5)
 
 	assert.Equal(t, "function1", rq.Functions["function1"].Name)
 	assert.Equal(t, "function3", rq.Functions["function3"].Name)
+
+	assert.Len(t, rq.Functions["function1"].Args(), 2)
+	assert.Equal(t, 4, rq.Queue.Len())
 }

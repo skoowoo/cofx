@@ -5,19 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 // Token
 //
 type Token struct {
-	value    string
+	text     string
+	subtext  []string
 	keyword  bool
 	operator bool
 }
 
 func (t *Token) ToNum() (int, bool) {
-	v, err := strconv.Atoi(t.value)
+	v, err := strconv.Atoi(t.text)
 	if err != nil {
 		return 0, false
 	}
@@ -58,14 +58,10 @@ type Directive struct {
 }
 
 func (d *Directive) Init() error {
-	name := d.First().value
+	name := d.First().subtext[0]
 	def, ok := directiveDefines[name]
 	if !ok {
-		if strings.HasPrefix(name, "@") {
-			def = directiveDefines["@*"]
-		} else {
-			return errors.New("init the directive failed: " + name)
-		}
+		return errors.New("init the directive failed: " + name)
 	}
 	d.name = name
 	d._tokensMin = def._tokensMin
@@ -120,12 +116,20 @@ var directiveDefines = map[string]Directive{
 	"input": {"input", 3, 3, nil, _directive_in_block, _block_set, verifyInput},
 	"loop":  {"loop", 3, 3, nil, _directive_in_block, _block_set, verifyLoop},
 	"}":     {"}", 1, 1, nil, _directive_finish_block, _block_none, verifyEndBlock},
-	"@*":    {"@*", 1, 1, nil, _directive_in_block, _block_run, verifyAt},
+	"@":     {"@", 1, 1, nil, _directive_in_block, _block_run, verifyAt},
 }
 
 func IsKeyword(s string) bool {
 	_, ok := directiveDefines[s]
 	return ok
+}
+
+// Maybe panic()
+func Keyword(s string) string {
+	if !IsKeyword(s) {
+		panic("not a keyword: " + s)
+	}
+	return s
 }
 
 func verifybase(dir *Directive) error {
@@ -225,10 +229,10 @@ func (b *Block) Put(dir *Directive) (BlockStatus, error) {
 	}
 	first, last := dir.First(), dir.Last()
 	if first != nil && last != nil {
-		if last.value == "{" {
+		if last.text == "{" {
 			b.bracket += 1
 		}
-		if last.value == "}" && first.value == "}" {
+		if last.text == "}" && first.text == "}" {
 			b.bracket -= 1
 		}
 	}
