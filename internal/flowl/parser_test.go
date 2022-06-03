@@ -23,12 +23,12 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
-	load cmd:root/action1
-	load cmd:url/action2
-	load cmd:path/action3
-	load go:action4
+	load cmd:root/function1
+	load cmd:url/function2
+	load cmd:path/function3
+	load go:function4
 	 
-	set @action1 {
+	set @function1 {
 		input k1 v1
 		input k3 v3
 		input k $v
@@ -36,16 +36,16 @@ func TestParseBlocksFull(t *testing.T) {
 		loop 5 2
 	}
 	
-	set @action2 {
+	set @function2 {
 		input k $v
 	
-		input action1_out $out1
+		input function1_out $out1
 	}
 	
-	run @action1
-	run	@action2
-	run	@action3
-	run @action4
+	run @function1
+	run	@function2
+	run	@function3
+	run @function4
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
@@ -57,12 +57,12 @@ func TestParseBlocksFull(t *testing.T) {
 // Only load part
 func TestParseBlocksOnlyLoad(t *testing.T) {
 	const testingdata string = `
-load file:///root/action1
-  load http://localhost:8080/action2
+load file:///root/function1
+  load http://localhost:8080/function2
 
-load https://github.com/path/action3
+load https://github.com/path/function3
 
-	load 	action4
+	load 	function4
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
@@ -80,15 +80,15 @@ load https://github.com/path/action3
 		assert.True(t, tokens[0].keyword)
 		assert.False(t, tokens[1].keyword)
 	}
-	check(blocks[0], "file:///root/action1")
-	check(blocks[1], "http://localhost:8080/action2")
-	check(blocks[2], "https://github.com/path/action3")
-	check(blocks[3], "action4")
+	check(blocks[0], "file:///root/function1")
+	check(blocks[1], "http://localhost:8080/function2")
+	check(blocks[2], "https://github.com/path/function3")
+	check(blocks[3], "function4")
 }
 
 func TestParseBlocksOnlySet(t *testing.T) {
 	const testingdata string = `
-	set @action1 {
+	set @function1 {
 	input k1 v1
 	input k3 v3
 	input k $v
@@ -96,10 +96,10 @@ func TestParseBlocksOnlySet(t *testing.T) {
 	loop 5 2
 	}
 
-set @action2 { 
+set @function2 { 
 	input k $v
 	
-	input action1_out $out1
+	input function1_out $out1
 }
 	`
 	blocks, err := loadTestingdata(testingdata)
@@ -112,7 +112,7 @@ set @action2 {
 func TestParseBlocksSetWithError(t *testing.T) {
 	// testingdata is an error data
 	const testingdata1 string = `
-set @action1 {
+set @function1 {
 	input k1 v1
 	input k3 v3
 	input k $v
@@ -120,17 +120,17 @@ set @action1 {
 	loop 5 2
 
 
-set @action2 {
+set @function2 {
 	input k $v
 	
-	input action1_out $out1
+	input function1_out $out1
 }
 	`
 	_, err := loadTestingdata(testingdata1)
 	assert.Error(t, err)
 
 	const testingdata2 string = `
-	set @action1 {
+	set @function1 {
 		input k1 v1
 		input k3 v3
 		input k $v
@@ -140,10 +140,10 @@ set @action2 {
 
 	}
 	
-	set @action2  {
+	set @function2  {
 		input k $v
 		
-		input action1_out $out1
+		input function1_out $out1
 	}
 	`
 	_, err = loadTestingdata(testingdata2)
@@ -153,10 +153,10 @@ set @action2 {
 
 func TestParseBlocksOnlyRun(t *testing.T) {
 	const testingdata string = `
-	run @action1
-	run @action2
+	run @function1
+	run @function2
 
-run @action3
+run @function3
 
 	`
 	blocks, err := loadTestingdata(testingdata)
@@ -175,19 +175,19 @@ run @action3
 		assert.True(t, tokens[0].keyword)
 		assert.False(t, tokens[1].keyword)
 	}
-	check(blocks[0], "@action1")
-	check(blocks[1], "@action2")
-	check(blocks[2], "@action3")
+	check(blocks[0], "@function1")
+	check(blocks[1], "@function2")
+	check(blocks[2], "@function3")
 }
 
 // Parallel run testing
 func TestParseBlocksOnlyRun2(t *testing.T) {
 	const testingdata string = `
 run {
-	@action1
-	@action2
+	@function1
+	@function2
 
-	@action3
+	@function3
 }
 	`
 	blocks, err := loadTestingdata(testingdata)
@@ -201,11 +201,11 @@ func TestParseBlocksOnlyRun2WithError(t *testing.T) {
 	{
 		const testingdata string = `
 run 3 {
-	@action1
-	load file:///root/action1
-	@action2
+	@function1
+	load file:///root/function1
+	@function2
 
-	@action3
+	@function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -215,10 +215,10 @@ run 3 {
 	{
 		const testingdata string = `
 run 3 {
-	@action1
-	run @action2
+	@function1
+	run @function2
 
-	@action3
+	@function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -228,10 +228,10 @@ run 3 {
 	{
 		const testingdata string = `
 run {
-	@action1
+	@function1
 	input k v
 
-	@action3
+	@function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -241,9 +241,9 @@ run {
 	{
 		const testingdata string = `
 run xyz {
-	@action1
+	@function1
 
-	@action3
+	@function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -253,8 +253,8 @@ run xyz {
 	{
 		const testingdata string = `
 run 3 {
-	@action1
-	@action3
+	@function1
+	@function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -281,9 +281,9 @@ func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
 
 func TestParseFull(t *testing.T) {
 	const testingdata string = `
-	load go:action1
-	load go:action2
-	load cmd:/tmp/action3
+	load go:function1
+	load go:function2
+	load cmd:/tmp/function3
 	`
 
 	blocks, bs, rq, err := loadTestingdata2(testingdata)
@@ -292,8 +292,8 @@ func TestParseFull(t *testing.T) {
 	assert.NotNil(t, bs)
 	assert.NotNil(t, rq)
 
-	assert.Len(t, rq.Actions, 3)
+	assert.Len(t, rq.Functions, 3)
 
-	assert.Equal(t, "action1", rq.Actions["action1"].Name)
-	assert.Equal(t, "action3", rq.Actions["action3"].Name)
+	assert.Equal(t, "function1", rq.Functions["function1"].Name)
+	assert.Equal(t, "function3", rq.Functions["function3"].Name)
 }

@@ -10,14 +10,14 @@ import (
 // RunQueue
 //
 type RunQueue struct {
-	Actions map[string]*Action
-	Queue   *list.List
+	Functions map[string]*Function
+	Queue     *list.List
 }
 
 func NewRunQueue() *RunQueue {
 	return &RunQueue{
-		Actions: make(map[string]*Action),
-		Queue:   list.New(),
+		Functions: make(map[string]*Function),
+		Queue:     list.New(),
 	}
 }
 
@@ -46,22 +46,22 @@ func (rq *RunQueue) Generate(bs *BlockStore) error {
 func (rq *RunQueue) processLoad(b *Block) error {
 	location := b.directives[0].tokens[1]
 	var (
-		loader ActionLoader
+		loader FunctionLoader
 		name   string
 	)
 	if l := newGoLoader(location.value); l != nil {
 		loader = l
-		name = l.actionName
+		name = l.funcName
 	} else if l := newCmdLoader(location.value); l != nil {
 		loader = l
-		name = l.actionName
+		name = l.funcName
 	} else {
 		return errors.New("not found loader: " + location.value)
 	}
 
-	_, ok := rq.Actions[name]
+	_, ok := rq.Functions[name]
 	if !ok {
-		rq.Actions[name] = &Action{
+		rq.Functions[name] = &Function{
 			Name:   name,
 			Loader: loader,
 		}
@@ -79,49 +79,49 @@ func (rq *RunQueue) processRun(b *Block) error {
 	return nil
 }
 
-// Action
+// Function
 //
 
-// Action is the unit of task running
-type ActionLoader interface {
+// Function is the unit of task running
+type FunctionLoader interface {
 	Load()
 }
 
-type ActionRunner interface {
+type FunctionRunner interface {
 }
 
-type Action struct {
+type Function struct {
 	Name   string
-	Loader ActionLoader
-	Runner ActionRunner
+	Loader FunctionLoader
+	Runner FunctionRunner
 	input  map[string]string
 	output map[string]string
 }
 
-func NewAction(name string, loader ActionLoader, runner ActionRunner) *Action {
-	return &Action{
+func NewFunction(name string, loader FunctionLoader, runner FunctionRunner) *Function {
+	return &Function{
 		Name:   name,
 		Loader: loader,
 		Runner: runner,
 	}
 }
 
-func (a *Action) Input(k, v string) *Action {
+func (a *Function) Input(k, v string) *Function {
 	a.input[k] = v
 	return a
 }
 
-func (a *Action) Output() map[string]string {
+func (a *Function) Output() map[string]string {
 	return a.output
 }
 
 // Loader
 //
 // go
-// load go://action
+// load go://function
 type GoLoader struct {
-	location   string
-	actionName string
+	location string
+	funcName string
 }
 
 func newGoLoader(loc string) *GoLoader {
@@ -130,19 +130,19 @@ func newGoLoader(loc string) *GoLoader {
 	}
 	name := strings.TrimPrefix(loc, "go:")
 	return &GoLoader{
-		location:   name,
-		actionName: name,
+		location: name,
+		funcName: name,
 	}
 }
 
 func (l *GoLoader) Load() {
-
+	// todo
 }
 
 // Cmd
 type CmdLoader struct {
-	location   string
-	actionName string
+	location string
+	funcName string
 }
 
 func newCmdLoader(loc string) *CmdLoader {
@@ -152,13 +152,13 @@ func newCmdLoader(loc string) *CmdLoader {
 	p := strings.TrimPrefix(loc, "cmd:")
 	name := path.Base(p)
 	return &CmdLoader{
-		actionName: name,
-		location:   p,
+		funcName: name,
+		location: p,
 	}
 }
 
 func (l *CmdLoader) Load() {
-
+	// todo
 }
 
 // Runner
