@@ -1,4 +1,4 @@
-module github.com/autoflowlabs/autoflow
+module github.com/autoflowlabs/funcflow
 
 go 1.18
 

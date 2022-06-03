@@ -1,4 +1,4 @@
-package actions
+package functions
 
 // todo
 type Manifest struct {
