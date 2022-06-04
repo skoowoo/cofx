@@ -46,18 +46,23 @@ func (rq *RunQueue) Generate(bs *BlockStore) error {
 func (rq *RunQueue) processLoad(b *Block) error {
 	// First directive and it's second token is 'load location'
 	location := b.directives[0].tokens[1].text
-	var loader FunctionLoader
+	var (
+		loader FunctionLoader
+		runner FunctionRunner
+	)
 	if l := newGoLoader(location); l != nil {
 		loader = l
+		runner = nil
 	} else if l := newCmdLoader(location); l != nil {
 		loader = l
+		runner = nil
 	} else {
 		return errors.New("not found loader: " + location)
 	}
 
 	_, ok := rq.Functions[loader.Name()]
 	if !ok {
-		rq.Functions[loader.Name()] = NewFunction(loader.Name(), loader, nil)
+		rq.Functions[loader.Name()] = NewFunction(loader.Name(), loader, runner)
 	} else {
 		return errors.New("repeat to load: " + loader.Name())
 	}

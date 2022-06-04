@@ -31,7 +31,7 @@ func ParseBlocks(rd io.Reader) (*BlockStore, error) {
 		if !scanner.Scan() {
 			break
 		}
-		err := processOneLine(blockstore, scanner.Text())
+		err := scanToken(blockstore, scanner.Text())
 		if err != nil {
 			return nil, err
 		}
@@ -39,7 +39,7 @@ func ParseBlocks(rd io.Reader) (*BlockStore, error) {
 	return blockstore, nil
 }
 
-func processOneLine(bs *BlockStore, line string) error {
+func scanToken(bs *BlockStore, line string) error {
 	line = strings.TrimSpace(line)
 	words := strings.Fields(line)
 	if len(words) == 0 {
