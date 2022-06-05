@@ -1,4 +1,4 @@
-package functions
+package gofunctions
 
 // todo
 type Manifest struct {

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"path"
 	"strings"
+
+	"github.com/autoflowlabs/funcflow/internal/gofunctions"
 )
 
 // RunQueue
@@ -52,10 +54,10 @@ func (rq *RunQueue) processLoad(b *Block) error {
 	)
 	if l := newGoLoader(location); l != nil {
 		loader = l
-		runner = nil
+		runner = newGoRunner()
 	} else if l := newCmdLoader(location); l != nil {
 		loader = l
-		runner = nil
+		runner = nil //todo
 	} else {
 		return errors.New("not found loader: " + location)
 	}
@@ -112,7 +114,7 @@ func (rq *RunQueue) processRun(b *Block) error {
 		if last == nil {
 			rq.Queue.PushBack(fc) // it's first
 		} else {
-			last.parallel = fc
+			last.Parallel = fc
 		}
 		last = fc
 	}
@@ -124,30 +126,29 @@ func (rq *RunQueue) processRun(b *Block) error {
 
 // Function is the unit of task running
 type FunctionLoader interface {
-	Load()
+	Load() error
 	Name() string
 }
 
 type FunctionRunner interface {
+	Run() error
 }
 
 type Function struct {
-	Name         string
-	Loader       FunctionLoader
-	Runner       FunctionRunner
-	args         map[string]string
-	returnValues map[string]string
+	Name   string
+	Loader FunctionLoader
+	Runner FunctionRunner
+	args   map[string]string
 
-	parallel *Function
+	Parallel *Function
 }
 
 func NewFunction(name string, loader FunctionLoader, runner FunctionRunner) *Function {
 	return &Function{
-		Name:         name,
-		Loader:       loader,
-		Runner:       runner,
-		args:         make(map[string]string),
-		returnValues: make(map[string]string),
+		Name:   name,
+		Loader: loader,
+		Runner: runner,
+		args:   make(map[string]string),
 	}
 }
 
@@ -158,10 +159,6 @@ func (f *Function) InputArg(k, v string) *Function {
 
 func (f *Function) Args() map[string]string {
 	return f.args
-}
-
-func (f *Function) ReturnValues() map[string]string {
-	return f.returnValues
 }
 
 // Loader
@@ -184,8 +181,15 @@ func newGoLoader(loc string) *GoLoader {
 	}
 }
 
-func (l *GoLoader) Load() {
+func (l *GoLoader) Load() error {
+	def := gofunctions.Lookup(l.location)
+	if def == nil {
+		return errors.New("in gofunctions package, not found function: " + l.location)
+	}
+	manifest := def.Manifest()
 	// todo
+	_ = manifest
+	return nil
 }
 
 func (l *GoLoader) Name() string {
@@ -210,8 +214,9 @@ func newCmdLoader(loc string) *CmdLoader {
 	}
 }
 
-func (l *CmdLoader) Load() {
+func (l *CmdLoader) Load() error {
 	// todo
+	return nil
 }
 
 func (l *CmdLoader) Name() string {
@@ -219,3 +224,12 @@ func (l *CmdLoader) Name() string {
 }
 
 // Runner
+type GoRunner struct{}
+
+func newGoRunner() *GoRunner {
+	return &GoRunner{}
+}
+
+func (r *GoRunner) Run() error {
+	return nil
+}

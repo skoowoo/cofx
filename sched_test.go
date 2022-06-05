@@ -12,24 +12,16 @@ import (
 
 func TestAddFlow(t *testing.T) {
 	const testingdata string = `
-	load go:function1
-	load go:function2
-	load cmd:/tmp/function3
-	load cmd:/tmp/function4
-	load cmd:/tmp/function5
+	load go:print
+	load go:sleep
 
-	set function1 {
+	set print {
 		input k1 v1
 		input k2 v2
 	}
 
-	run @function1
-	run	@function2
-	run	@function3
-	run {
-		@function4
-		@function5
-	}
+	run @print
+	run	@sleep
 	`
 	sched := NewSched()
 	err := sched.StartAndRun(context.TODO())
@@ -46,7 +38,7 @@ func TestAddFlow(t *testing.T) {
 
 	flow, err := sched.flowstore.Get(id.Value())
 	assert.NoError(t, err)
-	assert.Equal(t, _FLOW_ADDED, flow.status)
+	assert.Equal(t, _FLOW_STOPPED, flow.status)
 
 	assert.Len(t, sched.flowstore.entity, 1)
 

@@ -32,9 +32,23 @@ func (c *FlowController) StartAndMonitoring(ctx context.Context) {
 	for {
 		select {
 		case flow := <-c.events:
-			_ = flow // todo
 			c.flowCount += 1
-			flow.ID.Feedback("Handled")
+
+			go func(ctx context.Context, f *Flow) {
+				if err := f.Ready(ctx); err != nil {
+					logrus.Errorln(err)
+					f.ID.Feedback(err.Error())
+					return
+				}
+				f.ID.Feedback("Ready")
+
+				if err := f.ExecuteAndWaiting(ctx); err != nil {
+					logrus.Errorln(err)
+					f.ID.Feedback(err.Error())
+					return
+				}
+				f.ID.Feedback("Execute Done")
+			}(ctx, flow)
 		case <-ctx.Done():
 		}
 	}
