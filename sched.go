@@ -1,45 +1,14 @@
-package scheduler
+package funcflow
 
 import (
 	"context"
 	"errors"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/autoflowlabs/funcflow/internal/flowl"
 	"github.com/autoflowlabs/funcflow/pkg/feedbackid"
 	"github.com/sirupsen/logrus"
-)
-
-// Flow
-//
-type Flow struct {
-	sync.RWMutex
-	ID         feedbackid.ID
-	runq       *flowl.RunQueue
-	blockstore *flowl.BlockStore
-	status     FlowStatus
-}
-
-func (f *Flow) SetStatus(set func(current FlowStatus) FlowStatus) {
-	f.Lock()
-	defer f.Unlock()
-	f.status = set(f.status)
-}
-
-type FlowStatus int
-
-const (
-	_FLOW_STOPPED FlowStatus = iota
-	_FLOW_RUNNING
-	_FLOW_READY
-	_FLOW_ERROR
-	_FLOW_ADDED
-	_FLOW_UPDATED
-	_FLOW_RUNNING_AND_UPDATED
-	_FLOW_DELETED
-	_FLOW_RUNNING_AND_DELETED
 )
 
 // FlowController
@@ -58,6 +27,7 @@ func (c *FlowController) Notify(f *Flow) error {
 	return nil
 }
 
+// StartAndMonitoring run on a goroutine, receive flow event, and then control the flow
 func (c *FlowController) StartAndMonitoring(ctx context.Context) {
 	for {
 		select {
