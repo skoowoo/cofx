@@ -1,17 +1,21 @@
 package sleep
 
-import "github.com/autoflowlabs/funcflow/internal/gofunctions"
+import (
+	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
+)
 
-var Fake struct{}
-
-func init() {
-	gofunctions.Register("sleep", &sleeper{})
+func Function() functiondefine.Define {
+	return &sleeper{}
 }
 
 // todo
 type sleeper struct {
 }
 
-func (p *sleeper) Manifest() *gofunctions.Manifest {
+func (p *sleeper) Name() string {
+	return "sleep"
+}
+
+func (p *sleeper) Manifest() *functiondefine.Manifest {
 	return nil
 }

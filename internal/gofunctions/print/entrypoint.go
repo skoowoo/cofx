@@ -1,17 +1,21 @@
 package print
 
-import "github.com/autoflowlabs/funcflow/internal/gofunctions"
+import (
+	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
+)
 
-var Fake struct{}
-
-func init() {
-	gofunctions.Register("print", &printer{})
+func Function() functiondefine.Define {
+	return &printer{}
 }
 
 // todo
 type printer struct {
 }
 
-func (p *printer) Manifest() *gofunctions.Manifest {
+func (p *printer) Manifest() *functiondefine.Manifest {
 	return nil
+}
+
+func (p *printer) Name() string {
+	return "print"
 }

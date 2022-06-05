@@ -1,18 +1,18 @@
 package gofunctions
 
-import "errors"
+import (
+	"errors"
 
-var builtin map[string]FunctionDefine
+	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
+)
+
+var builtin map[string]functiondefine.Define
 
 func init() {
-	builtin = make(map[string]FunctionDefine)
+	builtin = make(map[string]functiondefine.Define)
 }
 
-type FunctionDefine interface {
-	Manifest() *Manifest
-}
-
-func Lookup(name string) FunctionDefine {
+func Lookup(name string) functiondefine.Define {
 	fc, ok := builtin[name]
 	if ok {
 		return fc
@@ -20,7 +20,7 @@ func Lookup(name string) FunctionDefine {
 	return nil
 }
 
-func Register(name string, def FunctionDefine) error {
+func Register(name string, def functiondefine.Define) error {
 	_, ok := builtin[name]
 	if ok {
 		return errors.New("repeat register the function name: " + name)
