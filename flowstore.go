@@ -5,32 +5,20 @@ import (
 	"sync"
 )
 
-type ChangeNotify interface {
-	Added(*Flow)
-	Updated(*Flow)
-	Deleted(*Flow)
-}
-
 // todo
-type Persistent interface {
+type PersistentStore interface {
 }
 
 type FlowStore struct {
 	sync.RWMutex
-	notify ChangeNotify
-	entity map[string]*Flow
-	saver  Persistent
+	entity  map[string]*Flow
+	backend PersistentStore
 }
 
 // Store store a kv into flowstore
 func (s *FlowStore) Store(k string, f *Flow) (err error) {
 	s.Lock()
-	defer func() {
-		s.Unlock()
-		if err == nil {
-			s.notify.Added(f)
-		}
-	}()
+	defer s.Unlock()
 
 	_, ok := s.entity[k]
 	if ok {
@@ -43,12 +31,7 @@ func (s *FlowStore) Store(k string, f *Flow) (err error) {
 
 func (s *FlowStore) Update(k string, f *Flow) (err error) {
 	s.Lock()
-	defer func() {
-		s.Unlock()
-		if err == nil {
-			s.notify.Updated(f)
-		}
-	}()
+	defer s.Unlock()
 
 	_, ok := s.entity[k]
 	if !ok {

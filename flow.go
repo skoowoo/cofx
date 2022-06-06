@@ -3,18 +3,17 @@ package funcflow
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/autoflowlabs/funcflow/internal/flowl"
 	"github.com/autoflowlabs/funcflow/pkg/feedbackid"
-	"github.com/sirupsen/logrus"
 )
 
 type FlowStatus int
 
 const (
-	_FLOW_STOPPED FlowStatus = iota
+	_FLOW_UNKNOWN FlowStatus = iota
+	_FLOW_STOPPED
 	_FLOW_RUNNING
 	_FLOW_READY
 	_FLOW_ERROR
@@ -43,25 +42,26 @@ type Flow struct {
 	status       FlowStatus
 	beginTime    time.Time
 	endTime      time.Time
-	fnTotal      int32
-	readyFnCount int32
-	successCount int32
+	fnTotal      int
+	readyFnCount int
+	successCount int
 	result       map[string]*FunctionResult
+	cancel       context.CancelFunc
 }
 
-func (f *Flow) SetStatus(set func(current FlowStatus) FlowStatus) {
+func (f *Flow) SetWithLock(set func(*Flow)) {
 	f.Lock()
 	defer f.Unlock()
-	f.status = set(f.status)
-}
-func (f *Flow) AddSuccessCount(n int32) {
-	atomic.AddInt32(&f.successCount, n)
+	set(f)
 }
 
 // Ready make the flow ready, will execute loader of the functions
 func (f *Flow) Ready(ctx context.Context) error {
+	f.Lock()
+	defer f.Unlock()
+
 	functions := f.runq.Functions
-	f.fnTotal = int32(len(functions))
+	f.fnTotal = len(functions)
 	f.result = make(map[string]*FunctionResult)
 
 	for _, v := range functions {
@@ -69,72 +69,69 @@ func (f *Flow) Ready(ctx context.Context) error {
 			return err
 		}
 		f.readyFnCount += 1
+
 		f.result[v.Name] = &FunctionResult{
 			fn:           v,
 			returnValues: make(map[string]string),
 		}
 	}
-	f.SetStatus(func(current FlowStatus) FlowStatus {
-		return _FLOW_READY
-	})
+	f.status = _FLOW_READY
 	return nil
 }
 
-// ExecuteAndWaiting exec the flow, and will execute runner of the functions
-func (f *Flow) ExecuteAndWaiting(ctx context.Context) error {
+// ExecuteAndWaitFunc exec the flow, and will execute runner of the functions
+func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	// begin
-	f.SetStatus(func(current FlowStatus) FlowStatus {
-		return _FLOW_RUNNING
+	f.SetWithLock(func(s *Flow) {
+		s.status = _FLOW_RUNNING
+		s.beginTime = time.Now()
 	})
-	f.beginTime = time.Now()
 
-	// running
+	// functions running
+	ch := make(chan *FunctionResult, 10)
+	batchFuncs := 0
 	queue := f.runq.Queue
 	for e := queue.Front(); e != nil; e = e.Next() {
 		fn := e.Value.(*flowl.Function)
-		var wg sync.WaitGroup
 		for p := fn; p != nil; p = p.Parallel {
-			wg.Add(1)
-			r := f.result[p.Name]
-
-			go func(p *flowl.Function, r *FunctionResult) {
-				defer func() {
-					r.endTime = time.Now()
-					wg.Done()
-				}()
-				r.beginTime = time.Now()
-				if err := p.Runner.Run(); err != nil {
-					f.SetStatus(func(current FlowStatus) FlowStatus {
-						return _FLOW_ERROR
-					})
-					r.err = err
-					logrus.Errorln(err)
-					return
-				}
-				f.AddSuccessCount(1)
-
-			}(p, r)
+			batchFuncs += 1
+			go func(ctx context.Context, p *flowl.Function, r *FunctionResult) {
+				r.err = p.Runner.Run()
+				ch <- r
+			}(ctx, p, f.result[p.Name])
 		}
-		wg.Wait()
+		// waiting
+		for batchFuncs > 0 {
+			select {
+			case r := <-ch:
+				if r.err != nil {
+					f.SetWithLock(func(s *Flow) {
+						s.status = _FLOW_ERROR
+					})
+				}
+				batchFuncs -= 1
+			case <-ctx.Done():
+				// canced
+			}
+		}
 	}
 
 	// end
-	f.endTime = time.Now()
-	f.SetStatus(func(current FlowStatus) FlowStatus {
-		if current == _FLOW_RUNNING {
-			return _FLOW_STOPPED
+	f.SetWithLock(func(s *Flow) {
+		if s.status == _FLOW_RUNNING {
+			s.status = _FLOW_STOPPED
 		}
-		return current
+		f.endTime = time.Now()
 	})
 	return nil
 }
 
 // Cancel stop the flow, the running functions continue to run until ends
-func (f *Flow) Cancel(ctx context.Context) {
-
+func (f *Flow) Cancel() {
+	f.cancel()
 }
 
 // Kill force stop the flow, the running functions will be stopped immediately
-func (f *Flow) Kill(ctx context.Context) {
-
+func (f *Flow) Kill() {
+	f.Cancel()
 }
