@@ -54,7 +54,13 @@ func (fc *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) erro
 	if err != nil {
 		return err
 	}
-	go flow.ExecuteAndWaitFunc(ctx)
+	go func() {
+		nctx, cancel := context.WithCancel(context.Background())
+		flow.SetWithLock(func(s *Flow) {
+			s.cancel = cancel
+		})
+		flow.ExecuteAndWaitFunc(nctx)
+	}()
 	return nil
 }
 

@@ -121,6 +121,12 @@ func (rq *RunQueue) processRun(b *Block) error {
 	return nil
 }
 
+func (rq *RunQueue) Step(batch func(*Function)) {
+	for e := rq.Queue.Front(); e != nil; e = e.Next() {
+		batch(e.Value.(*Function))
+	}
+}
+
 // Function
 //
 

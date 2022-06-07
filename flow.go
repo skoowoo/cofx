@@ -25,6 +25,7 @@ const (
 )
 
 type FunctionResult struct {
+	fid          feedbackid.ID
 	fn           *flowl.Function
 	returnValues map[string]string
 	beginTime    time.Time
@@ -71,6 +72,7 @@ func (f *Flow) Ready(ctx context.Context) error {
 		f.readyFnCount += 1
 
 		f.result[v.Name] = &FunctionResult{
+			fid:          f.ID,
 			fn:           v,
 			returnValues: make(map[string]string),
 		}
@@ -88,20 +90,22 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	})
 
 	// functions running
-	ch := make(chan *FunctionResult, 10)
-	batchFuncs := 0
-	queue := f.runq.Queue
-	for e := queue.Front(); e != nil; e = e.Next() {
-		fn := e.Value.(*flowl.Function)
-		for p := fn; p != nil; p = p.Parallel {
+	f.runq.Step(func(first *flowl.Function) {
+		batchFuncs := 0
+		ch := make(chan *FunctionResult, 10)
+
+		for p := first; p != nil; p = p.Parallel {
 			batchFuncs += 1
-			go func(ctx context.Context, p *flowl.Function, r *FunctionResult) {
-				r.err = p.Runner.Run()
-				ch <- r
-			}(ctx, p, f.result[p.Name])
+			go func(fn *flowl.Function, r *FunctionResult) {
+				r.err = fn.Runner.Run()
+				select {
+				case ch <- r:
+				case <-ctx.Done():
+				}
+			}(p, f.result[p.Name])
 		}
 		// waiting
-		for batchFuncs > 0 {
+		for i := 0; i < batchFuncs; i++ {
 			select {
 			case r := <-ch:
 				if r.err != nil {
@@ -109,12 +113,12 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 						s.status = _FLOW_ERROR
 					})
 				}
-				batchFuncs -= 1
 			case <-ctx.Done():
 				// canced
+				close(ch)
 			}
 		}
-	}
+	})
 
 	// end
 	f.SetWithLock(func(s *Flow) {
@@ -129,9 +133,4 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 // Cancel stop the flow, the running functions continue to run until ends
 func (f *Flow) Cancel() {
 	f.cancel()
-}
-
-// Kill force stop the flow, the running functions will be stopped immediately
-func (f *Flow) Kill() {
-	f.Cancel()
 }
