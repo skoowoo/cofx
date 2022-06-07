@@ -1,3 +1,6 @@
+//go:generate stringer -type=BlockKind
+//go:generate stringer -type=BlockStatus
+//go:generate stringer -type=DirectiveKind
 package flowl
 
 import (
@@ -38,12 +41,13 @@ func (t *Token) SetOperator() *Token {
 
 // Directive
 //
-type DirectiveKind string
+type DirectiveKind int
 
 const (
-	_directive_define_block DirectiveKind = "define"
-	_directive_finish_block DirectiveKind = "finish"
-	_directive_in_block     DirectiveKind = "in"
+	_directive_unknow_block DirectiveKind = iota
+	_directive_define_block
+	_directive_finish_block
+	_directive_in_block
 )
 
 type Directive struct {
@@ -191,21 +195,23 @@ func verifyAt(dir *Directive) error {
 
 // Block
 //
-type BlockKind string
-type BlockStatus string
+type BlockKind int
 
 const (
-	_block_load BlockKind = "load"
-	_block_set  BlockKind = "set"
-	_block_run  BlockKind = "run"
-	_block_var  BlockKind = "var"
-	_block_none BlockKind = "none"
+	_block_unknow BlockKind = iota
+	_block_load
+	_block_set
+	_block_run
+	_block_var
+	_block_none
 )
 
+type BlockStatus int
+
 const (
-	_block_status_begin  BlockStatus = "begin"
-	_block_status_end    BlockStatus = "end"
-	_block_status_unknow BlockStatus = "unknow"
+	_block_status_unknow BlockStatus = iota
+	_block_status_begin
+	_block_status_end
 )
 
 type Block struct {

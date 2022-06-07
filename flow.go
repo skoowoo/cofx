@@ -1,3 +1,4 @@
+//go:generate stringer -type=FlowStatus
 package funcflow
 
 import (
@@ -12,16 +13,16 @@ import (
 type FlowStatus int
 
 const (
-	_FLOW_UNKNOWN FlowStatus = iota
-	_FLOW_STOPPED
-	_FLOW_RUNNING
-	_FLOW_READY
-	_FLOW_ERROR
-	_FLOW_ADDED
-	_FLOW_UPDATED
-	_FLOW_RUNNING_AND_UPDATED
-	_FLOW_DELETED
-	_FLOW_RUNNING_AND_DELETED
+	FLOW_UNKNOWN FlowStatus = iota
+	FLOW_STOPPED
+	FLOW_RUNNING
+	FLOW_READY
+	FLOW_ERROR
+	FLOW_ADDED
+	FLOW_UPDATED
+	FLOW_RUNNING_AND_UPDATED
+	FLOW_DELETED
+	FLOW_RUNNING_AND_DELETED
 )
 
 type FunctionResult struct {
@@ -77,7 +78,7 @@ func (f *Flow) Ready(ctx context.Context) error {
 			returnValues: make(map[string]string),
 		}
 	}
-	f.status = _FLOW_READY
+	f.status = FLOW_READY
 	return nil
 }
 
@@ -85,7 +86,7 @@ func (f *Flow) Ready(ctx context.Context) error {
 func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	// begin
 	f.SetWithLock(func(s *Flow) {
-		s.status = _FLOW_RUNNING
+		s.status = FLOW_RUNNING
 		s.beginTime = time.Now()
 	})
 
@@ -110,7 +111,7 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 			case r := <-ch:
 				if r.err != nil {
 					f.SetWithLock(func(s *Flow) {
-						s.status = _FLOW_ERROR
+						s.status = FLOW_ERROR
 					})
 				}
 			case <-ctx.Done():
@@ -122,8 +123,8 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 
 	// end
 	f.SetWithLock(func(s *Flow) {
-		if s.status == _FLOW_RUNNING {
-			s.status = _FLOW_STOPPED
+		if s.status == FLOW_RUNNING {
+			s.status = FLOW_STOPPED
 		}
 		f.endTime = time.Now()
 	})

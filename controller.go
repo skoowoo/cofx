@@ -32,7 +32,7 @@ func (fc *FlowController) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.
 		ID:         fid,
 		runq:       rq,
 		blockstore: bs,
-		status:     _FLOW_ADDED,
+		status:     FLOW_ADDED,
 	}
 	if err := fc.flowstore.Store(flow.ID.Value(), flow); err != nil {
 		return err

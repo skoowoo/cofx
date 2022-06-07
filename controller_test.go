@@ -35,7 +35,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 
 		flow, err := ctrl.InspectFlow(ctx, id)
 		assert.NoError(t, err)
-		assert.Equal(t, _FLOW_ADDED, flow.status)
+		assert.Equal(t, FLOW_ADDED, flow.status)
 	}
 
 	{
@@ -44,7 +44,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 
 		flow, err := ctrl.InspectFlow(ctx, id)
 		assert.NoError(t, err)
-		assert.Equal(t, _FLOW_READY, flow.status)
+		assert.Equal(t, FLOW_READY, flow.status)
 	}
 
 	{
@@ -55,7 +55,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 
 		flow, err := ctrl.InspectFlow(ctx, id)
 		assert.NoError(t, err)
-		assert.Equal(t, _FLOW_STOPPED, flow.status)
+		assert.Equal(t, FLOW_STOPPED, flow.status)
 	}
 
 	assert.Len(t, ctrl.flowstore.entity, 1)
