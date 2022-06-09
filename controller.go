@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/autoflowlabs/funcflow/internal/flowl"
-	"github.com/autoflowlabs/funcflow/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/internal/flowl"
+	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
 // FlowController

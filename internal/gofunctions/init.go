@@ -1,9 +1,9 @@
 package gofunctions
 
 import (
-	"github.com/autoflowlabs/funcflow/internal/gofunctions/print"
-	"github.com/autoflowlabs/funcflow/internal/gofunctions/sleep"
-	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
+	"github.com/cofunclabs/cofunc/internal/gofunctions/print"
+	"github.com/cofunclabs/cofunc/internal/gofunctions/sleep"
+	"github.com/cofunclabs/cofunc/pkg/functiondefine"
 )
 
 func init() {

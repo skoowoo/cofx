@@ -3,7 +3,7 @@ package gofunctions
 import (
 	"errors"
 
-	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
+	"github.com/cofunclabs/cofunc/pkg/functiondefine"
 )
 
 var builtin map[string]functiondefine.Define

@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/autoflowlabs/funcflow/internal/gofunctions"
+	"github.com/cofunclabs/cofunc/internal/gofunctions"
 )
 
 // RunQueue

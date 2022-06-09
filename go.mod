@@ -1,4 +1,4 @@
-module github.com/autoflowlabs/funcflow
+module github.com/cofunclabs/cofunc
 
 go 1.18
 

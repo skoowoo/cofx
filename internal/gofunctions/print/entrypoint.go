@@ -1,8 +1,6 @@
 package print
 
-import (
-	"github.com/autoflowlabs/funcflow/pkg/functiondefine"
-)
+import "github.com/cofunclabs/cofunc/pkg/functiondefine"
 
 func Function() functiondefine.Define {
 	return &printer{}

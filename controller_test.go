@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/autoflowlabs/funcflow/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/stretchr/testify/assert"
 )
 
