@@ -4,22 +4,19 @@ import (
 	"container/list"
 	"errors"
 
-	"github.com/cofunclabs/cofunc/internal/flowl/driver"
-	cmddriver "github.com/cofunclabs/cofunc/internal/flowl/driver/cmd"
-	godriver "github.com/cofunclabs/cofunc/internal/flowl/driver/go"
+	"github.com/cofunclabs/cofunc/internal/functiondriver"
 )
 
 // Function
 //
 type Function struct {
-	Name   string
-	Driver driver.FunctionDriver
-	args   map[string]string
-
+	Name     string
+	Driver   functiondriver.FunctionDriver
 	Parallel *Function
+	args     map[string]string
 }
 
-func NewFunction(name string, driver driver.FunctionDriver) *Function {
+func NewFunction(name string, driver functiondriver.FunctionDriver) *Function {
 	return &Function{
 		Name:   name,
 		Driver: driver,
@@ -75,17 +72,10 @@ func (rq *RunQueue) Generate(bs *BlockStore) error {
 func (rq *RunQueue) processLoad(b *Block) error {
 	// First directive and it's second token is 'load location'
 	location := b.directives[0].tokens[1].text
-	var (
-		dv driver.FunctionDriver
-	)
-	if d := godriver.New(location); d != nil {
-		dv = d
-	} else if d := cmddriver.New(location); d != nil {
-		dv = d
-	} else {
-		return errors.New("not found loader: " + location)
+	dv := functiondriver.New(location)
+	if dv == nil {
+		return errors.New("not found driver: " + location)
 	}
-
 	_, ok := rq.Functions[dv.Name()]
 	if !ok {
 		rq.Functions[dv.Name()] = NewFunction(dv.Name(), dv)
