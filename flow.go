@@ -67,7 +67,7 @@ func (f *Flow) Ready(ctx context.Context) error {
 	f.result = make(map[string]*FunctionResult)
 
 	for _, v := range functions {
-		if err := v.Loader.Load(); err != nil {
+		if err := v.Driver.Load(); err != nil {
 			return err
 		}
 		f.readyFnCount += 1
@@ -98,7 +98,7 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 		for p := first; p != nil; p = p.Parallel {
 			batchFuncs += 1
 			go func(fn *flowl.Function, r *FunctionResult) {
-				r.err = fn.Runner.Run()
+				r.err = fn.Driver.Run()
 				select {
 				case ch <- r:
 				case <-ctx.Done():
