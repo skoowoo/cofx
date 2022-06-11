@@ -307,11 +307,11 @@ func TestParseFull(t *testing.T) {
 	assert.NotNil(t, bs)
 	assert.NotNil(t, rq)
 
-	assert.Len(t, rq.Functions, 5)
+	assert.Len(t, rq.FNodes, 5)
 
-	assert.Equal(t, "function1", rq.Functions["function1"].Name)
-	assert.Equal(t, "function3", rq.Functions["function3"].Name)
+	assert.Equal(t, "function1", rq.FNodes["function1"].Name)
+	assert.Equal(t, "function3", rq.FNodes["function3"].Name)
 
-	assert.Len(t, rq.Functions["function1"].Args(), 2)
+	assert.Len(t, rq.FNodes["function1"].Args(), 2)
 	assert.Equal(t, 4, rq.Queue.Len())
 }

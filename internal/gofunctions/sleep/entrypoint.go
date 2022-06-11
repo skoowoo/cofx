@@ -1,8 +1,8 @@
 package sleep
 
-import "github.com/cofunclabs/cofunc/pkg/functiondefine"
+import "github.com/cofunclabs/cofunc/pkg/manifest"
 
-func Function() functiondefine.Define {
+func New() manifest.Manifester {
 	return &sleeper{}
 }
 
@@ -14,6 +14,13 @@ func (p *sleeper) Name() string {
 	return "sleep"
 }
 
-func (p *sleeper) Manifest() *functiondefine.Manifest {
-	return nil
+func (p *sleeper) Manifest() manifest.Manifest {
+	return manifest.Manifest{
+		Driver:     "go",
+		EntryPoint: "EntryPoint",
+	}
+}
+
+func (p *sleeper) EntryPoint(args map[string]interface{}) {
+
 }

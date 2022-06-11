@@ -1,8 +1,10 @@
 package print
 
-import "github.com/cofunclabs/cofunc/pkg/functiondefine"
+import (
+	"github.com/cofunclabs/cofunc/pkg/manifest"
+)
 
-func Function() functiondefine.Define {
+func New() manifest.Manifester {
 	return &printer{}
 }
 
@@ -10,8 +12,8 @@ func Function() functiondefine.Define {
 type printer struct {
 }
 
-func (p *printer) Manifest() *functiondefine.Manifest {
-	return nil
+func (p *printer) Manifest() manifest.Manifest {
+	return manifest.Manifest{}
 }
 
 func (p *printer) Name() string {

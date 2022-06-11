@@ -27,7 +27,7 @@ const (
 
 type FunctionResult struct {
 	fid          feedbackid.ID
-	fn           *flowl.Function
+	fnode        *flowl.FunctionNode
 	returnValues map[string]string
 	beginTime    time.Time
 	endTime      time.Time
@@ -62,11 +62,11 @@ func (f *Flow) Ready(ctx context.Context) error {
 	f.Lock()
 	defer f.Unlock()
 
-	functions := f.runq.Functions
-	f.fnTotal = len(functions)
+	nodes := f.runq.FNodes
+	f.fnTotal = len(nodes)
 	f.result = make(map[string]*FunctionResult)
 
-	for _, v := range functions {
+	for _, v := range nodes {
 		if err := v.Driver.Load(); err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ func (f *Flow) Ready(ctx context.Context) error {
 
 		f.result[v.Name] = &FunctionResult{
 			fid:          f.ID,
-			fn:           v,
+			fnode:        v,
 			returnValues: make(map[string]string),
 		}
 	}
@@ -91,13 +91,13 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	})
 
 	// functions running
-	f.runq.Step(func(first *flowl.Function) {
+	f.runq.Step(func(first *flowl.FunctionNode) {
 		batchFuncs := 0
 		ch := make(chan *FunctionResult, 10)
 
 		for p := first; p != nil; p = p.Parallel {
 			batchFuncs += 1
-			go func(fn *flowl.Function, r *FunctionResult) {
+			go func(fn *flowl.FunctionNode, r *FunctionResult) {
 				r.err = fn.Driver.Run()
 				select {
 				case ch <- r:

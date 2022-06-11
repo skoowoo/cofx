@@ -3,12 +3,12 @@ package gofunctions
 import (
 	"errors"
 
-	"github.com/cofunclabs/cofunc/pkg/functiondefine"
+	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 
-var builtin map[string]functiondefine.Define
+var builtin map[string]manifest.Manifester
 
-func Lookup(name string) functiondefine.Define {
+func Lookup(name string) manifest.Manifester {
 	fc, ok := builtin[name]
 	if ok {
 		return fc
@@ -16,7 +16,7 @@ func Lookup(name string) functiondefine.Define {
 	return nil
 }
 
-func register(name string, def functiondefine.Define) error {
+func register(name string, def manifest.Manifester) error {
 	_, ok := builtin[name]
 	if ok {
 		return errors.New("repeat register the function name: " + name)
