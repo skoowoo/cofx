@@ -5,12 +5,15 @@ import (
 	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/gofunctions"
+	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 
 // GoDriver
 type GoDriver struct {
 	location string
 	funcName string
+	fn       manifest.Manifester
+	manifest *manifest.Manifest
 }
 
 func New(loc string) *GoDriver {
@@ -25,19 +28,33 @@ func New(loc string) *GoDriver {
 }
 
 // load go://function
-func (d *GoDriver) Load() error {
-	def := gofunctions.Lookup(d.location)
-	if def == nil {
+func (d *GoDriver) Load(args map[string]string) error {
+	fn := gofunctions.Lookup(d.location)
+	if fn == nil {
 		return errors.New("in gofunctions package, not found function: " + d.location)
 	}
-	manifest := def.Manifest()
-	// todo
-	_ = manifest
+	mf := fn.Manifest()
+	if mf.Args == nil {
+		mf.Args = make(map[string]string)
+	}
+	for k, v := range args {
+		mf.Args[k] = v
+	}
+	d.fn = fn
+	d.manifest = &mf
 	return nil
 }
 
-func (d *GoDriver) Run() error {
-	return nil
+func (d *GoDriver) Run() (map[string]string, error) {
+	entrypoint := d.manifest.EntryPointFunc
+	if entrypoint == nil {
+		return nil, errors.New("in function, not found the entrypoint: " + d.location)
+	}
+	out, err := entrypoint(d.manifest.Args)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (d *GoDriver) Name() string {

@@ -7,8 +7,8 @@ import (
 
 type FunctionDriver interface {
 	Name() string
-	Load() error
-	Run() error
+	Load(args map[string]string) error
+	Run() (map[string]string, error)
 }
 
 func New(location string) FunctionDriver {

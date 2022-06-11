@@ -51,7 +51,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		err := ctrl.StartFlow(ctx, id)
 		assert.NoError(t, err)
 
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 5)
 
 		flow, err := ctrl.InspectFlow(ctx, id)
 		assert.NoError(t, err)

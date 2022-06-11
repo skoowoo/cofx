@@ -51,66 +51,66 @@ type Flow struct {
 	cancel       context.CancelFunc
 }
 
-func (f *Flow) SetWithLock(set func(*Flow)) {
-	f.Lock()
-	defer f.Unlock()
-	set(f)
+func (fw *Flow) SetWithLock(set func(*Flow)) {
+	fw.Lock()
+	defer fw.Unlock()
+	set(fw)
 }
 
 // Ready make the flow ready, will execute loader of the functions
-func (f *Flow) Ready(ctx context.Context) error {
-	f.Lock()
-	defer f.Unlock()
+func (fw *Flow) Ready(ctx context.Context) error {
+	fw.Lock()
+	defer fw.Unlock()
 
-	nodes := f.runq.FNodes
-	f.fnTotal = len(nodes)
-	f.result = make(map[string]*FunctionResult)
+	nodes := fw.runq.FNodes
+	fw.fnTotal = len(nodes)
+	fw.result = make(map[string]*FunctionResult)
 
-	for _, v := range nodes {
-		if err := v.Driver.Load(); err != nil {
+	for _, n := range nodes {
+		if err := n.Driver.Load(n.Args()); err != nil {
 			return err
 		}
-		f.readyFnCount += 1
+		fw.readyFnCount += 1
 
-		f.result[v.Name] = &FunctionResult{
-			fid:          f.ID,
-			fnode:        v,
+		fw.result[n.Name] = &FunctionResult{
+			fid:          fw.ID,
+			fnode:        n,
 			returnValues: make(map[string]string),
 		}
 	}
-	f.status = FLOW_READY
+	fw.status = FLOW_READY
 	return nil
 }
 
 // ExecuteAndWaitFunc exec the flow, and will execute runner of the functions
-func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
+func (fw *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	// begin
-	f.SetWithLock(func(s *Flow) {
+	fw.SetWithLock(func(s *Flow) {
 		s.status = FLOW_RUNNING
 		s.beginTime = time.Now()
 	})
 
 	// functions running
-	f.runq.Step(func(first *flowl.FunctionNode) {
+	fw.runq.Step(func(first *flowl.FunctionNode) {
 		batchFuncs := 0
 		ch := make(chan *FunctionResult, 10)
 
 		for p := first; p != nil; p = p.Parallel {
 			batchFuncs += 1
 			go func(fn *flowl.FunctionNode, r *FunctionResult) {
-				r.err = fn.Driver.Run()
+				r.returnValues, r.err = fn.Driver.Run()
 				select {
 				case ch <- r:
 				case <-ctx.Done():
 				}
-			}(p, f.result[p.Name])
+			}(p, fw.result[p.Name])
 		}
 		// waiting
 		for i := 0; i < batchFuncs; i++ {
 			select {
 			case r := <-ch:
 				if r.err != nil {
-					f.SetWithLock(func(s *Flow) {
+					fw.SetWithLock(func(s *Flow) {
 						s.status = FLOW_ERROR
 					})
 				}
@@ -122,16 +122,16 @@ func (f *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 	})
 
 	// end
-	f.SetWithLock(func(s *Flow) {
+	fw.SetWithLock(func(s *Flow) {
 		if s.status == FLOW_RUNNING {
 			s.status = FLOW_STOPPED
 		}
-		f.endTime = time.Now()
+		fw.endTime = time.Now()
 	})
 	return nil
 }
 
 // Cancel stop the flow, the running functions continue to run until ends
-func (f *Flow) Cancel() {
-	f.cancel()
+func (fw *Flow) Cancel() {
+	fw.cancel()
 }

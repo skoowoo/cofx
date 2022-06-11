@@ -23,13 +23,13 @@ func New(loc string) *CmdDriver {
 	}
 }
 
-func (d *CmdDriver) Load() error {
+func (d *CmdDriver) Load(args map[string]string) error {
 	// todo
 	return nil
 }
 
-func (d *CmdDriver) Run() error {
-	return nil
+func (d *CmdDriver) Run() (map[string]string, error) {
+	return nil, nil
 }
 
 func (d *CmdDriver) Name() string {
