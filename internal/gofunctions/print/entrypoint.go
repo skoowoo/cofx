@@ -30,7 +30,7 @@ func (p *printer) Name() string {
 func (p *printer) EntryPoint(args map[string]string) (map[string]string, error) {
 	var slice []string
 	for k, v := range args {
-		slice = append(slice, k+"="+v)
+		slice = append(slice, k+" = "+v)
 	}
 	sort.Strings(slice)
 	for _, s := range slice {
