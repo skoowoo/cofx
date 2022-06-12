@@ -1,1 +1,1 @@
-# funcflow
+# CoFUNC 
