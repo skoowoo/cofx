@@ -1,14 +1,16 @@
 package functiondriver
 
 import (
+	"context"
+
 	cmddriver "github.com/cofunclabs/cofunc/internal/functiondriver/cmd"
 	godriver "github.com/cofunclabs/cofunc/internal/functiondriver/go"
 )
 
 type FunctionDriver interface {
 	Name() string
-	Load(args map[string]string) error
-	Run() (map[string]string, error)
+	Load(ctx context.Context, args map[string]string) error
+	Run(ctx context.Context) (map[string]string, error)
 }
 
 func New(location string) FunctionDriver {

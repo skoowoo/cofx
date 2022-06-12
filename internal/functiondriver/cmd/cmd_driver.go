@@ -1,6 +1,7 @@
 package cmddriver
 
 import (
+	"context"
 	"path"
 	"strings"
 )
@@ -23,12 +24,12 @@ func New(loc string) *CmdDriver {
 	}
 }
 
-func (d *CmdDriver) Load(args map[string]string) error {
+func (d *CmdDriver) Load(ctx context.Context, args map[string]string) error {
 	// todo
 	return nil
 }
 
-func (d *CmdDriver) Run() (map[string]string, error) {
+func (d *CmdDriver) Run(ctx context.Context) (map[string]string, error) {
 	return nil, nil
 }
 

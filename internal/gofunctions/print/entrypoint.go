@@ -1,6 +1,7 @@
 package print
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -13,8 +14,7 @@ func New() manifest.Manifester {
 }
 
 // Be used to test the go driver
-type printer struct {
-}
+type printer struct{}
 
 func (p *printer) Manifest() manifest.Manifest {
 	return manifest.Manifest{
@@ -27,7 +27,7 @@ func (p *printer) Name() string {
 	return "print"
 }
 
-func (p *printer) EntryPoint(args map[string]string) (map[string]string, error) {
+func (p *printer) EntryPoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	var slice []string
 	for k, v := range args {
 		slice = append(slice, k+" = "+v)

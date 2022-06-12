@@ -1,6 +1,7 @@
 package godriver
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -28,7 +29,7 @@ func New(loc string) *GoDriver {
 }
 
 // load go://function
-func (d *GoDriver) Load(args map[string]string) error {
+func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
 	fn := gofunctions.Lookup(d.location)
 	if fn == nil {
 		return errors.New("in gofunctions package, not found function: " + d.location)
@@ -45,12 +46,12 @@ func (d *GoDriver) Load(args map[string]string) error {
 	return nil
 }
 
-func (d *GoDriver) Run() (map[string]string, error) {
+func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 	entrypoint := d.manifest.EntryPointFunc
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.location)
 	}
-	out, err := entrypoint(d.manifest.Args)
+	out, err := entrypoint(ctx, d.manifest.Args)
 	if err != nil {
 		return nil, err
 	}

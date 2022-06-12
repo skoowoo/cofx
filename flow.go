@@ -67,7 +67,7 @@ func (fw *Flow) Ready(ctx context.Context) error {
 	fw.result = make(map[string]*FunctionResult)
 
 	for _, n := range nodes {
-		if err := n.Driver.Load(n.Args()); err != nil {
+		if err := n.Driver.Load(ctx, n.Args()); err != nil {
 			return err
 		}
 		fw.readyFnCount += 1
@@ -98,7 +98,7 @@ func (fw *Flow) ExecuteAndWaitFunc(ctx context.Context) error {
 		for p := first; p != nil; p = p.Parallel {
 			batchFuncs += 1
 			go func(fn *flowl.FunctionNode, r *FunctionResult) {
-				r.returnValues, r.err = fn.Driver.Run()
+				r.returnValues, r.err = fn.Driver.Run(ctx)
 				select {
 				case ch <- r:
 				case <-ctx.Done():
