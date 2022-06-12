@@ -262,7 +262,7 @@ func (b *Block) GetKind() BlockKind {
 }
 
 func (b *Block) String() string {
-	return fmt.Sprintf("block - kind:%s, bracket:%d, status:%s, len:%d", b.kind, b.bracket, b.status, len(b.directives))
+	return fmt.Sprintf("kind:%s, len:%d", b.kind, len(b.directives))
 }
 
 // Blocklist store all blocks in the flowl
