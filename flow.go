@@ -1,5 +1,5 @@
 //go:generate stringer -type=FlowStatus
-package funcflow
+package cofunc
 
 import (
 	"context"

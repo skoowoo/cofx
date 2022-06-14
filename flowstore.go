@@ -1,4 +1,4 @@
-package funcflow
+package cofunc
 
 import (
 	"errors"
