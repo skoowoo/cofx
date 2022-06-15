@@ -1,4 +1,4 @@
-package gofunctions
+package builtins
 
 import (
 	"errors"

@@ -1,8 +1,8 @@
-package gofunctions
+package builtins
 
 import (
-	"github.com/cofunclabs/cofunc/internal/gofunctions/print"
-	"github.com/cofunclabs/cofunc/internal/gofunctions/sleep"
+	"github.com/cofunclabs/cofunc/internal/builtins/print"
+	"github.com/cofunclabs/cofunc/internal/builtins/sleep"
 	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 

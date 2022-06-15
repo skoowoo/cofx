@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/internal/gofunctions"
+	"github.com/cofunclabs/cofunc/internal/builtins"
 	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 
@@ -30,9 +30,9 @@ func New(loc string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
-	fn := gofunctions.Lookup(d.location)
+	fn := builtins.Lookup(d.location)
 	if fn == nil {
-		return errors.New("in gofunctions package, not found function: " + d.location)
+		return errors.New("in builtins package, not found function: " + d.location)
 	}
 	mf := fn.Manifest()
 	if mf.Args == nil {
