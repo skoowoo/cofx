@@ -1,6 +1,7 @@
 package cofunc
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -60,4 +61,10 @@ func (s *FlowStore) Foreach(do func(string, *Flow) error) {
 			return
 		}
 	}
+}
+
+func (s *FlowStore) ModifyEntity(ctx context.Context, f *Flow, modify func(context.Context, *Flow) error) error {
+	f.Lock()
+	defer f.Unlock()
+	return modify(ctx, f)
 }

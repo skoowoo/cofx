@@ -48,8 +48,8 @@ func initCmd() {
 			Example:      "flowl run ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.MinimumNArgs(1),
-			Run: func(cmd *cobra.Command, args []string) {
-				println(args[0])
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return runFlowl(args[0])
 			},
 		}
 		rootCmd.AddCommand(runCmd)
