@@ -20,8 +20,8 @@ func TestLoad(t *testing.T) {
 		"k3": "v3",
 	})
 	assert.NoError(t, err)
-	assert.Len(t, dr.manifest.Args, 3)
-	assert.NotNil(t, dr.fn)
+	assert.Len(t, dr.manifest.Args, 0)
+	assert.Len(t, dr.mergedArgs, 3)
 }
 
 func TestRun(t *testing.T) {

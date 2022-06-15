@@ -11,10 +11,10 @@ import (
 
 // GoDriver
 type GoDriver struct {
-	location string
-	funcName string
-	fn       manifest.Manifester
-	manifest *manifest.Manifest
+	location   string
+	funcName   string
+	manifest   *manifest.Manifest
+	mergedArgs map[string]string
 }
 
 func New(loc string) *GoDriver {
@@ -35,13 +35,7 @@ func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
 		return errors.New("in builtins package, not found function: " + d.location)
 	}
 	mf := fn.Manifest()
-	if mf.Args == nil {
-		mf.Args = make(map[string]string)
-	}
-	for k, v := range args {
-		mf.Args[k] = v
-	}
-	d.fn = fn
+	d.mergedArgs = mergeArgs(mf.Args, args)
 	d.manifest = &mf
 	return nil
 }
@@ -51,7 +45,7 @@ func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.location)
 	}
-	out, err := entrypoint(ctx, d.manifest.Args)
+	out, err := entrypoint(ctx, d.mergedArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -60,4 +54,15 @@ func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 
 func (d *GoDriver) Name() string {
 	return d.funcName
+}
+
+func mergeArgs(base, prior map[string]string) map[string]string {
+	merged := make(map[string]string)
+	for k, v := range base {
+		merged[k] = v
+	}
+	for k, v := range prior {
+		merged[k] = v
+	}
+	return merged
 }
