@@ -28,24 +28,19 @@ func TestParseBlocksFull(t *testing.T) {
 	load cmd:path/function3
 	load go:function4
 	 
-	set @function1 {
-		input k1 v1
-		input k3 v3
-		input k $v
-	
-		loop 5 2
+	run f1
+	run	f2
+	run	function3
+	run function4
+
+	fn f1 = function1 {
+		args = {
+			k1: v1
+		}
 	}
 	
-	set @function2 {
-		input k $v
-	
-		input function1_out $out1
+	fn f2=function2 {
 	}
-	
-	run @function1
-	run	@function2
-	run	@function3
-	run @function4
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
@@ -57,49 +52,37 @@ func TestParseBlocksFull(t *testing.T) {
 // Only load part
 func TestParseBlocksOnlyLoad(t *testing.T) {
 	const testingdata string = `
-load file:///root/function1
-  load http://localhost:8080/function2
+load cmd:function1
+  load 			 go:function2
 
-load https://github.com/path/function3
+load cmd:function3
 
-	load 	function4
+	load 	go:function4
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, path string) {
-		assert.Equal(t, _block_load, b.kind)
-		assert.Len(t, b.directives, 1)
-		tokens := b.directives[0].tokens
-		assert.Len(t, tokens, 2)
-
-		assert.Equal(t, "load", tokens[0].text)
-		assert.Equal(t, path, tokens[1].text)
-
-		assert.True(t, tokens[0].keyword)
-		assert.False(t, tokens[1].keyword)
+		assert.Equal(t, "load", b.Kind.Value)
+		assert.Equal(t, path, b.Object.Value)
 	}
-	check(blocks[0], "file:///root/function1")
-	check(blocks[1], "http://localhost:8080/function2")
-	check(blocks[2], "https://github.com/path/function3")
-	check(blocks[3], "function4")
+	check(blocks[0], "cmd:function1")
+	check(blocks[1], "go:function2")
+	check(blocks[2], "cmd:function3")
+	check(blocks[3], "go:function4")
 }
 
-func TestParseBlocksOnlySet(t *testing.T) {
+func TestParseBlocksOnlyfn(t *testing.T) {
 	const testingdata string = `
-	set @function1 {
-	input k1 v1
-	input k3 v3
-	input k $v
-
-	loop 5 2
+	fn f1 = function1 {
+		args = {
+			k1:v1
+			k3:v3
+		}
 	}
 
-set @function2 { 
-	input k $v
-	
-	input function1_out $out1
+fn f2=function2{ 
 }
 	`
 	blocks, err := loadTestingdata(testingdata)
@@ -112,38 +95,26 @@ set @function2 {
 func TestParseBlocksSetWithError(t *testing.T) {
 	// testingdata is an error data
 	const testingdata1 string = `
-set @function1 {
-	input k1 v1
-	input k3 v3
-	input k $v
-
-	loop 5 2
+fn f1= function1 {
+	args = {
+		k: v
+	}
 
 
-set @function2 {
-	input k $v
-	
-	input function1_out $out1
+fn f2= function2 {
 }
 	`
 	_, err := loadTestingdata(testingdata1)
 	assert.Error(t, err)
 
 	const testingdata2 string = `
-	set @function1 {
-		input k1 v1
-		input k3 v3
-		input k $v
-	
-		loop 5 2
+	fn f1 = function1 {
+		args = {
+			k1:v1
+			k2: v2
+			k3:v3
+		}
 	}
-
-	}
-	
-	set @function2  {
-		input k $v
-		
-		input function1_out $out1
 	}
 	`
 	_, err = loadTestingdata(testingdata2)
@@ -153,72 +124,131 @@ set @function2 {
 
 func TestParseBlocksOnlyRun(t *testing.T) {
 	const testingdata string = `
-	run @function1
-	run @function2
+	run function1
+	run 	function2{
+		k1:v1
+		k2:v2
+	}
 
-run @function3
+run function3 {
+	k : {(1+2+3)}
+
+	multi1: ***hello1
+	hello2
+	***
+
+	multi2: *** 
+	hello1
+	hello2
+	***
+
+	multi3:*** 
+	hello1
+	hello2***
+}
 
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	check := func(b *Block, arg string) {
-		assert.Equal(t, _block_run, b.kind)
-		assert.Len(t, b.directives, 1)
-		tokens := b.directives[0].tokens
-		assert.Len(t, tokens, 2)
+	check := func(b *Block, obj string) {
+		assert.Nil(t, b.Child)
+		assert.Nil(t, b.Parent)
+		assert.Equal(t, LevelParent, b.Level)
+		assert.Equal(t, "run", b.Kind.Value)
+		assert.Equal(t, obj, b.Object.Value)
 
-		assert.Equal(t, "run", tokens[0].text)
-		assert.Equal(t, arg, tokens[1].text)
-
-		assert.True(t, tokens[0].keyword)
-		assert.False(t, tokens[1].keyword)
+		if obj == "function2" {
+			kvs := b.BlockBody.(*FlMap).ToMap()
+			assert.Len(t, kvs, 2)
+		}
+		if obj == "function3" {
+			kvs := b.BlockBody.(*FlMap).ToMap()
+			assert.Len(t, kvs, 4)
+			assert.Equal(t, "{(1+2+3)}", kvs["k"])
+			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
+			assert.Equal(t, "\nhello1\nhello2\n", kvs["multi2"])
+			assert.Equal(t, "\nhello1\nhello2", kvs["multi3"])
+		}
 	}
-	check(blocks[0], "@function1")
-	check(blocks[1], "@function2")
-	check(blocks[2], "@function3")
+	check(blocks[0], "function1")
+	check(blocks[1], "function2")
+	check(blocks[2], "function3")
 }
 
 // Parallel run testing
 func TestParseBlocksOnlyRun2(t *testing.T) {
-	const testingdata string = `
-run {
-	@function1
-	@function2
+	{
+		const testingdata string = `
+run    {
 
-	@function3
+	function1
+	function2
+
+	function3
+
 }
 	`
-	blocks, err := loadTestingdata(testingdata)
-	if err != nil {
-		assert.FailNow(t, err.Error())
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 1)
+		b := blocks[0]
+		assert.Equal(t, "run", b.Kind.Value)
+		assert.True(t, b.Receiver.IsEmpty())
+		assert.True(t, b.Symbol.IsEmpty())
+		assert.True(t, b.Object.IsEmpty())
+
+		slice := b.BlockBody.(*FlList).ToSlice()
+		assert.Len(t, slice, 3)
+		e1, e2, e3 := slice[0], slice[1], slice[2]
+		assert.Equal(t, "function1", e1)
+		assert.Equal(t, "function2", e2)
+		assert.Equal(t, "function3", e3)
 	}
-	assert.Len(t, blocks, 1)
+
+	{
+		const testingdata string = `
+		run{
+	function1
+	function2
+
+	function3
+
+}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 1)
+		b := blocks[0]
+		assert.Equal(t, "run", b.Kind.Value)
+		assert.True(t, b.Receiver.IsEmpty())
+		assert.True(t, b.Symbol.IsEmpty())
+		assert.True(t, b.Object.IsEmpty())
+
+		slice := b.BlockBody.(*FlList).ToSlice()
+		assert.Len(t, slice, 3)
+		e1, e2, e3 := slice[0], slice[1], slice[2]
+		assert.Equal(t, "function1", e1)
+		assert.Equal(t, "function2", e2)
+		assert.Equal(t, "function3", e3)
+	}
 }
 
 func TestParseBlocksOnlyRun2WithError(t *testing.T) {
 	{
 		const testingdata string = `
-run 3 {
-	@function1
-	load file:///root/function1
-	@function2
+run {
+	function1
 
-	@function3
-}
-	`
-		_, err := loadTestingdata(testingdata)
-		assert.Error(t, err)
-	}
+	load xxxx
+	function2
 
-	{
-		const testingdata string = `
-run 3 {
-	@function1
-	run @function2
-
-	@function3
+	function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -228,10 +258,23 @@ run 3 {
 	{
 		const testingdata string = `
 run {
-	@function1
+	function1
+	run function2
+
+	function3
+}
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+
+	{
+		const testingdata string = `
+run {
+	function1
 	input k v
 
-	@function3
+	function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -241,9 +284,9 @@ run {
 	{
 		const testingdata string = `
 run xyz {
-	@function1
+	function1
 
-	@function3
+	function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -253,8 +296,8 @@ run xyz {
 	{
 		const testingdata string = `
 run 3 {
-	@function1
-	@function3
+	function1
+	function3
 }
 	`
 		_, err := loadTestingdata(testingdata)
@@ -279,6 +322,7 @@ func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
 	return blocks, bs, rq, nil
 }
 
+/*
 func TestParseFull(t *testing.T) {
 	const testingdata string = `
 	load go:function1
@@ -287,17 +331,15 @@ func TestParseFull(t *testing.T) {
 	load cmd:/tmp/function4
 	load cmd:/tmp/function5
 
-	set function1 {
-		input k1 v1
-		input k2 v2
+	fn f1 = function1 {
 	}
 
-	run @function1
-	run	@function2
-	run	@function3
+	run f1
+	run	function2
+	run	function3
 	run {
-		@function4
-		@function5
+		function4
+		function5
 	}
 	`
 
@@ -315,3 +357,5 @@ func TestParseFull(t *testing.T) {
 	assert.Len(t, rq.FNodes["function1"].Args(), 2)
 	assert.Equal(t, 4, rq.Queue.Len())
 }
+
+*/

@@ -1,304 +1,111 @@
-//go:generate stringer -type=BlockKind
-//go:generate stringer -type=BlockStatus
-//go:generate stringer -type=DirectiveKind
+//go:generate stringer -type TokenType
 package flowl
 
 import (
 	"container/list"
-	"errors"
 	"fmt"
-	"strconv"
+	"regexp"
+
+	"github.com/pkg/errors"
 )
 
 // Token
 //
-type Token struct {
-	text     string
-	subtext  []string
-	keyword  bool
-	operator bool
-}
-
-func (t *Token) ToNum() (int, bool) {
-	v, err := strconv.Atoi(t.text)
-	if err != nil {
-		return 0, false
-	}
-	return v, true
-}
-
-func (t *Token) SetKeyWord() *Token {
-	t.keyword = true
-	t.operator = false
-	return t
-}
-
-func (t *Token) SetOperator() *Token {
-	t.operator = true
-	t.keyword = false
-	return t
-}
-
-// Directive
-//
-type DirectiveKind int
+type TokenType int
 
 const (
-	_directive_unknow_block DirectiveKind = iota
-	_directive_define_block
-	_directive_finish_block
-	_directive_in_block
+	UnknowT TokenType = iota
+	IntT
+	TextT
+	MapKeyT
+	OperatorT
+	FunctionNodeNameT
+	LoadT
 )
 
-type Directive struct {
-	name       string // Defined
-	_tokensMin int8   // Defined, Include the directive token
-	_tokensMax int8   // Defined, Include the directive token
-
-	tokens    []*Token
-	kind      DirectiveKind // Defined
-	blockKind BlockKind
-	Verify    func(*Directive) error
+type Token struct {
+	Value string
+	Type  TokenType
 }
 
-func (d *Directive) Init() error {
-	name := d.First().subtext[0]
-	def, ok := directiveDefines[name]
-	if !ok {
-		return errors.New("init the directive failed: " + name)
+func NewTextToken(s string) *Token {
+	return NewToken(s, TextT)
+}
+
+func NewToken(s string, typ TokenType) *Token {
+	return &Token{
+		Value: s,
+		Type:  typ,
 	}
-	d.name = name
-	d._tokensMin = def._tokensMin
-	d._tokensMax = def._tokensMax
-	d.kind = def.kind
-	d.blockKind = def.blockKind
-	d.Verify = def.Verify
-
-	if err := d.Verify(d); err != nil {
-		return err
-	}
-	return nil
 }
 
-func (d *Directive) Put(t *Token) int {
-	d.tokens = append(d.tokens, t)
-	return len(d.tokens)
+func (t *Token) String() string {
+	return t.Value
 }
 
-func (d *Directive) SetBlockKind(k BlockKind) {
-	d.blockKind = k
+func (t *Token) IsEmpty() bool {
+	return len(t.Value) == 0
 }
 
-func (d *Directive) IsDefineBlock() bool {
-	return d.kind == _directive_define_block
-}
-
-func (d *Directive) Last() *Token {
-	l := len(d.tokens)
-	if l == 0 {
+func (t *Token) Validate() error {
+	pattern := `*`
+	switch t.Type {
+	case FunctionNodeNameT:
+		pattern = `^[a-zA-Z][a-zA-Z0-9]*$`
+	default:
 		return nil
 	}
-	return d.tokens[l-1]
-}
-
-func (d *Directive) First() *Token {
-	l := len(d.tokens)
-	if l == 0 {
-		return nil
+	match, err := regexp.MatchString(pattern, t.Value)
+	if err != nil {
+		return errors.Wrapf(err, "not match: %s:%s", t.Value, pattern)
 	}
-	return d.tokens[0]
-}
-
-func (d *Directive) String() string {
-	return fmt.Sprintf("directive - name:%s, kind:%s, bkind:%s, min:%d, max: %d, len:%d", d.name, d.kind, d.blockKind, d._tokensMin, d._tokensMax, len(d.tokens))
-}
-
-var directiveDefines = map[string]Directive{
-	"load":  {"load", 2, 2, nil, _directive_define_block, _block_load, verifyLoad},
-	"set":   {"set", 3, 3, nil, _directive_define_block, _block_set, verifySet},
-	"run":   {"run", 2, 2, nil, _directive_define_block, _block_run, verifyRun},
-	"input": {"input", 3, 3, nil, _directive_in_block, _block_set, verifyInput},
-	"loop":  {"loop", 3, 3, nil, _directive_in_block, _block_set, verifyLoop},
-	"}":     {"}", 1, 1, nil, _directive_finish_block, _block_none, verifyEndBlock},
-	"@":     {"@", 1, 1, nil, _directive_in_block, _block_run, verifyAt},
-}
-
-func IsKeyword(s string) bool {
-	_, ok := directiveDefines[s]
-	return ok
-}
-
-// Maybe panic()
-func Keyword(s string) string {
-	if !IsKeyword(s) {
-		panic("not a keyword: " + s)
-	}
-	return s
-}
-
-func verifybase(dir *Directive) error {
-	l := len(dir.tokens)
-	if l < int(dir._tokensMin) || l > int(dir._tokensMax) {
-		return errors.New("too many tokens: " + dir.name)
-	}
-	return nil
-}
-
-func verifyLoad(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifySet(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyRun(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyInput(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyLoop(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyEndBlock(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyAt(dir *Directive) error {
-	if err := verifybase(dir); err != nil {
-		return err
+	if !match {
+		return errors.Errorf("not match: %s:%s", t.Value, pattern)
 	}
 	return nil
 }
 
 // Block
 //
-type BlockKind int
+type BlockLevel int
 
 const (
-	_block_unknow BlockKind = iota
-	_block_load
-	_block_set
-	_block_run
-	_block_var
-	_block_none
-)
-
-type BlockStatus int
-
-const (
-	_block_status_unknow BlockStatus = iota
-	_block_status_begin
-	_block_status_end
+	LevelGlobal BlockLevel = iota
+	LevelParent
+	LevelChild
 )
 
 type Block struct {
-	directives []*Directive
-	kind       BlockKind
-	bracket    int
-	status     BlockStatus
-}
-
-func Newblock(k BlockKind) *Block {
-	return &Block{
-		kind:    k,
-		bracket: 0,
-		status:  _block_status_unknow,
-	}
-}
-
-func (b *Block) Put(dir *Directive) (BlockStatus, error) {
-	if dir.blockKind != _block_none && dir.blockKind != b.kind {
-		return b.status, fmt.Errorf("directive(%s) can't appear in the block", dir.name)
-	}
-	first, last := dir.First(), dir.Last()
-	if first != nil && last != nil {
-		if last.text == "{" {
-			b.bracket += 1
-		}
-		if last.text == "}" && first.text == "}" {
-			b.bracket -= 1
-		}
-	}
-	if b.bracket > 0 {
-		b.status = _block_status_begin
-	} else if b.bracket == 0 {
-		b.status = _block_status_end
-	} else if b.bracket < 0 {
-		return b.status, errors.New("invalid syntax: too many }")
-	}
-	b.directives = append(b.directives, dir)
-	return b.status, nil
-}
-
-func (b *Block) SetKind(k BlockKind) {
-	b.kind = k
-}
-
-func (b *Block) GetKind() BlockKind {
-	return b.kind
+	Kind     Token
+	Receiver Token
+	Symbol   Token
+	Object   Token
+	state    parserStateL2
+	Level    BlockLevel
+	Child    []*Block
+	Parent   *Block
+	BlockBody
 }
 
 func (b *Block) String() string {
-	return fmt.Sprintf("kind:%s, len:%d", b.kind, len(b.directives))
+	return fmt.Sprintf("kind:%s, receriver:%s, symbol:%s, object:%s", &b.Kind, &b.Receiver, &b.Symbol, &b.Object)
 }
 
 // Blocklist store all blocks in the flowl
 //
 type BlockStore struct {
-	l       *list.List
-	parsing *Block
+	l        *list.List
+	parsing  *Block
+	state    parserStateL1
+	prestate parserStateL1
 }
 
 func NewBlockStore() *BlockStore {
 	return &BlockStore{
 		l:       list.New(),
 		parsing: nil,
+		state:   _statel1_global,
 	}
-}
-
-func (bs *BlockStore) PutAndSetParsing(b *Block) error {
-	if bs.parsing != nil {
-		return errors.New("cann't put a block into blockstore, because the parsing block is not finished")
-	}
-	bs.l.PushBack(b)
-	bs.parsing = b
-	return nil
-}
-
-func (bs *BlockStore) ParsingBlock() *Block {
-	return bs.parsing
-}
-
-func (bs *BlockStore) FinishParsingBlock() error {
-	bs.parsing = nil
-	return nil
-}
-
-func (bs *BlockStore) ParsingBlockIsFinished() bool {
-	return bs.parsing == nil
 }
 
 func (bs *BlockStore) Foreach(do func(*Block) error) error {

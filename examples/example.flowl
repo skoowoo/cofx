@@ -1,10 +1,44 @@
 load go:print
 load go:sleep
+load go:command
 
-set print {
-	input k1 v1
-	input k2 v2
+// 这里是注释, 注释必须新行
+run print {
+	hello world 1
+	hello world 2
 }
 
-run @print
-run	@sleep
+run sleep
+
+run	sleep {
+	time: 5s
+	k: v
+}
+
+run {
+	c1
+	c2
+}
+
+// 定义函数
+// 1. (kind) (receiver) = (object) {}
+fn print = print {
+	// 2. (kind/map hide) (receiver) = (object/map hide)
+	args = {
+	}
+}
+
+fn c1 = command {
+	args = {
+		script: go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
+	}
+}
+
+fn c2 = command {
+	args = {
+		script: ```
+			go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
+			go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
+		```
+	}
+}

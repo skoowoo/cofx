@@ -36,6 +36,7 @@ func (f *FunctionNode) Args() map[string]string {
 // RunQueue
 //
 type RunQueue struct {
+	//TODO: loadedLocations map[string]string
 	FNodes map[string]*FunctionNode
 	Queue  *list.List
 }
@@ -49,29 +50,21 @@ func NewRunQueue() *RunQueue {
 
 func (rq *RunQueue) Generate(bs *BlockStore) error {
 	return bs.Foreach(func(b *Block) error {
-		switch b.GetKind() {
-		case _block_load:
-			if err := rq.processLoad(b); err != nil {
-				return err
-			}
-		case _block_set:
-			if err := rq.processSet(b); err != nil {
-				return err
-			}
-		case _block_run:
-			if err := rq.processRun(b); err != nil {
-				return err
-			}
-		case _block_var:
-
+		var err error
+		switch b.Kind.Value {
+		case "load":
+			err = rq.processLoad(b)
+		case "fn":
+			err = rq.processFn(b)
+		case "run":
+			err = rq.processRun(b)
 		}
-		return nil
+		return err
 	})
 }
 
 func (rq *RunQueue) processLoad(b *Block) error {
-	// First directive and it's second token is 'load location'
-	location := b.directives[0].tokens[1].text
+	location := b.Object.Value
 	dv := functiondriver.New(location)
 	if dv == nil {
 		return errors.New("not found driver: " + location)
@@ -85,53 +78,42 @@ func (rq *RunQueue) processLoad(b *Block) error {
 	return nil
 }
 
-func (rq *RunQueue) processSet(b *Block) error {
-	// First directive and it's second token is function's name
-	fname := b.directives[0].tokens[1].text
-	fc, ok := rq.FNodes[fname]
-	if !ok {
-		return errors.New("in loaded functions, not found: " + fname)
-	}
-	for _, dir := range b.directives {
-		if dir.name == Keyword("input") {
-			k, v := dir.tokens[1].text, dir.tokens[2].text
-			fc.InputArg(k, v)
-		}
-		// todo, handle others
-	}
+func (rq *RunQueue) processFn(b *Block) error {
 	return nil
 }
 
 func (rq *RunQueue) processRun(b *Block) error {
-	if len(b.directives) == 1 {
-		// First directive and it's second token is function's name with prefix '@'
-		fname := b.directives[0].tokens[1].subtext[1]
-		fc, ok := rq.FNodes[fname]
-		if !ok {
-			return errors.New("in loaded functions, not found: " + fname)
+	/*
+		if len(b.directives) == 1 {
+			// First directive and it's second token is function's name with prefix '@'
+			fname := b.directives[0].tokens[1].subtext[1]
+			fc, ok := rq.FNodes[fname]
+			if !ok {
+				return errors.New("in loaded functions, not found: " + fname)
+			}
+			rq.Queue.PushBack(fc)
+			return nil
 		}
-		rq.Queue.PushBack(fc)
-		return nil
-	}
 
-	// parallel run
-	var last *FunctionNode
-	for _, dir := range b.directives {
-		if dir.name != Keyword("@") {
-			continue
+		// parallel run
+		var last *FunctionNode
+		for _, dir := range b.directives {
+			if dir.name != Keyword("@") {
+				continue
+			}
+			fname := dir.tokens[0].subtext[1]
+			fc, ok := rq.FNodes[fname]
+			if !ok {
+				return errors.New("in loaded functions, not found: " + fname)
+			}
+			if last == nil {
+				rq.Queue.PushBack(fc) // it's first
+			} else {
+				last.Parallel = fc
+			}
+			last = fc
 		}
-		fname := dir.tokens[0].subtext[1]
-		fc, ok := rq.FNodes[fname]
-		if !ok {
-			return errors.New("in loaded functions, not found: " + fname)
-		}
-		if last == nil {
-			rq.Queue.PushBack(fc) // it's first
-		} else {
-			last.Parallel = fc
-		}
-		last = fc
-	}
+	*/
 	return nil
 }
 
