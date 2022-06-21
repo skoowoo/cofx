@@ -1,4 +1,5 @@
 //go:generate stringer -type parserStateL1
+//go:generate stringer -type parserStateL2
 package flowl
 
 import (
@@ -8,6 +9,76 @@ import (
 	"strings"
 	"unicode"
 )
+
+// Parse parse a 'flowl' file
+func ParseFile(file string) error {
+	return nil
+}
+
+func Parse(rd io.Reader) (runq *RunQueue, bs *BlockStore, err error) {
+	if bs, err = ParseBlocks(rd); err != nil {
+		return
+	}
+	runq = NewRunQueue()
+	if err = runq.Generate(bs); err != nil {
+		return
+	}
+	return
+}
+
+func ParseBlocks(rd io.Reader) (*BlockStore, error) {
+	blockstore := NewBlockStore()
+	num := 0
+	scanner := bufio.NewScanner(rd)
+	for {
+		if !scanner.Scan() {
+			break
+		}
+		num += 1
+		err := scanToken(blockstore, scanner.Text(), num)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return blockstore, blockstore.Foreach(validateBlocks)
+}
+
+func validateBlocks(b *Block) error {
+	if err := b.Kind.Validate(); err != nil {
+		return err
+	}
+	if err := b.Target.Validate(); err != nil {
+		return err
+	}
+	if err := b.Operator.Validate(); err != nil {
+		return err
+	}
+	if err := b.TypeOrValue.Validate(); err != nil {
+		return err
+	}
+
+	if b.BlockBody != nil {
+		lines := b.BlockBody.Statements()
+		for _, ln := range lines {
+			for _, t := range ln.Tokens {
+				if err := t.Validate(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if len(b.Child) == 0 {
+		return nil
+	}
+	for _, c := range b.Child {
+		if err := validateBlocks(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 type parserStateL1 int
 type parserStateL2 int
@@ -34,12 +105,12 @@ const (
 	_statel2_word_stared
 	_statel2_kind_started
 	_statel2_kind_done
-	_statel2_receiver_started
-	_statel2_receiver_done
+	_statel2_target_started
+	_statel2_target_done
 	_statel2_operator_started
 	_statel2_operator_done
-	_statel2_object_started
-	_statel2_object_done
+	_statel2_typeorvalue_started
+	_statel2_typeorvalue_done
 )
 
 func scanToken(bs *BlockStore, line string, linenum int) error {
@@ -98,10 +169,10 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 			// load go:sleep
 			//
 			if chr == '\n' {
-				block.Object = Token{
+				block.Target = Token{
 					Value: strings.TrimSpace(newline[startPos:last]),
 				}
-				block.state = _statel2_object_done
+				block.state = _statel2_typeorvalue_done
 				prestate = state
 				state = _statel1_global
 				break
@@ -109,8 +180,8 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 			if unicode.IsSpace(chr) {
 				break
 			}
-			if block.state != _statel2_object_started {
-				block.state = _statel2_object_started
+			if block.state != _statel2_typeorvalue_started {
+				block.state = _statel2_typeorvalue_started
 				startPos = last
 			}
 		case _statel1_run_block_started:
@@ -125,12 +196,12 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 			}
 			*/
 			if chr == '\n' {
-				// run sleep
-				block.Object = Token{
+				// run function
+				block.Target = Token{
 					Value: strings.TrimSpace(newline[startPos:last]),
-					Type:  FunctionNodeNameT,
+					Type:  FunctionNameT,
 				}
-				block.state = _statel2_object_done
+				block.state = _statel2_typeorvalue_done
 				prestate = state
 				state = _statel1_global
 				break
@@ -141,15 +212,15 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 			}
 
 			if chr == '{' {
-				if block.state == _statel2_object_started {
+				if block.state == _statel2_typeorvalue_started {
 					/*
 						run sleep {
 							time: 1s
 						}
 					*/
-					block.Object = Token{
+					block.Target = Token{
 						Value: strings.TrimSpace(newline[startPos:last]),
-						Type:  FunctionNodeNameT,
+						Type:  FunctionNameT,
 					}
 					block.BlockBody = &FlMap{}
 				} else {
@@ -159,17 +230,17 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 							f2
 						}
 					*/
-					block.BlockBody = &FlList{EType: FunctionNodeNameT}
+					block.BlockBody = &FlList{EType: FunctionNameT}
 				}
 
-				block.state = _statel2_object_done
+				block.state = _statel2_typeorvalue_done
 				prestate = state
 				state = _statel1_run_body_started
 				break
 			}
 
-			if block.state != _statel2_object_started {
-				block.state = _statel2_object_started
+			if block.state != _statel2_typeorvalue_started {
+				block.state = _statel2_typeorvalue_started
 				startPos = last
 			}
 		case _statel1_run_body_started:
@@ -206,19 +277,19 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 				if unicode.IsSpace(chr) {
 					break
 				}
-				block.state = _statel2_receiver_started
+				block.state = _statel2_target_started
 				startPos = last
-			case _statel2_receiver_started:
+			case _statel2_target_started:
 				if unicode.IsSpace(chr) {
-					block.state = _statel2_receiver_done
+					block.state = _statel2_target_done
 				} else if chr == '=' {
 					block.state = _statel2_operator_started
 				}
 				s := newline[startPos:last]
-				block.Receiver = Token{
+				block.Target = Token{
 					Value: s,
 				}
-			case _statel2_receiver_done:
+			case _statel2_target_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
@@ -231,23 +302,23 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 				if unicode.IsSpace(chr) {
 					block.state = _statel2_operator_done
 				} else {
-					block.state = _statel2_object_started
+					block.state = _statel2_typeorvalue_started
 					startPos = last
 				}
-				block.Symbol = Token{
+				block.Operator = Token{
 					Value: "=",
 				}
 			case _statel2_operator_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
-				block.state = _statel2_object_started
+				block.state = _statel2_typeorvalue_started
 				startPos = last
-			case _statel2_object_started:
+			case _statel2_typeorvalue_started:
 				if unicode.IsSpace(chr) || chr == '{' {
-					block.state = _statel2_object_done
+					block.state = _statel2_typeorvalue_done
 					s := newline[startPos:last]
-					block.Object = Token{
+					block.TypeOrValue = Token{
 						Value: s,
 					}
 					if chr == '{' {
@@ -255,7 +326,7 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 						state = _statel1_fn_body_started
 					}
 				}
-			case _statel2_object_done:
+			case _statel2_typeorvalue_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
@@ -326,7 +397,7 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 				}
 			case _statel2_operator_started:
 				if chr == '{' || unicode.IsSpace(chr) {
-					block.Symbol = Token{
+					block.Operator = Token{
 						Value: "=",
 					}
 					block.state = _statel2_operator_done
@@ -387,75 +458,5 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 	bs.prestate = prestate
 	bs.state = state
 	bs.parsing = block
-	return nil
-}
-
-// Parse parse a 'flowl' file
-func ParseFile(file string) error {
-	return nil
-}
-
-func Parse(rd io.Reader) (runq *RunQueue, bs *BlockStore, err error) {
-	if bs, err = ParseBlocks(rd); err != nil {
-		return
-	}
-	runq = NewRunQueue()
-	if err = runq.Generate(bs); err != nil {
-		return
-	}
-	return
-}
-
-func ParseBlocks(rd io.Reader) (*BlockStore, error) {
-	blockstore := NewBlockStore()
-	num := 0
-	scanner := bufio.NewScanner(rd)
-	for {
-		if !scanner.Scan() {
-			break
-		}
-		num += 1
-		err := scanToken(blockstore, scanner.Text(), num)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return blockstore, blockstore.Foreach(validateBlocks)
-}
-
-func validateBlocks(b *Block) error {
-	if err := b.Kind.Validate(); err != nil {
-		return err
-	}
-	if err := b.Object.Validate(); err != nil {
-		return err
-	}
-	if err := b.Symbol.Validate(); err != nil {
-		return err
-	}
-	if err := b.Object.Validate(); err != nil {
-		return err
-	}
-
-	if b.BlockBody != nil {
-		lines := b.BlockBody.Statements()
-		for _, ln := range lines {
-			for _, t := range ln.Tokens {
-				if err := t.Validate(); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	if len(b.Child) == 0 {
-		return nil
-	}
-	for _, c := range b.Child {
-		if err := validateBlocks(c); err != nil {
-			return err
-		}
-	}
 	return nil
 }

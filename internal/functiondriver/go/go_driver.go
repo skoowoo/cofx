@@ -11,8 +11,8 @@ import (
 
 // GoDriver
 type GoDriver struct {
-	location   string
-	funcName   string
+	path       string
+	fname      string
 	manifest   *manifest.Manifest
 	mergedArgs map[string]string
 }
@@ -23,16 +23,16 @@ func New(loc string) *GoDriver {
 	}
 	name := strings.TrimPrefix(loc, "go:")
 	return &GoDriver{
-		location: name,
-		funcName: name,
+		path:  name,
+		fname: name,
 	}
 }
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
-	fn := builtins.Lookup(d.location)
+	fn := builtins.Lookup(d.path)
 	if fn == nil {
-		return errors.New("in builtins package, not found function: " + d.location)
+		return errors.New("in builtins package, not found function: " + d.path)
 	}
 	mf := fn.Manifest()
 	d.mergedArgs = mergeArgs(mf.Args, args)
@@ -43,7 +43,7 @@ func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
 func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 	entrypoint := d.manifest.EntryPointFunc
 	if entrypoint == nil {
-		return nil, errors.New("in function, not found the entrypoint: " + d.location)
+		return nil, errors.New("in function, not found the entrypoint: " + d.path)
 	}
 	out, err := entrypoint(ctx, d.mergedArgs)
 	if err != nil {
@@ -53,7 +53,7 @@ func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 }
 
 func (d *GoDriver) Name() string {
-	return d.funcName
+	return d.fname
 }
 
 func mergeArgs(base, prior map[string]string) map[string]string {

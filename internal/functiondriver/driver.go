@@ -13,11 +13,11 @@ type FunctionDriver interface {
 	Run(ctx context.Context) (map[string]string, error)
 }
 
-func New(location string) FunctionDriver {
-	if d := godriver.New(location); d != nil {
+func New(loadTarget string) FunctionDriver {
+	if d := godriver.New(loadTarget); d != nil {
 		return d
 	}
-	if d := cmddriver.New(location); d != nil {
+	if d := cmddriver.New(loadTarget); d != nil {
 		return d
 	}
 	return nil

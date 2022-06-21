@@ -65,7 +65,7 @@ load cmd:function3
 	}
 	check := func(b *Block, path string) {
 		assert.Equal(t, "load", b.Kind.Value)
-		assert.Equal(t, path, b.Object.Value)
+		assert.Equal(t, path, b.Target.Value)
 	}
 	check(blocks[0], "cmd:function1")
 	check(blocks[1], "go:function2")
@@ -157,7 +157,7 @@ run function3 {
 		assert.Nil(t, b.Parent)
 		assert.Equal(t, LevelParent, b.Level)
 		assert.Equal(t, "run", b.Kind.Value)
-		assert.Equal(t, obj, b.Object.Value)
+		assert.Equal(t, obj, b.Target.Value)
 
 		if obj == "function2" {
 			kvs := b.BlockBody.(*FlMap).ToMap()
@@ -197,9 +197,9 @@ run    {
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
 		assert.Equal(t, "run", b.Kind.Value)
-		assert.True(t, b.Receiver.IsEmpty())
-		assert.True(t, b.Symbol.IsEmpty())
-		assert.True(t, b.Object.IsEmpty())
+		assert.True(t, b.Target.IsEmpty())
+		assert.True(t, b.Operator.IsEmpty())
+		assert.True(t, b.TypeOrValue.IsEmpty())
 
 		slice := b.BlockBody.(*FlList).ToSlice()
 		assert.Len(t, slice, 3)
@@ -226,9 +226,9 @@ run    {
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
 		assert.Equal(t, "run", b.Kind.Value)
-		assert.True(t, b.Receiver.IsEmpty())
-		assert.True(t, b.Symbol.IsEmpty())
-		assert.True(t, b.Object.IsEmpty())
+		assert.True(t, b.Target.IsEmpty())
+		assert.True(t, b.Operator.IsEmpty())
+		assert.True(t, b.TypeOrValue.IsEmpty())
 
 		slice := b.BlockBody.(*FlList).ToSlice()
 		assert.Len(t, slice, 3)
@@ -322,7 +322,6 @@ func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
 	return blocks, bs, rq, nil
 }
 
-/*
 func TestParseFull(t *testing.T) {
 	const testingdata string = `
 	load go:function1
@@ -332,14 +331,23 @@ func TestParseFull(t *testing.T) {
 	load cmd:/tmp/function5
 
 	fn f1 = function1 {
+		args = {
+			k: v1
+			"hello": "world"
+		}
 	}
 
 	run f1
-	run	function2
+	run	function2 {
+		k : v2
+	}
 	run	function3
 	run {
 		function4
 		function5
+	}
+	run	function3 {
+		k: v3
 	}
 	`
 
@@ -349,13 +357,34 @@ func TestParseFull(t *testing.T) {
 	assert.NotNil(t, bs)
 	assert.NotNil(t, rq)
 
-	assert.Len(t, rq.FNodes, 5)
+	assert.Len(t, rq.ConfiguredNodes, 1)
+	assert.Equal(t, "function1", rq.ConfiguredNodes["f1"].Driver.Name())
+	assert.Len(t, rq.Queue, 5)
 
-	assert.Equal(t, "function1", rq.FNodes["function1"].Name)
-	assert.Equal(t, "function3", rq.FNodes["function3"].Name)
-
-	assert.Len(t, rq.FNodes["function1"].Args(), 2)
-	assert.Equal(t, 4, rq.Queue.Len())
+	rq.Stage(func(stage int, node *FunctionNode) {
+		if stage == 1 {
+			assert.Equal(t, "f1", node.Name)
+			assert.Len(t, node.Args, 2)
+			assert.Equal(t, "v1", node.Args["k"])
+		}
+		if stage == 2 {
+			assert.Equal(t, "function2", node.Name)
+			assert.Len(t, node.Args, 1)
+			assert.Equal(t, "v2", node.Args["k"])
+		}
+		if stage == 3 {
+			assert.Equal(t, "function3", node.Name)
+			assert.Len(t, node.Args, 0)
+		}
+		if stage == 4 {
+			assert.Equal(t, "function4", node.Name)
+			assert.NotNil(t, node.Parallel)
+			assert.Equal(t, "function5", node.Parallel.Name)
+		}
+		if stage == 5 {
+			assert.Equal(t, "function3", node.Name)
+			assert.Len(t, node.Args, 1)
+			assert.Equal(t, "v3", node.Args["k"])
+		}
+	})
 }
-
-*/

@@ -1,11 +1,20 @@
 package flowl
 
 import (
-	"container/list"
 	"errors"
+	"path"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
 )
+
+// LoadedLocation
+//
+type LoadedLocation struct {
+	DriverName   string
+	FunctionName string
+	Path         string
+}
 
 // FunctionNode
 //
@@ -13,112 +22,150 @@ type FunctionNode struct {
 	Name     string
 	Driver   functiondriver.FunctionDriver
 	Parallel *FunctionNode
-	args     map[string]string
-}
-
-func NewFunction(name string, driver functiondriver.FunctionDriver) *FunctionNode {
-	return &FunctionNode{
-		Name:   name,
-		Driver: driver,
-		args:   make(map[string]string),
-	}
-}
-
-func (f *FunctionNode) InputArg(k, v string) *FunctionNode {
-	f.args[k] = v
-	return f
-}
-
-func (f *FunctionNode) Args() map[string]string {
-	return f.args
+	Args     map[string]string
 }
 
 // RunQueue
 //
 type RunQueue struct {
-	//TODO: loadedLocations map[string]string
-	FNodes map[string]*FunctionNode
-	Queue  *list.List
+	Locations       map[string]LoadedLocation
+	ConfiguredNodes map[string]*FunctionNode
+	Queue           []*FunctionNode
 }
 
 func NewRunQueue() *RunQueue {
 	return &RunQueue{
-		FNodes: make(map[string]*FunctionNode),
-		Queue:  list.New(),
+		Locations:       make(map[string]LoadedLocation),
+		ConfiguredNodes: make(map[string]*FunctionNode),
+		Queue:           make([]*FunctionNode, 0),
 	}
 }
 
 func (rq *RunQueue) Generate(bs *BlockStore) error {
-	return bs.Foreach(func(b *Block) error {
-		var err error
-		switch b.Kind.Value {
-		case "load":
-			err = rq.processLoad(b)
-		case "fn":
-			err = rq.processFn(b)
-		case "run":
-			err = rq.processRun(b)
-		}
+	if err := rq.processLoad(bs); err != nil {
 		return err
+	}
+	if err := rq.processFn(bs); err != nil {
+		return err
+	}
+	if err := rq.processRun(bs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*FunctionNode, error) {
+	loc, ok := rq.Locations[fName]
+	if !ok {
+		return nil, errors.New("not load function: " + fName)
+	}
+	loadTarget := loc.DriverName + ":" + loc.Path
+	driver := functiondriver.New(loadTarget)
+	if driver == nil {
+		return nil, errors.New("not found driver: " + loadTarget)
+	}
+	return &FunctionNode{
+		Name:   nodeName,
+		Driver: driver,
+		Args:   make(map[string]string),
+	}, nil
+}
+
+func (rq *RunQueue) processLoad(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "load" {
+			return nil
+		}
+		s := b.Target.Value
+		fields := strings.Split(s, ":")
+		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
+		if _, ok := rq.Locations[fname]; ok {
+			return errors.New("repeat to load function: " + fname)
+		}
+		rq.Locations[fname] = LoadedLocation{
+			DriverName:   dname,
+			Path:         p,
+			FunctionName: fname,
+		}
+		return nil
 	})
 }
 
-func (rq *RunQueue) processLoad(b *Block) error {
-	location := b.Object.Value
-	dv := functiondriver.New(location)
-	if dv == nil {
-		return errors.New("not found driver: " + location)
-	}
-	_, ok := rq.FNodes[dv.Name()]
-	if !ok {
-		rq.FNodes[dv.Name()] = NewFunction(dv.Name(), dv)
-	} else {
-		return errors.New("repeat to load: " + dv.Name())
-	}
-	return nil
-}
-
-func (rq *RunQueue) processFn(b *Block) error {
-	return nil
-}
-
-func (rq *RunQueue) processRun(b *Block) error {
-	/*
-		if len(b.directives) == 1 {
-			// First directive and it's second token is function's name with prefix '@'
-			fname := b.directives[0].tokens[1].subtext[1]
-			fc, ok := rq.FNodes[fname]
-			if !ok {
-				return errors.New("in loaded functions, not found: " + fname)
+func (rq *RunQueue) processFn(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "fn" {
+			return nil
+		}
+		nodeName, fName := b.Target.Value, b.TypeOrValue.Value
+		node, err := rq.createFunctionNode(nodeName, fName)
+		if err != nil {
+			return err
+		}
+		if _, ok := rq.ConfiguredNodes[node.Name]; ok {
+			return errors.New("repeat to configure function:" + node.Name)
+		}
+		rq.ConfiguredNodes[node.Name] = node
+		for _, child := range b.Child {
+			if child.Kind.Value == "args" {
+				node.Args = child.BlockBody.(*FlMap).ToMap()
 			}
-			rq.Queue.PushBack(fc)
+		}
+		return nil
+	})
+}
+
+func (rq *RunQueue) processRun(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "run" {
+			return nil
+		}
+		if name := b.Target.Value; name != "" {
+			// 这里属于串行调用函数 run
+			//
+			node, ok := rq.ConfiguredNodes[name]
+			if !ok {
+				// 没有显示配置函数，采用默认函数名直接run
+				var err error
+				if node, err = rq.createFunctionNode(name, name); err != nil {
+					return err
+				}
+				if b.BlockBody != nil {
+					node.Args = b.BlockBody.(*FlMap).ToMap()
+				}
+			} else {
+				// 已经配置过的函数
+				// TODO: 是否要处理一下 args ?
+			}
+			rq.Queue = append(rq.Queue, node)
 			return nil
 		}
 
-		// parallel run
+		// 这里属于并行调用函数 run
+		//
 		var last *FunctionNode
-		for _, dir := range b.directives {
-			if dir.name != Keyword("@") {
-				continue
-			}
-			fname := dir.tokens[0].subtext[1]
-			fc, ok := rq.FNodes[fname]
+		names := b.BlockBody.(*FlList).ToSlice()
+		for _, name := range names {
+			node, ok := rq.ConfiguredNodes[name]
 			if !ok {
-				return errors.New("in loaded functions, not found: " + fname)
+				// 没有显示配置函数，采用默认函数名直接run
+				var err error
+				if node, err = rq.createFunctionNode(name, name); err != nil {
+					return err
+				}
 			}
 			if last == nil {
-				rq.Queue.PushBack(fc) // it's first
+				rq.Queue = append(rq.Queue, node)
 			} else {
-				last.Parallel = fc
+				last.Parallel = node
 			}
-			last = fc
+			last = node
 		}
-	*/
-	return nil
+		return nil
+	})
 }
 
-func (rq *RunQueue) Step(batch func(*FunctionNode)) {
-	for e := rq.Queue.Front(); e != nil; e = e.Next() {
-		batch(e.Value.(*FunctionNode))
+func (rq *RunQueue) Stage(batch func(int, *FunctionNode)) {
+	for i, e := range rq.Queue {
+		batch(i+1, e)
 	}
 }

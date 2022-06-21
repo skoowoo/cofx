@@ -2,7 +2,6 @@ load go:print
 load go:sleep
 load go:command
 
-// 这里是注释, 注释必须新行
 run print {
 	hello world 1
 	hello world 2
@@ -20,10 +19,7 @@ run {
 	c2
 }
 
-// 定义函数
-// 1. (kind) (receiver) = (object) {}
 fn print = print {
-	// 2. (kind/map hide) (receiver) = (object/map hide)
 	args = {
 	}
 }
@@ -36,9 +32,9 @@ fn c1 = command {
 
 fn c2 = command {
 	args = {
-		script: ```
+		script: ***
 			go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
 			go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
-		```
+		***
 	}
 }

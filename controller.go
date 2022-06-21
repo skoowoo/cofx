@@ -50,12 +50,12 @@ func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) er
 		if body.Status == flow.FLOW_READY || body.Status == flow.FLOW_RUNNING {
 			return nil
 		}
-		nodes := body.Runq().FNodes
+		nodes := body.Runq().ConfiguredNodes
 		body.FnTotal = len(nodes)
 		body.Results = make(map[string]*flow.FunctionResult)
 
 		for _, n := range nodes {
-			if err := n.Driver.Load(ctx, n.Args()); err != nil {
+			if err := n.Driver.Load(ctx, n.Args); err != nil {
 				return err
 			}
 			body.ReadyFnCount += 1
@@ -83,7 +83,7 @@ func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) er
 		return err
 	}
 
-	fw.Runq().Step(func(batch *flowl.FunctionNode) {
+	fw.Runq().Stage(func(stage int, batch *flowl.FunctionNode) {
 		batchFuncs := 0
 		ch := make(chan *flow.FunctionResult, 10)
 

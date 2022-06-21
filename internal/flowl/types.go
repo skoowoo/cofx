@@ -5,13 +5,8 @@ import (
 	"strings"
 )
 
-type BlockBody interface {
-	Type() string
-	Append(o interface{}) error
-	Statements() []*Statement
-}
-
 // Map
+//
 type FlMap struct {
 	RawBody
 	state parserStateL2
@@ -59,6 +54,7 @@ func (m *FlMap) Append(o interface{}) error {
 }
 
 // List
+//
 type FlList struct {
 	RawBody
 	EType TokenType
@@ -85,58 +81,4 @@ func (l *FlList) Append(o interface{}) error {
 	}
 	l.Lines = append(l.Lines, NewStatementWithToken(t))
 	return nil
-}
-
-// raw
-type RawBody struct {
-	Lines []*Statement
-}
-
-func (r *RawBody) Statements() []*Statement {
-	return r.Lines
-}
-
-func (r *RawBody) Type() string {
-	return "raw"
-}
-
-func (r *RawBody) Append(o interface{}) error {
-	stm := o.(*Statement)
-	r.Lines = append(r.Lines, stm)
-	return nil
-}
-
-func (r *RawBody) LastStatement() *Statement {
-	l := len(r.Lines)
-	if l == 0 {
-		panic("not found statement")
-	}
-	return r.Lines[l-1]
-}
-
-type Statement struct {
-	LineNum int
-	Tokens  []*Token
-}
-
-func NewStatement(ss ...string) *Statement {
-	stm := &Statement{}
-	for _, s := range ss {
-		stm.Tokens = append(stm.Tokens, NewTextToken(s))
-	}
-	return stm
-}
-
-func NewStatementWithToken(ts ...*Token) *Statement {
-	stm := &Statement{}
-	stm.Tokens = append(stm.Tokens, ts...)
-	return stm
-}
-
-func (s *Statement) LastToken() *Token {
-	l := len(s.Tokens)
-	if l == 0 {
-		return nil
-	}
-	return s.Tokens[l-1]
 }

@@ -12,8 +12,8 @@ func TestLoad(t *testing.T) {
 	if dr == nil {
 		t.FailNow()
 	}
-	assert.Equal(t, "print", dr.funcName)
-	assert.Equal(t, "print", dr.location)
+	assert.Equal(t, "print", dr.fname)
+	assert.Equal(t, "print", dr.path)
 	err := dr.Load(context.Background(), map[string]string{
 		"k1": "v1",
 		"k2": "v2",

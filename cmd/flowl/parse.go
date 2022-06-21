@@ -42,7 +42,7 @@ func printBlocks(bs *flowl.BlockStore, name string) {
 func printRunQueue(rq *flowl.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Step(func(batch *flowl.FunctionNode) {
+	rq.Stage(func(stage int, batch *flowl.FunctionNode) {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Step ")
