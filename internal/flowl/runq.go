@@ -1,11 +1,20 @@
 package flowl
 
 import (
-	"container/list"
 	"errors"
+	"path"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
 )
+
+// LoadedLocation
+//
+type LoadedLocation struct {
+	DriverName   string
+	FunctionName string
+	Path         string
+}
 
 // FunctionNode
 //
@@ -13,130 +22,176 @@ type FunctionNode struct {
 	Name     string
 	Driver   functiondriver.FunctionDriver
 	Parallel *FunctionNode
-	args     map[string]string
-}
-
-func NewFunction(name string, driver functiondriver.FunctionDriver) *FunctionNode {
-	return &FunctionNode{
-		Name:   name,
-		Driver: driver,
-		args:   make(map[string]string),
-	}
-}
-
-func (f *FunctionNode) InputArg(k, v string) *FunctionNode {
-	f.args[k] = v
-	return f
-}
-
-func (f *FunctionNode) Args() map[string]string {
-	return f.args
+	Args     map[string]string
 }
 
 // RunQueue
 //
 type RunQueue struct {
-	FNodes map[string]*FunctionNode
-	Queue  *list.List
+	Locations       map[string]LoadedLocation
+	ConfiguredNodes map[string]*FunctionNode
+	Queue           []*FunctionNode
 }
 
 func NewRunQueue() *RunQueue {
 	return &RunQueue{
-		FNodes: make(map[string]*FunctionNode),
-		Queue:  list.New(),
+		Locations:       make(map[string]LoadedLocation),
+		ConfiguredNodes: make(map[string]*FunctionNode),
+		Queue:           make([]*FunctionNode, 0),
 	}
 }
 
 func (rq *RunQueue) Generate(bs *BlockStore) error {
-	return bs.Foreach(func(b *Block) error {
-		switch b.GetKind() {
-		case _block_load:
-			if err := rq.processLoad(b); err != nil {
-				return err
-			}
-		case _block_set:
-			if err := rq.processSet(b); err != nil {
-				return err
-			}
-		case _block_run:
-			if err := rq.processRun(b); err != nil {
-				return err
-			}
-		case _block_var:
+	if err := rq.processLoad(bs); err != nil {
+		return err
+	}
+	if err := rq.processFn(bs); err != nil {
+		return err
+	}
+	if err := rq.processRun(bs); err != nil {
+		return err
+	}
+	return nil
+}
 
+func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*FunctionNode, error) {
+	loc, ok := rq.Locations[fName]
+	if !ok {
+		return nil, errors.New("not load function: " + fName)
+	}
+	loadTarget := loc.DriverName + ":" + loc.Path
+	driver := functiondriver.New(loadTarget)
+	if driver == nil {
+		return nil, errors.New("not found driver: " + loadTarget)
+	}
+	return &FunctionNode{
+		Name:   nodeName,
+		Driver: driver,
+		Args:   make(map[string]string),
+	}, nil
+}
+
+func (rq *RunQueue) processLoad(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "load" {
+			return nil
+		}
+		s := b.Target.Value
+		fields := strings.Split(s, ":")
+		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
+		if _, ok := rq.Locations[fname]; ok {
+			return errors.New("repeat to load function: " + fname)
+		}
+		rq.Locations[fname] = LoadedLocation{
+			DriverName:   dname,
+			Path:         p,
+			FunctionName: fname,
 		}
 		return nil
 	})
 }
 
-func (rq *RunQueue) processLoad(b *Block) error {
-	// First directive and it's second token is 'load location'
-	location := b.directives[0].tokens[1].text
-	dv := functiondriver.New(location)
-	if dv == nil {
-		return errors.New("not found driver: " + location)
-	}
-	_, ok := rq.FNodes[dv.Name()]
-	if !ok {
-		rq.FNodes[dv.Name()] = NewFunction(dv.Name(), dv)
-	} else {
-		return errors.New("repeat to load: " + dv.Name())
-	}
-	return nil
-}
-
-func (rq *RunQueue) processSet(b *Block) error {
-	// First directive and it's second token is function's name
-	fname := b.directives[0].tokens[1].text
-	fc, ok := rq.FNodes[fname]
-	if !ok {
-		return errors.New("in loaded functions, not found: " + fname)
-	}
-	for _, dir := range b.directives {
-		if dir.name == Keyword("input") {
-			k, v := dir.tokens[1].text, dir.tokens[2].text
-			fc.InputArg(k, v)
+func (rq *RunQueue) processFn(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "fn" {
+			return nil
 		}
-		// todo, handle others
-	}
-	return nil
-}
-
-func (rq *RunQueue) processRun(b *Block) error {
-	if len(b.directives) == 1 {
-		// First directive and it's second token is function's name with prefix '@'
-		fname := b.directives[0].tokens[1].subtext[1]
-		fc, ok := rq.FNodes[fname]
-		if !ok {
-			return errors.New("in loaded functions, not found: " + fname)
+		nodeName, fName := b.Target.Value, b.TypeOrValue.Value
+		if nodeName == fName {
+			return errors.New("node and function name are the same: " + nodeName)
 		}
-		rq.Queue.PushBack(fc)
+		node, err := rq.createFunctionNode(nodeName, fName)
+		if err != nil {
+			return err
+		}
+		if _, ok := rq.ConfiguredNodes[node.Name]; ok {
+			return errors.New("repeat to configure function:" + node.Name)
+		}
+		rq.ConfiguredNodes[node.Name] = node
+		for _, child := range b.Child {
+			if child.Kind.Value == "args" {
+				node.Args = child.BlockBody.(*FlMap).ToMap()
+			}
+		}
 		return nil
-	}
+	})
+}
 
-	// parallel run
-	var last *FunctionNode
-	for _, dir := range b.directives {
-		if dir.name != Keyword("@") {
-			continue
+func (rq *RunQueue) processRun(bs *BlockStore) error {
+	return bs.Foreach(func(b *Block) error {
+		if b.Kind.Value != "run" {
+			return nil
 		}
-		fname := dir.tokens[0].subtext[1]
-		fc, ok := rq.FNodes[fname]
-		if !ok {
-			return errors.New("in loaded functions, not found: " + fname)
+		if name := b.Target.Value; name != "" {
+			// here is the serial run function
+			//
+			node, ok := rq.ConfiguredNodes[name]
+			if !ok {
+				// not configured function, so run directly with default function name
+				var err error
+				if node, err = rq.createFunctionNode(name, name); err != nil {
+					return err
+				}
+				if b.BlockBody != nil {
+					node.Args = b.BlockBody.(*FlMap).ToMap()
+				}
+			} else {
+				// the function is configured
+				if b.BlockBody != nil {
+					node.Args = b.BlockBody.(*FlMap).ToMap()
+				}
+			}
+			rq.Queue = append(rq.Queue, node)
+			return nil
 		}
-		if last == nil {
-			rq.Queue.PushBack(fc) // it's first
-		} else {
-			last.Parallel = fc
+
+		// Here is the parallel run function
+		//
+		var last *FunctionNode
+		names := b.BlockBody.(*FlList).ToSlice()
+		for _, name := range names {
+			node, ok := rq.ConfiguredNodes[name]
+			if !ok {
+				// not configured function, so run directly with default function name
+				var err error
+				if node, err = rq.createFunctionNode(name, name); err != nil {
+					return err
+				}
+			}
+			if last == nil {
+				rq.Queue = append(rq.Queue, node)
+			} else {
+				last.Parallel = node
+			}
+			last = node
 		}
-		last = fc
+		return nil
+	})
+}
+
+func (rq *RunQueue) Stage(do func(int, *FunctionNode)) {
+	for i, e := range rq.Queue {
+		do(i+1, e)
+	}
+}
+
+func (rq *RunQueue) Foreach(do func(int, *FunctionNode) error) error {
+	for i, e := range rq.Queue {
+		for p := e; p != nil; p = p.Parallel {
+			if err := do(i+1, p); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
 
-func (rq *RunQueue) Step(batch func(*FunctionNode)) {
-	for e := rq.Queue.Front(); e != nil; e = e.Next() {
-		batch(e.Value.(*FunctionNode))
+func (rq *RunQueue) NodeNum() int {
+	var n int
+	for _, e := range rq.Queue {
+		for p := e; p != nil; p = p.Parallel {
+			n += 1
+		}
 	}
+	return n
 }

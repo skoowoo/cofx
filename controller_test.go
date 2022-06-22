@@ -16,13 +16,15 @@ func TestAddReadyStartFlow(t *testing.T) {
 	load go:print
 	load go:sleep
 
-	set print {
-		input k1 v1
-		input k2 v2
+	fn p = print {
+		args = {
+			k1: v1
+			k2: v2
+		}
 	}
 
-	run @print
-	run	@sleep
+	run p
+	run	sleep
 	`
 
 	ctrl := NewFlowController()
