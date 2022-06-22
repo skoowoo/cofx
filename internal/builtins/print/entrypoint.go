@@ -20,7 +20,7 @@ type printer struct{}
 func (p *printer) Manifest() manifest.Manifest {
 	return manifest.Manifest{
 		Driver:         "go",
-		EntryPointFunc: p.EntryPoint,
+		EntrypointFunc: p.Entrypoint,
 	}
 }
 
@@ -28,11 +28,11 @@ func (p *printer) Name() string {
 	return "print"
 }
 
-func (p *printer) EntryPoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func (p *printer) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	logrus.Debugf("function print: args=%v\n", args)
 	var slice []string
 	for k, v := range args {
-		slice = append(slice, k+" = "+v)
+		slice = append(slice, k+": "+v)
 	}
 	sort.Strings(slice)
 	for _, s := range slice {

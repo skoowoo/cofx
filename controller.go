@@ -2,6 +2,7 @@ package cofunc
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -83,12 +84,17 @@ func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) er
 		return err
 	}
 
-	fw.Runq().Stage(func(stage int, node *flowl.Node) {
-		batchFuncs := 0
-		ch := make(chan *flow.FunctionResult, 10)
-
+	fw.Runq().Forstage(func(stage int, node *flowl.Node) error {
+		// find out functions at the stage
+		errResults := make([]*flow.FunctionResult, 0)
+		results := make([]*flow.FunctionResult, 0)
 		for p := node; p != nil; p = p.Parallel {
-			batchFuncs += 1
+			results = append(results, fw.Results[p.Name])
+		}
+		ch := make(chan *flow.FunctionResult, len(results))
+
+		// parallel run functions at the stage
+		for p := node; p != nil; p = p.Parallel {
 			go func(n *flowl.Node, fr *flow.FunctionResult) {
 				fr.BeginTime = time.Now()
 				fr.ReturnValues, fr.Err = n.Driver.Run(ctx)
@@ -99,18 +105,25 @@ func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) er
 				}
 			}(p, fw.Results[p.Name])
 		}
-		// waiting the batch functions to finish running
-		for i := 0; i < batchFuncs; i++ {
+
+		// waiting functions at the stage to finish running
+		for i := 0; i < len(results); i++ {
 			select {
 			case r := <-ch:
 				if r.Err != nil {
 					fw.UpdateField(flow.ToError)
+					errResults = append(errResults, r)
 				}
 			case <-ctx.Done():
 				// canced
 				close(ch)
 			}
 		}
+
+		if l := len(errResults); l != 0 {
+			return errors.New("occurred error at stage")
+		}
+		return nil
 	})
 
 	if err := fw.UpdateField(flow.ToStopped, flow.UpdateEndTime); err != nil {

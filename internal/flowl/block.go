@@ -37,6 +37,11 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 type Token struct {
 	Value string
 	Type  TokenType
+	Vars  []*struct {
+		N    string // var's name
+		V    string // var's value, need to read from others
+		S, E int    // S is var start position in 'Token.Value', E is end position
+	}
 }
 
 func NewTextToken(s string) *Token {
@@ -56,6 +61,15 @@ func (t *Token) String() string {
 
 func (t *Token) IsEmpty() bool {
 	return len(t.Value) == 0
+}
+
+// TODO: when running
+func (t *Token) AssignVar(b *Block) error {
+	return nil
+}
+
+func (t *Token) HasVar() bool {
+	return len(t.Vars) != 0
 }
 
 func (t *Token) Validate() error {
@@ -159,6 +173,11 @@ func (b *Block) String() string {
 	} else {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue)
 	}
+}
+
+// TODO: Call InputVar at running, not parsing
+func (b *Block) InputVar() error {
+	return nil
 }
 
 // BlockList store all blocks in the flowl

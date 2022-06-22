@@ -372,7 +372,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Equal(t, "function1", rq.ConfiguredNodes["f1"].Driver.FunctionName())
 		assert.Len(t, rq.Queue, 5)
 
-		rq.Stage(func(stage int, node *Node) {
+		rq.Forstage(func(stage int, node *Node) error {
 			if stage == 1 {
 				assert.Equal(t, "f1", node.Name)
 				assert.Len(t, node.Args, 2)
@@ -397,6 +397,7 @@ func TestParseFullWithRunq(t *testing.T) {
 				assert.Len(t, node.Args, 1)
 				assert.Equal(t, "v3", node.Args["k"])
 			}
+			return nil
 		})
 	}
 }

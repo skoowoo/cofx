@@ -42,7 +42,7 @@ func printBlocks(bl *flowl.BlockList, name string) {
 func printRunQueue(rq *flowl.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Stage(func(stage int, n *flowl.Node) {
+	rq.Forstage(func(stage int, n *flowl.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")
@@ -54,7 +54,7 @@ func printRunQueue(rq *flowl.RunQueue, name string) {
 			buf.WriteString(p.Driver.FunctionName())
 			buf.WriteString(" ")
 		}
-
 		fmt.Printf("  %s\n", buf.String())
+		return nil
 	})
 }

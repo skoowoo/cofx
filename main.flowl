@@ -1,0 +1,29 @@
+load go:print
+load go:command
+
+run print {
+	STARING: build "cofunc"
+}
+
+run gobuild
+run unittest
+
+run print {
+	END: build "cofunc"
+}
+
+fn gobuild = command {
+	args = {
+		script: go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
+	}
+}
+
+fn unittest = command {
+	args = {
+		script: ***
+			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/builtins/command
+			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/functiondriver/go
+			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/flowl
+		***
+	}
+}

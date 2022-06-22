@@ -22,14 +22,14 @@ func (c *Command) Name() string {
 func (c *Command) Manifest() manifest.Manifest {
 	return manifest.Manifest{
 		Driver:         "go",
-		EntryPointFunc: c.EntryPoint,
+		EntrypointFunc: c.Entrypoint,
 		Args: map[string]string{
 			"script": "",
 		},
 	}
 }
 
-func (c *Command) EntryPoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func (c *Command) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	script := args["script"]
 	if script == "" {
 		return nil, errors.New("command function miss 'script' argument")

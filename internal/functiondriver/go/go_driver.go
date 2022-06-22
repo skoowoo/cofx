@@ -41,7 +41,7 @@ func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
 }
 
 func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
-	entrypoint := d.manifest.EntryPointFunc
+	entrypoint := d.manifest.EntrypointFunc
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.path)
 	}

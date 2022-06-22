@@ -19,10 +19,10 @@ func (p *sleeper) Name() string {
 func (p *sleeper) Manifest() manifest.Manifest {
 	return manifest.Manifest{
 		Driver:         "go",
-		EntryPointFunc: p.EntryPoint,
+		EntrypointFunc: p.Entrypoint,
 	}
 }
 
-func (p *sleeper) EntryPoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func (p *sleeper) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	return nil, nil
 }

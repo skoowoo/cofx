@@ -23,6 +23,9 @@ type Node struct {
 	Driver   functiondriver.FunctionDriver
 	Parallel *Node
 	Args     map[string]string
+	// TODO:
+	RunBlock *Block
+	FnBlock  *Block
 }
 
 // RunQueue
@@ -41,20 +44,20 @@ func NewRunQueue() *RunQueue {
 	}
 }
 
-func (rq *RunQueue) Generate(bs *BlockList) error {
-	if err := rq.processLoad(bs); err != nil {
+func (rq *RunQueue) Generate(bl *BlockList) error {
+	if err := rq.processLoad(bl); err != nil {
 		return err
 	}
-	if err := rq.processFn(bs); err != nil {
+	if err := rq.processFn(bl); err != nil {
 		return err
 	}
-	if err := rq.processRun(bs); err != nil {
+	if err := rq.processRun(bl); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*Node, error) {
+func (rq *RunQueue) createNode(nodeName, fName string) (*Node, error) {
 	loc, ok := rq.Locations[fName]
 	if !ok {
 		return nil, errors.New("not load function: " + fName)
@@ -71,8 +74,8 @@ func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*Node, error) {
 	}, nil
 }
 
-func (rq *RunQueue) processLoad(bs *BlockList) error {
-	return bs.Foreach(func(b *Block) error {
+func (rq *RunQueue) processLoad(bl *BlockList) error {
+	return bl.Foreach(func(b *Block) error {
 		if b.Kind.Value != "load" {
 			return nil
 		}
@@ -91,8 +94,8 @@ func (rq *RunQueue) processLoad(bs *BlockList) error {
 	})
 }
 
-func (rq *RunQueue) processFn(bs *BlockList) error {
-	return bs.Foreach(func(b *Block) error {
+func (rq *RunQueue) processFn(bl *BlockList) error {
+	return bl.Foreach(func(b *Block) error {
 		if b.Kind.Value != "fn" {
 			return nil
 		}
@@ -100,7 +103,7 @@ func (rq *RunQueue) processFn(bs *BlockList) error {
 		if nodeName == fName {
 			return errors.New("node and function name are the same: " + nodeName)
 		}
-		node, err := rq.createFunctionNode(nodeName, fName)
+		node, err := rq.createNode(nodeName, fName)
 		if err != nil {
 			return err
 		}
@@ -117,8 +120,8 @@ func (rq *RunQueue) processFn(bs *BlockList) error {
 	})
 }
 
-func (rq *RunQueue) processRun(bs *BlockList) error {
-	return bs.Foreach(func(b *Block) error {
+func (rq *RunQueue) processRun(bl *BlockList) error {
+	return bl.Foreach(func(b *Block) error {
 		if b.Kind.Value != "run" {
 			return nil
 		}
@@ -129,7 +132,7 @@ func (rq *RunQueue) processRun(bs *BlockList) error {
 			if !ok {
 				// not configured function, so run directly with default function name
 				var err error
-				if node, err = rq.createFunctionNode(name, name); err != nil {
+				if node, err = rq.createNode(name, name); err != nil {
 					return err
 				}
 				if b.BlockBody != nil {
@@ -154,7 +157,7 @@ func (rq *RunQueue) processRun(bs *BlockList) error {
 			if !ok {
 				// not configured function, so run directly with default function name
 				var err error
-				if node, err = rq.createFunctionNode(name, name); err != nil {
+				if node, err = rq.createNode(name, name); err != nil {
 					return err
 				}
 			}
@@ -169,10 +172,13 @@ func (rq *RunQueue) processRun(bs *BlockList) error {
 	})
 }
 
-func (rq *RunQueue) Stage(do func(int, *Node)) {
+func (rq *RunQueue) Forstage(do func(int, *Node) error) error {
 	for i, e := range rq.Queue {
-		do(i+1, e)
+		if err := do(i+1, e); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (rq *RunQueue) Foreach(do func(int, *Node) error) error {
