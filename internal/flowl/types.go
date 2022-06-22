@@ -36,6 +36,9 @@ func (m *FlMap) Append(o interface{}) error {
 		t := m.LastStatement().LastToken()
 		t.Value = t.Value + "\n" + s
 	} else {
+		if s == "" {
+			return nil
+		}
 		idx := strings.Index(s, ":")
 		if idx == -1 {
 			return errors.New("invalid kv in map: " + s)

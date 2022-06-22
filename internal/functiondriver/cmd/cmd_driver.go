@@ -33,6 +33,6 @@ func (d *CmdDriver) Run(ctx context.Context) (map[string]string, error) {
 	return nil, nil
 }
 
-func (d *CmdDriver) Name() string {
+func (d *CmdDriver) FunctionName() string {
 	return d.funcName
 }

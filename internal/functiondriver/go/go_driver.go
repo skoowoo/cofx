@@ -30,7 +30,7 @@ func New(loc string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
-	fn := builtins.Lookup(d.path)
+	fn := builtins.Lookup(d.fname)
 	if fn == nil {
 		return errors.New("in builtins package, not found function: " + d.path)
 	}
@@ -52,7 +52,7 @@ func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
 	return out, nil
 }
 
-func (d *GoDriver) Name() string {
+func (d *GoDriver) FunctionName() string {
 	return d.fname
 }
 

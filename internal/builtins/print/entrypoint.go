@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/sirupsen/logrus"
 )
 
 func New() manifest.Manifester {
@@ -28,6 +29,7 @@ func (p *printer) Name() string {
 }
 
 func (p *printer) EntryPoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+	logrus.Debugf("function print: args=%v\n", args)
 	var slice []string
 	for k, v := range args {
 		slice = append(slice, k+" = "+v)

@@ -105,10 +105,15 @@ type BlockBody interface {
 	Type() string
 	Append(o interface{}) error
 	Statements() []*Statement
+	Len() int
 }
 
 type RawBody struct {
 	Lines []*Statement
+}
+
+func (r *RawBody) Len() int {
+	return len(r.Lines)
 }
 
 func (r *RawBody) Statements() []*Statement {
@@ -154,7 +159,11 @@ type Block struct {
 }
 
 func (b *Block) String() string {
-	return fmt.Sprintf("kind:%s, receriver:%s, symbol:%s, object:%s", &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue)
+	if b.BlockBody != nil {
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue, b.BlockBody.Len())
+	} else {
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue)
+	}
 }
 
 // Blocklist store all blocks in the flowl

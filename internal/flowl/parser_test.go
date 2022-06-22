@@ -84,6 +84,13 @@ func TestParseBlocksOnlyfn(t *testing.T) {
 
 fn f2=function2{ 
 }
+
+fn f3 = function3 {
+	args = {
+
+
+	}
+}
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
@@ -92,9 +99,10 @@ fn f2=function2{
 	_ = blocks
 }
 
-func TestParseBlocksSetWithError(t *testing.T) {
+func TestParseBlocksFnWithError(t *testing.T) {
 	// testingdata is an error data
-	const testingdata1 string = `
+	{
+		const testingdata1 string = `
 fn f1= function1 {
 	args = {
 		k: v
@@ -104,10 +112,12 @@ fn f1= function1 {
 fn f2= function2 {
 }
 	`
-	_, err := loadTestingdata(testingdata1)
-	assert.Error(t, err)
+		_, err := loadTestingdata(testingdata1)
+		assert.Error(t, err)
+	}
 
-	const testingdata2 string = `
+	{
+		const testingdata2 string = `
 	fn f1 = function1 {
 		args = {
 			k1:v1
@@ -117,9 +127,9 @@ fn f2= function2 {
 	}
 	}
 	`
-	_, err = loadTestingdata(testingdata2)
-	assert.Error(t, err)
-
+		_, err := loadTestingdata(testingdata2)
+		assert.Error(t, err)
+	}
 }
 
 func TestParseBlocksOnlyRun(t *testing.T) {
@@ -322,8 +332,9 @@ func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
 	return blocks, bs, rq, nil
 }
 
-func TestParseFull(t *testing.T) {
-	const testingdata string = `
+func TestParseFullWithRunq(t *testing.T) {
+	{
+		const testingdata string = `
 	load go:function1
 	load go:function2
 	load cmd:/tmp/function3
@@ -351,40 +362,64 @@ func TestParseFull(t *testing.T) {
 	}
 	`
 
-	blocks, bs, rq, err := loadTestingdata2(testingdata)
-	assert.NoError(t, err)
-	assert.NotNil(t, blocks)
-	assert.NotNil(t, bs)
-	assert.NotNil(t, rq)
+		blocks, bs, rq, err := loadTestingdata2(testingdata)
+		assert.NoError(t, err)
+		assert.NotNil(t, blocks)
+		assert.NotNil(t, bs)
+		assert.NotNil(t, rq)
 
-	assert.Len(t, rq.ConfiguredNodes, 1)
-	assert.Equal(t, "function1", rq.ConfiguredNodes["f1"].Driver.Name())
-	assert.Len(t, rq.Queue, 5)
+		assert.Len(t, rq.ConfiguredNodes, 1)
+		assert.Equal(t, "function1", rq.ConfiguredNodes["f1"].Driver.FunctionName())
+		assert.Len(t, rq.Queue, 5)
 
-	rq.Stage(func(stage int, node *FunctionNode) {
-		if stage == 1 {
-			assert.Equal(t, "f1", node.Name)
-			assert.Len(t, node.Args, 2)
-			assert.Equal(t, "v1", node.Args["k"])
+		rq.Stage(func(stage int, node *FunctionNode) {
+			if stage == 1 {
+				assert.Equal(t, "f1", node.Name)
+				assert.Len(t, node.Args, 2)
+				assert.Equal(t, "v1", node.Args["k"])
+			}
+			if stage == 2 {
+				assert.Equal(t, "function2", node.Name)
+				assert.Len(t, node.Args, 1)
+				assert.Equal(t, "v2", node.Args["k"])
+			}
+			if stage == 3 {
+				assert.Equal(t, "function3", node.Name)
+				assert.Len(t, node.Args, 0)
+			}
+			if stage == 4 {
+				assert.Equal(t, "function4", node.Name)
+				assert.NotNil(t, node.Parallel)
+				assert.Equal(t, "function5", node.Parallel.Name)
+			}
+			if stage == 5 {
+				assert.Equal(t, "function3", node.Name)
+				assert.Len(t, node.Args, 1)
+				assert.Equal(t, "v3", node.Args["k"])
+			}
+		})
+	}
+}
+
+func TestParseFullWithRunqWithErr(t *testing.T) {
+	{
+		const testingdata string = `
+	load go:function1
+	load go:function2
+
+	fn function1 = function1 {
+		args = {
+
 		}
-		if stage == 2 {
-			assert.Equal(t, "function2", node.Name)
-			assert.Len(t, node.Args, 1)
-			assert.Equal(t, "v2", node.Args["k"])
-		}
-		if stage == 3 {
-			assert.Equal(t, "function3", node.Name)
-			assert.Len(t, node.Args, 0)
-		}
-		if stage == 4 {
-			assert.Equal(t, "function4", node.Name)
-			assert.NotNil(t, node.Parallel)
-			assert.Equal(t, "function5", node.Parallel.Name)
-		}
-		if stage == 5 {
-			assert.Equal(t, "function3", node.Name)
-			assert.Len(t, node.Args, 1)
-			assert.Equal(t, "v3", node.Args["k"])
-		}
-	})
+	}
+
+	run function1
+	`
+
+		blocks, bs, rq, err := loadTestingdata2(testingdata)
+		assert.Error(t, err)
+		_ = blocks
+		_ = bs
+		_ = rq
+	}
 }

@@ -97,6 +97,9 @@ func (rq *RunQueue) processFn(bs *BlockStore) error {
 			return nil
 		}
 		nodeName, fName := b.Target.Value, b.TypeOrValue.Value
+		if nodeName == fName {
+			return errors.New("node and function name are the same: " + nodeName)
+		}
 		node, err := rq.createFunctionNode(nodeName, fName)
 		if err != nil {
 			return err
@@ -120,11 +123,11 @@ func (rq *RunQueue) processRun(bs *BlockStore) error {
 			return nil
 		}
 		if name := b.Target.Value; name != "" {
-			// 这里属于串行调用函数 run
+			// here is the serial run function
 			//
 			node, ok := rq.ConfiguredNodes[name]
 			if !ok {
-				// 没有显示配置函数，采用默认函数名直接run
+				// not configured function, so run directly with default function name
 				var err error
 				if node, err = rq.createFunctionNode(name, name); err != nil {
 					return err
@@ -133,21 +136,23 @@ func (rq *RunQueue) processRun(bs *BlockStore) error {
 					node.Args = b.BlockBody.(*FlMap).ToMap()
 				}
 			} else {
-				// 已经配置过的函数
-				// TODO: 是否要处理一下 args ?
+				// the function is configured
+				if b.BlockBody != nil {
+					node.Args = b.BlockBody.(*FlMap).ToMap()
+				}
 			}
 			rq.Queue = append(rq.Queue, node)
 			return nil
 		}
 
-		// 这里属于并行调用函数 run
+		// Here is the parallel run function
 		//
 		var last *FunctionNode
 		names := b.BlockBody.(*FlList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.ConfiguredNodes[name]
 			if !ok {
-				// 没有显示配置函数，采用默认函数名直接run
+				// not configured function, so run directly with default function name
 				var err error
 				if node, err = rq.createFunctionNode(name, name); err != nil {
 					return err
@@ -164,8 +169,29 @@ func (rq *RunQueue) processRun(bs *BlockStore) error {
 	})
 }
 
-func (rq *RunQueue) Stage(batch func(int, *FunctionNode)) {
+func (rq *RunQueue) Stage(do func(int, *FunctionNode)) {
 	for i, e := range rq.Queue {
-		batch(i+1, e)
+		do(i+1, e)
 	}
+}
+
+func (rq *RunQueue) Foreach(do func(int, *FunctionNode) error) error {
+	for i, e := range rq.Queue {
+		for p := e; p != nil; p = p.Parallel {
+			if err := do(i+1, p); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (rq *RunQueue) NodeNum() int {
+	var n int
+	for _, e := range rq.Queue {
+		for p := e; p != nil; p = p.Parallel {
+			n += 1
+		}
+	}
+	return n
 }

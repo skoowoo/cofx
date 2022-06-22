@@ -42,16 +42,16 @@ func printBlocks(bs *flowl.BlockStore, name string) {
 func printRunQueue(rq *flowl.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Stage(func(stage int, batch *flowl.FunctionNode) {
+	rq.Stage(func(stage int, n *flowl.FunctionNode) {
 		var buf bytes.Buffer
 		i += 1
-		buf.WriteString("Step ")
+		buf.WriteString("Stage ")
 		buf.WriteString(strconv.Itoa(i))
 		buf.WriteString(": ")
-		for p := batch; p != nil; p = p.Parallel {
-			buf.WriteString(p.Driver.Name())
-			buf.WriteString(":")
+		for p := n; p != nil; p = p.Parallel {
 			buf.WriteString(p.Name)
+			buf.WriteString("->")
+			buf.WriteString(p.Driver.FunctionName())
 			buf.WriteString(" ")
 		}
 

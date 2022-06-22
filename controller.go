@@ -50,11 +50,10 @@ func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) er
 		if body.Status == flow.FLOW_READY || body.Status == flow.FLOW_RUNNING {
 			return nil
 		}
-		nodes := body.Runq().ConfiguredNodes
-		body.FnTotal = len(nodes)
+		body.FnTotal = body.Runq().NodeNum()
 		body.Results = make(map[string]*flow.FunctionResult)
 
-		for _, n := range nodes {
+		body.Runq().Foreach(func(stage int, n *flowl.FunctionNode) error {
 			if err := n.Driver.Load(ctx, n.Args); err != nil {
 				return err
 			}
@@ -65,7 +64,8 @@ func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) er
 				FNode:        n,
 				ReturnValues: make(map[string]string),
 			}
-		}
+			return nil
+		})
 		body.Status = flow.FLOW_READY
 		return nil
 	}

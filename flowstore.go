@@ -7,14 +7,13 @@ import (
 	"github.com/cofunclabs/cofunc/internal/flow"
 )
 
-// todo
+// TODO:
 type PersistentStore interface {
 }
 
 type FlowStore struct {
 	sync.RWMutex
-	entity  map[string]*flow.Flow
-	backend PersistentStore
+	entity map[string]*flow.Flow
 }
 
 // Store store a kv into flowstore

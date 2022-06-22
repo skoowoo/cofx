@@ -8,7 +8,7 @@ import (
 )
 
 type FunctionDriver interface {
-	Name() string
+	FunctionName() string
 	Load(ctx context.Context, args map[string]string) error
 	Run(ctx context.Context) (map[string]string, error)
 }
