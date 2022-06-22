@@ -26,11 +26,11 @@ func (m *FlMap) Type() string {
 }
 
 func (m *FlMap) Append(o interface{}) error {
-	const multiflag = "***"
+	const multiline = "***"
 	s := o.(string)
 	if m.state == _statel2_multilines_started {
-		if strings.HasSuffix(s, multiflag) {
-			s = strings.TrimSuffix(s, multiflag)
+		if strings.HasSuffix(s, multiline) {
+			s = strings.TrimSuffix(s, multiline)
 			m.state = _statel2_unknow
 		}
 		t := m.LastStatement().LastToken()
@@ -45,8 +45,8 @@ func (m *FlMap) Append(o interface{}) error {
 		}
 		k := strings.TrimSpace(s[0:idx])
 		v := strings.TrimSpace(s[idx+1:])
-		if strings.HasPrefix(v, multiflag) {
-			v = strings.TrimPrefix(v, multiflag)
+		if strings.HasPrefix(v, multiline) {
+			v = strings.TrimPrefix(v, multiline)
 			m.state = _statel2_multilines_started
 			m.Lines = append(m.Lines, NewStatement(k, v))
 		} else {

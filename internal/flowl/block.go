@@ -24,14 +24,14 @@ const (
 	LoadT
 )
 
-var tokenPatterns = map[TokenType]string{
-	UnknowT:       `^*$`,
-	IntT:          `^*$`,
-	TextT:         `^*$`,
-	MapKeyT:       `^*$`,
-	OperatorT:     `^*$`,
-	LoadT:         `^*$`,
-	FunctionNameT: `^[a-zA-Z][a-zA-Z0-9]*$`,
+var tokenPatterns = map[TokenType]*regexp.Regexp{
+	UnknowT:       regexp.MustCompile(`^*$`),
+	IntT:          regexp.MustCompile(`^[1-9][0-9]*$`),
+	TextT:         regexp.MustCompile(`^*$`),
+	MapKeyT:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
+	OperatorT:     regexp.MustCompile(`^=$`),
+	LoadT:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
+	FunctionNameT: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
 }
 
 type Token struct {
@@ -59,12 +59,7 @@ func (t *Token) IsEmpty() bool {
 }
 
 func (t *Token) Validate() error {
-	pattern := tokenPatterns[t.Type]
-	match, err := regexp.MatchString(pattern, t.Value)
-	if err != nil {
-		return errors.Wrapf(err, "validate token")
-	}
-	if !match {
+	if pattern := tokenPatterns[t.Type]; !pattern.MatchString(t.Value) {
 		return errors.Errorf("not match: %s:%s", t.Value, pattern)
 	}
 	return nil
