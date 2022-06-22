@@ -9,12 +9,12 @@ import (
 
 func loadTestingdata(data string) ([]*Block, error) {
 	rd := strings.NewReader(data)
-	bs, err := ParseBlocks(rd)
+	bl, err := ParseBlocks(rd)
 	if err != nil {
 		return nil, err
 	}
 	var blocks []*Block
-	bs.Foreach(func(b *Block) error {
+	bl.Foreach(func(b *Block) error {
 		blocks = append(blocks, b)
 		return nil
 	})
@@ -318,18 +318,18 @@ run 3 {
 
 //
 // Test Run queue and blockstore
-func loadTestingdata2(data string) ([]*Block, *BlockStore, *RunQueue, error) {
+func loadTestingdata2(data string) ([]*Block, *BlockList, *RunQueue, error) {
 	rd := strings.NewReader(data)
-	rq, bs, err := Parse(rd)
+	rq, bl, err := Parse(rd)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	var blocks []*Block
-	bs.Foreach(func(b *Block) error {
+	bl.Foreach(func(b *Block) error {
 		blocks = append(blocks, b)
 		return nil
 	})
-	return blocks, bs, rq, nil
+	return blocks, bl, rq, nil
 }
 
 func TestParseFullWithRunq(t *testing.T) {
@@ -362,10 +362,10 @@ func TestParseFullWithRunq(t *testing.T) {
 	}
 	`
 
-		blocks, bs, rq, err := loadTestingdata2(testingdata)
+		blocks, bl, rq, err := loadTestingdata2(testingdata)
 		assert.NoError(t, err)
 		assert.NotNil(t, blocks)
-		assert.NotNil(t, bs)
+		assert.NotNil(t, bl)
 		assert.NotNil(t, rq)
 
 		assert.Len(t, rq.ConfiguredNodes, 1)
@@ -416,10 +416,10 @@ func TestParseFullWithRunqWithErr(t *testing.T) {
 	run function1
 	`
 
-		blocks, bs, rq, err := loadTestingdata2(testingdata)
+		blocks, bl, rq, err := loadTestingdata2(testingdata)
 		assert.Error(t, err)
 		_ = blocks
-		_ = bs
+		_ = bl
 		_ = rq
 	}
 }

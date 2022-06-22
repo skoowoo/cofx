@@ -15,19 +15,19 @@ func ParseFile(file string) error {
 	return nil
 }
 
-func Parse(rd io.Reader) (runq *RunQueue, bs *BlockStore, err error) {
-	if bs, err = ParseBlocks(rd); err != nil {
+func Parse(rd io.Reader) (runq *RunQueue, bl *BlockList, err error) {
+	if bl, err = ParseBlocks(rd); err != nil {
 		return
 	}
 	runq = NewRunQueue()
-	if err = runq.Generate(bs); err != nil {
+	if err = runq.Generate(bl); err != nil {
 		return
 	}
 	return
 }
 
-func ParseBlocks(rd io.Reader) (*BlockStore, error) {
-	blockstore := NewBlockStore()
+func ParseBlocks(rd io.Reader) (*BlockList, error) {
+	bl := NewBlockList()
 	num := 0
 	scanner := bufio.NewScanner(rd)
 	for {
@@ -35,13 +35,13 @@ func ParseBlocks(rd io.Reader) (*BlockStore, error) {
 			break
 		}
 		num += 1
-		err := scanToken(blockstore, scanner.Text(), num)
+		err := scanToken(bl, scanner.Text(), num)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return blockstore, blockstore.Foreach(validateBlocks)
+	return bl, bl.Foreach(validateBlocks)
 }
 
 func validateBlocks(b *Block) error {
@@ -113,10 +113,10 @@ const (
 	_statel2_typeorvalue_done
 )
 
-func scanToken(bs *BlockStore, line string, linenum int) error {
-	prestate := bs.prestate
-	state := bs.state
-	block := bs.parsing
+func scanToken(bl *BlockList, line string, linenum int) error {
+	prestate := bl.prestate
+	state := bl.state
+	block := bl.parsing
 
 	var startPos int
 
@@ -162,8 +162,8 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 				Level:     LevelParent,
 				BlockBody: body,
 			}
-			bs.l.PushBack(block)
-			bs.parsing = block
+			bl.l.PushBack(block)
+			bl.parsing = block
 		case _statel1_load_block_started:
 			///
 			// load go:sleep
@@ -455,8 +455,8 @@ func scanToken(bs *BlockStore, line string, linenum int) error {
 	if err := finiteAutomata(len(line), '\n', line); err != nil {
 		return err
 	}
-	bs.prestate = prestate
-	bs.state = state
-	bs.parsing = block
+	bl.prestate = prestate
+	bl.state = state
+	bl.parsing = block
 	return nil
 }

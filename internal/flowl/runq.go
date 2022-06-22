@@ -41,7 +41,7 @@ func NewRunQueue() *RunQueue {
 	}
 }
 
-func (rq *RunQueue) Generate(bs *BlockStore) error {
+func (rq *RunQueue) Generate(bs *BlockList) error {
 	if err := rq.processLoad(bs); err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*Node, error) {
 	}, nil
 }
 
-func (rq *RunQueue) processLoad(bs *BlockStore) error {
+func (rq *RunQueue) processLoad(bs *BlockList) error {
 	return bs.Foreach(func(b *Block) error {
 		if b.Kind.Value != "load" {
 			return nil
@@ -91,7 +91,7 @@ func (rq *RunQueue) processLoad(bs *BlockStore) error {
 	})
 }
 
-func (rq *RunQueue) processFn(bs *BlockStore) error {
+func (rq *RunQueue) processFn(bs *BlockList) error {
 	return bs.Foreach(func(b *Block) error {
 		if b.Kind.Value != "fn" {
 			return nil
@@ -117,7 +117,7 @@ func (rq *RunQueue) processFn(bs *BlockStore) error {
 	})
 }
 
-func (rq *RunQueue) processRun(bs *BlockStore) error {
+func (rq *RunQueue) processRun(bs *BlockList) error {
 	return bs.Foreach(func(b *Block) error {
 		if b.Kind.Value != "run" {
 			return nil

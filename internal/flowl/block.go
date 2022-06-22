@@ -161,25 +161,25 @@ func (b *Block) String() string {
 	}
 }
 
-// Blocklist store all blocks in the flowl
+// BlockList store all blocks in the flowl
 //
-type BlockStore struct {
+type BlockList struct {
 	l        *list.List
 	parsing  *Block
 	state    parserStateL1
 	prestate parserStateL1
 }
 
-func NewBlockStore() *BlockStore {
-	return &BlockStore{
+func NewBlockList() *BlockList {
+	return &BlockList{
 		l:       list.New(),
 		parsing: nil,
 		state:   _statel1_global,
 	}
 }
 
-func (bs *BlockStore) Foreach(do func(*Block) error) error {
-	l := bs.l
+func (bl *BlockList) Foreach(do func(*Block) error) error {
+	l := bl.l
 	for e := l.Front(); e != nil; e = e.Next() {
 		b := e.Value.(*Block)
 		if err := do(b); err != nil {
@@ -189,6 +189,6 @@ func (bs *BlockStore) Foreach(do func(*Block) error) error {
 	return nil
 }
 
-func (bs *BlockStore) String() string {
+func (bl *BlockList) String() string {
 	return ""
 }

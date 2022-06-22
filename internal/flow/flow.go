@@ -50,18 +50,18 @@ type Body struct {
 	Results      map[string]*FunctionResult
 
 	runq       *flowl.RunQueue
-	blockstore *flowl.BlockStore
+	blockstore *flowl.BlockList
 }
 
 func (b *Body) Runq() *flowl.RunQueue {
 	return b.runq
 }
 
-func (b *Body) BlockStore() *flowl.BlockStore {
+func (b *Body) BlockStore() *flowl.BlockList {
 	return b.blockstore
 }
 
-func New(id feedbackid.ID, runq *flowl.RunQueue, bs *flowl.BlockStore) *Flow {
+func New(id feedbackid.ID, runq *flowl.RunQueue, bs *flowl.BlockList) *Flow {
 	return &Flow{
 		Body: Body{
 			ID:         id,
