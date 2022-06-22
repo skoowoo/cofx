@@ -26,7 +26,7 @@ const (
 
 type FunctionResult struct {
 	FID          feedbackid.ID
-	FNode        *flowl.FunctionNode
+	Node         *flowl.Node
 	ReturnValues map[string]string
 	BeginTime    time.Time
 	EndTime      time.Time

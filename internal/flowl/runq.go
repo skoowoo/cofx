@@ -16,12 +16,12 @@ type LoadedLocation struct {
 	Path         string
 }
 
-// FunctionNode
+// Node
 //
-type FunctionNode struct {
+type Node struct {
 	Name     string
 	Driver   functiondriver.FunctionDriver
-	Parallel *FunctionNode
+	Parallel *Node
 	Args     map[string]string
 }
 
@@ -29,15 +29,15 @@ type FunctionNode struct {
 //
 type RunQueue struct {
 	Locations       map[string]LoadedLocation
-	ConfiguredNodes map[string]*FunctionNode
-	Queue           []*FunctionNode
+	ConfiguredNodes map[string]*Node
+	Queue           []*Node
 }
 
 func NewRunQueue() *RunQueue {
 	return &RunQueue{
 		Locations:       make(map[string]LoadedLocation),
-		ConfiguredNodes: make(map[string]*FunctionNode),
-		Queue:           make([]*FunctionNode, 0),
+		ConfiguredNodes: make(map[string]*Node),
+		Queue:           make([]*Node, 0),
 	}
 }
 
@@ -54,7 +54,7 @@ func (rq *RunQueue) Generate(bs *BlockStore) error {
 	return nil
 }
 
-func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*FunctionNode, error) {
+func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*Node, error) {
 	loc, ok := rq.Locations[fName]
 	if !ok {
 		return nil, errors.New("not load function: " + fName)
@@ -64,7 +64,7 @@ func (rq *RunQueue) createFunctionNode(nodeName, fName string) (*FunctionNode, e
 	if driver == nil {
 		return nil, errors.New("not found driver: " + loadTarget)
 	}
-	return &FunctionNode{
+	return &Node{
 		Name:   nodeName,
 		Driver: driver,
 		Args:   make(map[string]string),
@@ -147,7 +147,7 @@ func (rq *RunQueue) processRun(bs *BlockStore) error {
 
 		// Here is the parallel run function
 		//
-		var last *FunctionNode
+		var last *Node
 		names := b.BlockBody.(*FlList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.ConfiguredNodes[name]
@@ -169,13 +169,13 @@ func (rq *RunQueue) processRun(bs *BlockStore) error {
 	})
 }
 
-func (rq *RunQueue) Stage(do func(int, *FunctionNode)) {
+func (rq *RunQueue) Stage(do func(int, *Node)) {
 	for i, e := range rq.Queue {
 		do(i+1, e)
 	}
 }
 
-func (rq *RunQueue) Foreach(do func(int, *FunctionNode) error) error {
+func (rq *RunQueue) Foreach(do func(int, *Node) error) error {
 	for i, e := range rq.Queue {
 		for p := e; p != nil; p = p.Parallel {
 			if err := do(i+1, p); err != nil {

@@ -53,7 +53,7 @@ func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) er
 		body.FnTotal = body.Runq().NodeNum()
 		body.Results = make(map[string]*flow.FunctionResult)
 
-		body.Runq().Foreach(func(stage int, n *flowl.FunctionNode) error {
+		body.Runq().Foreach(func(stage int, n *flowl.Node) error {
 			if err := n.Driver.Load(ctx, n.Args); err != nil {
 				return err
 			}
@@ -61,7 +61,7 @@ func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) er
 
 			body.Results[n.Name] = &flow.FunctionResult{
 				FID:          body.ID,
-				FNode:        n,
+				Node:         n,
 				ReturnValues: make(map[string]string),
 			}
 			return nil
@@ -83,15 +83,15 @@ func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) er
 		return err
 	}
 
-	fw.Runq().Stage(func(stage int, batch *flowl.FunctionNode) {
+	fw.Runq().Stage(func(stage int, node *flowl.Node) {
 		batchFuncs := 0
 		ch := make(chan *flow.FunctionResult, 10)
 
-		for p := batch; p != nil; p = p.Parallel {
+		for p := node; p != nil; p = p.Parallel {
 			batchFuncs += 1
-			go func(fn *flowl.FunctionNode, fr *flow.FunctionResult) {
+			go func(n *flowl.Node, fr *flow.FunctionResult) {
 				fr.BeginTime = time.Now()
-				fr.ReturnValues, fr.Err = fn.Driver.Run(ctx)
+				fr.ReturnValues, fr.Err = n.Driver.Run(ctx)
 				fr.EndTime = time.Now()
 				select {
 				case ch <- fr:
