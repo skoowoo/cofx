@@ -2,11 +2,23 @@ package flowl
 
 import (
 	"errors"
+	"io"
 	"path"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
 )
+
+func ParseFlowl(rd io.Reader) (runq *RunQueue, ast *AST, err error) {
+	if ast, err = ParseAST(rd); err != nil {
+		return
+	}
+	runq, err = NewRunQueue(ast)
+	if err != nil {
+		return
+	}
+	return
+}
 
 // LoadedLocation
 //
@@ -34,27 +46,26 @@ type RunQueue struct {
 	Locations       map[string]LoadedLocation
 	ConfiguredNodes map[string]*Node
 	Queue           []*Node
+	ast             *AST
 }
 
-func NewRunQueue() *RunQueue {
-	return &RunQueue{
+func NewRunQueue(ast *AST) (*RunQueue, error) {
+	q := &RunQueue{
 		Locations:       make(map[string]LoadedLocation),
 		ConfiguredNodes: make(map[string]*Node),
 		Queue:           make([]*Node, 0),
+		ast:             ast,
 	}
-}
-
-func (rq *RunQueue) Generate(bl *BlockList) error {
-	if err := rq.processLoad(bl); err != nil {
-		return err
+	if err := q.processLoad(ast); err != nil {
+		return nil, err
 	}
-	if err := rq.processFn(bl); err != nil {
-		return err
+	if err := q.processFn(ast); err != nil {
+		return nil, err
 	}
-	if err := rq.processRun(bl); err != nil {
-		return err
+	if err := q.processRun(ast); err != nil {
+		return nil, err
 	}
-	return nil
+	return q, nil
 }
 
 func (rq *RunQueue) createNode(nodeName, fName string) (*Node, error) {
@@ -74,8 +85,8 @@ func (rq *RunQueue) createNode(nodeName, fName string) (*Node, error) {
 	}, nil
 }
 
-func (rq *RunQueue) processLoad(bl *BlockList) error {
-	return bl.Foreach(func(b *Block) error {
+func (rq *RunQueue) processLoad(ast *AST) error {
+	return ast.Foreach(func(b *Block) error {
 		if b.Kind.Value != "load" {
 			return nil
 		}
@@ -94,8 +105,8 @@ func (rq *RunQueue) processLoad(bl *BlockList) error {
 	})
 }
 
-func (rq *RunQueue) processFn(bl *BlockList) error {
-	return bl.Foreach(func(b *Block) error {
+func (rq *RunQueue) processFn(ast *AST) error {
+	return ast.Foreach(func(b *Block) error {
 		if b.Kind.Value != "fn" {
 			return nil
 		}
@@ -120,8 +131,8 @@ func (rq *RunQueue) processFn(bl *BlockList) error {
 	})
 }
 
-func (rq *RunQueue) processRun(bl *BlockList) error {
-	return bl.Foreach(func(b *Block) error {
+func (rq *RunQueue) processRun(ast *AST) error {
+	return ast.Foreach(func(b *Block) error {
 		if b.Kind.Value != "run" {
 			return nil
 		}

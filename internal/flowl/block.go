@@ -3,7 +3,6 @@
 package flowl
 
 import (
-	"container/list"
 	"fmt"
 	"regexp"
 
@@ -180,34 +179,51 @@ func (b *Block) InputVar() error {
 	return nil
 }
 
-// BlockList store all blocks in the flowl
+// AST store all blocks in the flowl
 //
-type BlockList struct {
-	l        *list.List
+type AST struct {
+	global Block
+
 	parsing  *Block
 	state    parserStateL1
 	prestate parserStateL1
 }
 
-func NewBlockList() *BlockList {
-	return &BlockList{
-		l:       list.New(),
+func NewAST() *AST {
+	return &AST{
+		global: Block{
+			Child: make([]*Block, 0),
+			Level: LevelGlobal,
+		},
 		parsing: nil,
 		state:   _statel1_global,
 	}
 }
 
-func (bl *BlockList) Foreach(do func(*Block) error) error {
-	l := bl.l
-	for e := l.Front(); e != nil; e = e.Next() {
-		b := e.Value.(*Block)
+func deepwalk(b *Block, do func(*Block) error) error {
+	// skip the global block
+	// if b.Parent != nil {
+	// 	if err := do(b); err != nil {
+	// 		return err
+	// 	}
+	// }
+	if b.Level != LevelGlobal {
 		if err := do(b); err != nil {
+			return err
+		}
+	}
+	for _, c := range b.Child {
+		if err := deepwalk(c, do); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (bl *BlockList) String() string {
+func (a *AST) Foreach(do func(*Block) error) error {
+	return deepwalk(&a.global, do)
+}
+
+func (a *AST) String() string {
 	return ""
 }

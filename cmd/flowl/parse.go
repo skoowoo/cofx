@@ -20,20 +20,20 @@ func parseFlowLAndPrint(name string, all bool) error {
 	defer func() {
 		f.Close()
 	}()
-	rq, bl, err := flowl.Parse(f)
+	rq, ast, err := flowl.ParseFlowl(f)
 	if err != nil {
 		return err
 	}
 	if all {
-		printBlocks(bl, name)
+		printBlocks(ast, name)
 	}
 	printRunQueue(rq, name)
 	return nil
 }
 
-func printBlocks(bl *flowl.BlockList, name string) {
+func printBlocks(ast *flowl.AST, name string) {
 	fmt.Printf("blocks in %s:\n", name)
-	bl.Foreach(func(b *flowl.Block) error {
+	ast.Foreach(func(b *flowl.Block) error {
 		fmt.Printf("  %s\n", b.String())
 		return nil
 	})

@@ -49,24 +49,24 @@ type Body struct {
 	ReadyFnCount int
 	Results      map[string]*FunctionResult
 
-	runq       *flowl.RunQueue
-	blockstore *flowl.BlockList
+	runq *flowl.RunQueue
+	ast  *flowl.AST
 }
 
 func (b *Body) Runq() *flowl.RunQueue {
 	return b.runq
 }
 
-func (b *Body) BlockStore() *flowl.BlockList {
-	return b.blockstore
+func (b *Body) BlockStore() *flowl.AST {
+	return b.ast
 }
 
-func New(id feedbackid.ID, runq *flowl.RunQueue, bs *flowl.BlockList) *Flow {
+func New(id feedbackid.ID, runq *flowl.RunQueue, ast *flowl.AST) *Flow {
 	return &Flow{
 		Body: Body{
-			ID:         id,
-			runq:       runq,
-			blockstore: bs,
+			ID:   id,
+			runq: runq,
+			ast:  ast,
 		},
 	}
 }

@@ -10,24 +10,8 @@ import (
 	"unicode"
 )
 
-// Parse parse a 'flowl' file
-func ParseFile(file string) error {
-	return nil
-}
-
-func Parse(rd io.Reader) (runq *RunQueue, bl *BlockList, err error) {
-	if bl, err = ParseBlocks(rd); err != nil {
-		return
-	}
-	runq = NewRunQueue()
-	if err = runq.Generate(bl); err != nil {
-		return
-	}
-	return
-}
-
-func ParseBlocks(rd io.Reader) (*BlockList, error) {
-	bl := NewBlockList()
+func ParseAST(rd io.Reader) (*AST, error) {
+	a := NewAST()
 	num := 0
 	scanner := bufio.NewScanner(rd)
 	for {
@@ -35,13 +19,13 @@ func ParseBlocks(rd io.Reader) (*BlockList, error) {
 			break
 		}
 		num += 1
-		err := scanToken(bl, scanner.Text(), num)
+		err := scanToken(a, scanner.Text(), num)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return bl, bl.Foreach(validateBlocks)
+	return a, a.Foreach(validateBlocks)
 }
 
 func validateBlocks(b *Block) error {
@@ -113,10 +97,10 @@ const (
 	_statel2_typeorvalue_done
 )
 
-func scanToken(bl *BlockList, line string, linenum int) error {
-	prestate := bl.prestate
-	state := bl.state
-	block := bl.parsing
+func scanToken(ast *AST, line string, linenum int) error {
+	prestate := ast.prestate
+	state := ast.state
+	block := ast.parsing
 
 	var startPos int
 
@@ -162,8 +146,8 @@ func scanToken(bl *BlockList, line string, linenum int) error {
 				Level:     LevelParent,
 				BlockBody: body,
 			}
-			bl.l.PushBack(block)
-			bl.parsing = block
+			ast.global.Child = append(ast.global.Child, block)
+			ast.parsing = block
 		case _statel1_load_block_started:
 			///
 			// load go:sleep
@@ -455,8 +439,8 @@ func scanToken(bl *BlockList, line string, linenum int) error {
 	if err := finiteAutomata(len(line), '\n', line); err != nil {
 		return err
 	}
-	bl.prestate = prestate
-	bl.state = state
-	bl.parsing = block
+	ast.prestate = prestate
+	ast.state = state
+	ast.parsing = block
 	return nil
 }

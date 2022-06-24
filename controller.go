@@ -26,11 +26,11 @@ func NewFlowController() *FlowController {
 }
 
 func (ctrl *FlowController) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
-	rq, bl, err := flowl.Parse(rd)
+	rq, ast, err := flowl.ParseFlowl(rd)
 	if err != nil {
 		return err
 	}
-	fw := flow.New(fid, rq, bl)
+	fw := flow.New(fid, rq, ast)
 	if err := ctrl.flowstore.Store(fid.Value(), fw); err != nil {
 		return err
 	}
