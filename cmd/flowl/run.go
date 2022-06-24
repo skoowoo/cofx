@@ -2,17 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 
-	"github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/internal/flowl"
+	co "github.com/cofunclabs/cofunc"
 	. "github.com/cofunclabs/cofunc/pkg/assertutils"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
 func runFlowl(name string) error {
-	if err := flowl.IsFlowl(name); err != nil {
-		return err
+	if !co.IsFlowl(name) {
+		return errors.New("file is not a flowl: " + name)
 	}
 	f, err := os.Open(name)
 	if err != nil {
@@ -22,7 +22,7 @@ func runFlowl(name string) error {
 		f.Close()
 	}()
 
-	ctrl := cofunc.NewController()
+	ctrl := co.NewController()
 	PanicIfNil(ctrl)
 
 	fid := feedbackid.NewDefaultID(name)

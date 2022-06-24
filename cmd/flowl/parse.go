@@ -2,16 +2,17 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/cofunclabs/cofunc/internal/flowl"
+	co "github.com/cofunclabs/cofunc"
 )
 
-func parseFlowLAndPrint(name string, all bool) error {
-	if err := flowl.IsFlowl(name); err != nil {
-		return err
+func parseFlowl(name string, all bool) error {
+	if !co.IsFlowl(name) {
+		return errors.New("file is not a flowl: " + name)
 	}
 	f, err := os.Open(name)
 	if err != nil {
@@ -20,7 +21,7 @@ func parseFlowLAndPrint(name string, all bool) error {
 	defer func() {
 		f.Close()
 	}()
-	rq, ast, err := flowl.ParseFlowl(f)
+	rq, ast, err := co.ParseFlowl(f)
 	if err != nil {
 		return err
 	}
@@ -31,18 +32,18 @@ func parseFlowLAndPrint(name string, all bool) error {
 	return nil
 }
 
-func printBlocks(ast *flowl.AST, name string) {
+func printBlocks(ast *co.AST, name string) {
 	fmt.Printf("blocks in %s:\n", name)
-	ast.Foreach(func(b *flowl.Block) error {
+	ast.Foreach(func(b *co.Block) error {
 		fmt.Printf("  %s\n", b.String())
 		return nil
 	})
 }
 
-func printRunQueue(rq *flowl.RunQueue, name string) {
+func printRunQueue(rq *co.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Forstage(func(stage int, n *flowl.Node) error {
+	rq.Forstage(func(stage int, n *co.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")

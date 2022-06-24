@@ -1,4 +1,4 @@
-package flowl
+package cofunc
 
 import "strings"
 

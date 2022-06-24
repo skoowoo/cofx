@@ -1,4 +1,4 @@
-package flowl
+package cofunc
 
 import (
 	"strings"
@@ -57,24 +57,24 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.NotNil(t, bl)
 		assert.NotNil(t, rq)
 
-		assert.Len(t, rq.ConfiguredNodes, 1)
-		assert.Equal(t, "function1", rq.ConfiguredNodes["f1"].Driver.FunctionName())
-		assert.Len(t, rq.Queue, 5)
+		assert.Len(t, rq.configuredNodes, 1)
+		assert.Equal(t, "function1", rq.configuredNodes["f1"].Driver.FunctionName())
+		assert.Len(t, rq.queue, 5)
 
 		rq.Forstage(func(stage int, node *Node) error {
 			if stage == 1 {
 				assert.Equal(t, "f1", node.Name)
-				assert.Len(t, node.Args, 2)
-				assert.Equal(t, "v1", node.Args["k"])
+				assert.Len(t, node.args, 2)
+				assert.Equal(t, "v1", node.args["k"])
 			}
 			if stage == 2 {
 				assert.Equal(t, "function2", node.Name)
-				assert.Len(t, node.Args, 1)
-				assert.Equal(t, "v2", node.Args["k"])
+				assert.Len(t, node.args, 1)
+				assert.Equal(t, "v2", node.args["k"])
 			}
 			if stage == 3 {
 				assert.Equal(t, "function3", node.Name)
-				assert.Len(t, node.Args, 0)
+				assert.Len(t, node.args, 0)
 			}
 			if stage == 4 {
 				assert.Equal(t, "function4", node.Name)
@@ -83,8 +83,8 @@ func TestParseFullWithRunq(t *testing.T) {
 			}
 			if stage == 5 {
 				assert.Equal(t, "function3", node.Name)
-				assert.Len(t, node.Args, 1)
-				assert.Equal(t, "v3", node.Args["k"])
+				assert.Len(t, node.args, 1)
+				assert.Equal(t, "v3", node.args["k"])
 			}
 			return nil
 		})

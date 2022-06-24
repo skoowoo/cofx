@@ -1,4 +1,4 @@
-package flowl
+package cofunc
 
 import (
 	"errors"
@@ -14,8 +14,8 @@ type FMap struct {
 
 func (m *FMap) ToMap() map[string]string {
 	ret := make(map[string]string)
-	for _, line := range m.Lines {
-		k, v := line.Tokens[0].Value, line.Tokens[1].Value
+	for _, line := range m.lines {
+		k, v := line.tokens[0].value, line.tokens[1].value
 		ret[k] = v
 	}
 	return ret
@@ -34,7 +34,7 @@ func (m *FMap) Append(o interface{}) error {
 			m.state = _statel2_unknow
 		}
 		t := m.LastStatement().LastToken()
-		t.Value = t.Value + "\n" + s
+		t.value = t.value + "\n" + s
 	} else {
 		if s == "" {
 			return nil
@@ -48,9 +48,9 @@ func (m *FMap) Append(o interface{}) error {
 		if strings.HasPrefix(v, multiline) {
 			v = strings.TrimPrefix(v, multiline)
 			m.state = _statel2_multilines_started
-			m.Lines = append(m.Lines, NewStatement(k, v))
+			m.lines = append(m.lines, NewStatement(k, v))
 		} else {
-			m.Lines = append(m.Lines, NewStatement(k, v))
+			m.lines = append(m.lines, NewStatement(k, v))
 		}
 	}
 	return nil
@@ -60,13 +60,13 @@ func (m *FMap) Append(o interface{}) error {
 //
 type FList struct {
 	RawBody
-	EType TokenType
+	etype TokenType
 }
 
 func (l *FList) ToSlice() []string {
 	var ret []string
-	for _, line := range l.Lines {
-		v := line.Tokens[0].Value
+	for _, line := range l.lines {
+		v := line.tokens[0].value
 		ret = append(ret, v)
 	}
 	return ret
@@ -79,9 +79,9 @@ func (l *FList) Type() string {
 func (l *FList) Append(o interface{}) error {
 	s := o.(string)
 	t := &Token{
-		Value: s,
-		Type:  l.EType,
+		value: s,
+		typ:   l.etype,
 	}
-	l.Lines = append(l.Lines, NewStatementWithToken(t))
+	l.lines = append(l.lines, NewStatementWithToken(t))
 	return nil
 }

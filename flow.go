@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofunclabs/cofunc/internal/flowl"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
@@ -26,7 +25,7 @@ const (
 
 type FunctionResult struct {
 	fid     feedbackid.ID
-	node    *flowl.Node
+	node    *Node
 	returns map[string]string
 	begin   time.Time
 	end     time.Time
@@ -49,19 +48,19 @@ type FlowBody struct {
 	ready   int
 	results map[string]*FunctionResult
 
-	runq *flowl.RunQueue
-	ast  *flowl.AST
+	runq *RunQueue
+	ast  *AST
 }
 
-func (b *FlowBody) Runq() *flowl.RunQueue {
+func (b *FlowBody) Runq() *RunQueue {
 	return b.runq
 }
 
-func (b *FlowBody) BlockStore() *flowl.AST {
+func (b *FlowBody) BlockStore() *AST {
 	return b.ast
 }
 
-func NewFlow(id feedbackid.ID, runq *flowl.RunQueue, ast *flowl.AST) *Flow {
+func NewFlow(id feedbackid.ID, runq *RunQueue, ast *AST) *Flow {
 	return &Flow{
 		FlowBody: FlowBody{
 			id:   id,

@@ -1,4 +1,4 @@
-package flowl
+package cofunc
 
 import (
 	"strings"
@@ -64,8 +64,8 @@ load cmd:function3
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, path string) {
-		assert.Equal(t, "load", b.Kind.Value)
-		assert.Equal(t, path, b.Target.Value)
+		assert.Equal(t, "load", b.kind.value)
+		assert.Equal(t, path, b.target.value)
 	}
 	check(blocks[0], "cmd:function1")
 	check(blocks[1], "go:function2")
@@ -163,11 +163,11 @@ run function3 {
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, obj string) {
-		assert.Nil(t, b.Child)
-		assert.Nil(t, b.Parent)
-		assert.Equal(t, LevelParent, b.Level)
-		assert.Equal(t, "run", b.Kind.Value)
-		assert.Equal(t, obj, b.Target.Value)
+		assert.Nil(t, b.child)
+		assert.Nil(t, b.parent)
+		assert.Equal(t, LevelParent, b.level)
+		assert.Equal(t, "run", b.kind.value)
+		assert.Equal(t, obj, b.target.value)
 
 		if obj == "function2" {
 			kvs := b.BlockBody.(*FMap).ToMap()
@@ -206,10 +206,10 @@ run    {
 		}
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
-		assert.Equal(t, "run", b.Kind.Value)
-		assert.True(t, b.Target.IsEmpty())
-		assert.True(t, b.Operator.IsEmpty())
-		assert.True(t, b.TypeOrValue.IsEmpty())
+		assert.Equal(t, "run", b.kind.value)
+		assert.True(t, b.target.IsEmpty())
+		assert.True(t, b.operator.IsEmpty())
+		assert.True(t, b.typevalue.IsEmpty())
 
 		slice := b.BlockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
@@ -235,10 +235,10 @@ run    {
 		}
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
-		assert.Equal(t, "run", b.Kind.Value)
-		assert.True(t, b.Target.IsEmpty())
-		assert.True(t, b.Operator.IsEmpty())
-		assert.True(t, b.TypeOrValue.IsEmpty())
+		assert.Equal(t, "run", b.kind.value)
+		assert.True(t, b.target.IsEmpty())
+		assert.True(t, b.operator.IsEmpty())
+		assert.True(t, b.typevalue.IsEmpty())
 
 		slice := b.BlockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)

@@ -34,7 +34,7 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.MinimumNArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return parseFlowLAndPrint(args[0], showAll)
+				return parseFlowl(args[0], showAll)
 			},
 		}
 		parseCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show run queue and blocks, only show run queue by default")

@@ -1,6 +1,6 @@
 //go:generate stringer -type TokenType
 //go:generate stringer -type BlockLevel
-package flowl
+package cofunc
 
 import (
 	"fmt"
@@ -34,12 +34,12 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 }
 
 type Token struct {
-	Value string
-	Type  TokenType
-	Vars  []*struct {
-		N    string // var's name
-		V    string // var's value, need to read from others
-		S, E int    // S is var start position in 'Token.Value', E is end position
+	value string
+	typ   TokenType
+	vars  []*struct {
+		n    string // var's name
+		v    string // var's value, need to read from others
+		s, e int    // S is var start position in 'Token.Value', E is end position
 	}
 }
 
@@ -49,17 +49,17 @@ func NewTextToken(s string) *Token {
 
 func NewToken(s string, typ TokenType) *Token {
 	return &Token{
-		Value: s,
-		Type:  typ,
+		value: s,
+		typ:   typ,
 	}
 }
 
 func (t *Token) String() string {
-	return t.Value
+	return t.value
 }
 
 func (t *Token) IsEmpty() bool {
-	return len(t.Value) == 0
+	return len(t.value) == 0
 }
 
 // TODO: when running
@@ -68,12 +68,12 @@ func (t *Token) AssignVar(b *Block) error {
 }
 
 func (t *Token) HasVar() bool {
-	return len(t.Vars) != 0
+	return len(t.vars) != 0
 }
 
 func (t *Token) Validate() error {
-	if pattern := tokenPatterns[t.Type]; !pattern.MatchString(t.Value) {
-		return errors.Errorf("not match: %s:%s", t.Value, pattern)
+	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.value) {
+		return errors.Errorf("not match: %s:%s", t.value, pattern)
 	}
 	return nil
 }
@@ -81,30 +81,30 @@ func (t *Token) Validate() error {
 // Statement
 //
 type Statement struct {
-	LineNum int
-	Tokens  []*Token
+	lineNum int
+	tokens  []*Token
 }
 
 func NewStatement(ss ...string) *Statement {
 	stm := &Statement{}
 	for _, s := range ss {
-		stm.Tokens = append(stm.Tokens, NewTextToken(s))
+		stm.tokens = append(stm.tokens, NewTextToken(s))
 	}
 	return stm
 }
 
 func NewStatementWithToken(ts ...*Token) *Statement {
 	stm := &Statement{}
-	stm.Tokens = append(stm.Tokens, ts...)
+	stm.tokens = append(stm.tokens, ts...)
 	return stm
 }
 
 func (s *Statement) LastToken() *Token {
-	l := len(s.Tokens)
+	l := len(s.tokens)
 	if l == 0 {
 		return nil
 	}
-	return s.Tokens[l-1]
+	return s.tokens[l-1]
 }
 
 // Block
@@ -117,15 +117,15 @@ type BlockBody interface {
 }
 
 type RawBody struct {
-	Lines []*Statement
+	lines []*Statement
 }
 
 func (r *RawBody) Len() int {
-	return len(r.Lines)
+	return len(r.lines)
 }
 
 func (r *RawBody) Statements() []*Statement {
-	return r.Lines
+	return r.lines
 }
 
 func (r *RawBody) Type() string {
@@ -134,16 +134,16 @@ func (r *RawBody) Type() string {
 
 func (r *RawBody) Append(o interface{}) error {
 	stm := o.(*Statement)
-	r.Lines = append(r.Lines, stm)
+	r.lines = append(r.lines, stm)
 	return nil
 }
 
 func (r *RawBody) LastStatement() *Statement {
-	l := len(r.Lines)
+	l := len(r.lines)
 	if l == 0 {
 		panic("not found statement")
 	}
-	return r.Lines[l-1]
+	return r.lines[l-1]
 }
 
 type BlockLevel int
@@ -155,22 +155,22 @@ const (
 )
 
 type Block struct {
-	Kind        Token
-	Target      Token
-	Operator    Token
-	TypeOrValue Token
-	state       parserStateL2
-	Level       BlockLevel
-	Child       []*Block
-	Parent      *Block
+	kind      Token
+	target    Token
+	operator  Token
+	typevalue Token
+	state     parserStateL2
+	level     BlockLevel
+	child     []*Block
+	parent    *Block
 	BlockBody
 }
 
 func (b *Block) String() string {
 	if b.BlockBody != nil {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue, b.BlockBody.Len())
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.BlockBody.Len())
 	} else {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.Kind, &b.Target, &b.Operator, &b.TypeOrValue)
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.kind, &b.target, &b.operator, &b.typevalue)
 	}
 }
 
@@ -192,8 +192,8 @@ type AST struct {
 func NewAST() *AST {
 	return &AST{
 		global: Block{
-			Child: make([]*Block, 0),
-			Level: LevelGlobal,
+			child: make([]*Block, 0),
+			level: LevelGlobal,
 		},
 		parsing: nil,
 		state:   _statel1_global,
@@ -207,12 +207,12 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	// 		return err
 	// 	}
 	// }
-	if b.Level != LevelGlobal {
+	if b.level != LevelGlobal {
 		if err := do(b); err != nil {
 			return err
 		}
 	}
-	for _, c := range b.Child {
+	for _, c := range b.child {
 		if err := deepwalk(c, do); err != nil {
 			return err
 		}

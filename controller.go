@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/cofunclabs/cofunc/internal/flowl"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
@@ -25,7 +24,7 @@ func NewController() *Controller {
 }
 
 func (ctl *Controller) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
-	rq, ast, err := flowl.ParseFlowl(rd)
+	rq, ast, err := ParseFlowl(rd)
 	if err != nil {
 		return err
 	}
@@ -53,8 +52,8 @@ func (ctl *Controller) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.total = body.Runq().NodeNum()
 		body.results = make(map[string]*FunctionResult)
 
-		body.Runq().Foreach(func(stage int, n *flowl.Node) error {
-			if err := n.Driver.Load(ctx, n.Args); err != nil {
+		body.Runq().Foreach(func(stage int, n *Node) error {
+			if err := n.Driver.Load(ctx, n.args); err != nil {
 				return err
 			}
 			body.ready += 1
@@ -83,7 +82,7 @@ func (ctl *Controller) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		return err
 	}
 
-	fw.Runq().Forstage(func(stage int, node *flowl.Node) error {
+	fw.Runq().Forstage(func(stage int, node *Node) error {
 		// find out functions at the stage
 		errResults := make([]*FunctionResult, 0)
 		results := make([]*FunctionResult, 0)
@@ -94,7 +93,7 @@ func (ctl *Controller) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 
 		// parallel run functions at the stage
 		for p := node; p != nil; p = p.Parallel {
-			go func(n *flowl.Node, fr *FunctionResult) {
+			go func(n *Node, fr *FunctionResult) {
 				fr.begin = time.Now()
 				fr.returns, fr.err = n.Driver.Run(ctx)
 				fr.end = time.Now()

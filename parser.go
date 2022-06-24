@@ -1,6 +1,6 @@
 //go:generate stringer -type parserStateL1
 //go:generate stringer -type parserStateL2
-package flowl
+package cofunc
 
 import (
 	"bufio"
@@ -29,23 +29,23 @@ func ParseAST(rd io.Reader) (*AST, error) {
 }
 
 func validateBlocks(b *Block) error {
-	if err := b.Kind.Validate(); err != nil {
+	if err := b.kind.Validate(); err != nil {
 		return err
 	}
-	if err := b.Target.Validate(); err != nil {
+	if err := b.target.Validate(); err != nil {
 		return err
 	}
-	if err := b.Operator.Validate(); err != nil {
+	if err := b.operator.Validate(); err != nil {
 		return err
 	}
-	if err := b.TypeOrValue.Validate(); err != nil {
+	if err := b.typevalue.Validate(); err != nil {
 		return err
 	}
 
 	if b.BlockBody != nil {
 		lines := b.BlockBody.Statements()
 		for _, ln := range lines {
-			for _, t := range ln.Tokens {
+			for _, t := range ln.tokens {
 				if err := t.Validate(); err != nil {
 					return err
 				}
@@ -53,10 +53,10 @@ func validateBlocks(b *Block) error {
 		}
 	}
 
-	if len(b.Child) == 0 {
+	if len(b.child) == 0 {
 		return nil
 	}
-	for _, c := range b.Child {
+	for _, c := range b.child {
 		if err := validateBlocks(c); err != nil {
 			return err
 		}
@@ -139,22 +139,22 @@ func scanToken(ast *AST, line string, linenum int) error {
 				return errors.New("invalid block define: " + word)
 			}
 			block = &Block{
-				Kind: Token{
-					Value: word,
+				kind: Token{
+					value: word,
 				},
 				state:     _statel2_kind_done,
-				Level:     LevelParent,
+				level:     LevelParent,
 				BlockBody: body,
 			}
-			ast.global.Child = append(ast.global.Child, block)
+			ast.global.child = append(ast.global.child, block)
 			ast.parsing = block
 		case _statel1_load_block_started:
 			///
 			// load go:sleep
 			//
 			if chr == '\n' {
-				block.Target = Token{
-					Value: strings.TrimSpace(newline[startPos:last]),
+				block.target = Token{
+					value: strings.TrimSpace(newline[startPos:last]),
 				}
 				block.state = _statel2_typeorvalue_done
 				prestate = state
@@ -181,9 +181,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 			*/
 			if chr == '\n' {
 				// run function
-				block.Target = Token{
-					Value: strings.TrimSpace(newline[startPos:last]),
-					Type:  FunctionNameT,
+				block.target = Token{
+					value: strings.TrimSpace(newline[startPos:last]),
+					typ:   FunctionNameT,
 				}
 				block.state = _statel2_typeorvalue_done
 				prestate = state
@@ -202,9 +202,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 							time: 1s
 						}
 					*/
-					block.Target = Token{
-						Value: strings.TrimSpace(newline[startPos:last]),
-						Type:  FunctionNameT,
+					block.target = Token{
+						value: strings.TrimSpace(newline[startPos:last]),
+						typ:   FunctionNameT,
 					}
 					block.BlockBody = &FMap{}
 				} else {
@@ -214,7 +214,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 							f2
 						}
 					*/
-					block.BlockBody = &FList{EType: FunctionNameT}
+					block.BlockBody = &FList{etype: FunctionNameT}
 				}
 
 				block.state = _statel2_typeorvalue_done
@@ -270,8 +270,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.state = _statel2_operator_started
 				}
 				s := newline[startPos:last]
-				block.Target = Token{
-					Value: s,
+				block.target = Token{
+					value: s,
 				}
 			case _statel2_target_done:
 				if unicode.IsSpace(chr) {
@@ -289,8 +289,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.state = _statel2_typeorvalue_started
 					startPos = last
 				}
-				block.Operator = Token{
-					Value: "=",
+				block.operator = Token{
+					value: "=",
 				}
 			case _statel2_operator_done:
 				if unicode.IsSpace(chr) {
@@ -302,8 +302,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if unicode.IsSpace(chr) || chr == '{' {
 					block.state = _statel2_typeorvalue_done
 					s := newline[startPos:last]
-					block.TypeOrValue = Token{
-						Value: s,
+					block.typevalue = Token{
+						value: s,
 					}
 					if chr == '{' {
 						prestate = state
@@ -338,15 +338,15 @@ func scanToken(ast *AST, line string, linenum int) error {
 					switch s {
 					case "args":
 						argsBlock := &Block{
-							Kind: Token{
-								Value: s,
+							kind: Token{
+								value: s,
 							},
 							state:     _statel2_kind_done,
-							Level:     LevelChild,
-							Parent:    block,
+							level:     LevelChild,
+							parent:    block,
 							BlockBody: &FMap{},
 						}
-						block.Child = append(block.Child, argsBlock)
+						block.child = append(block.child, argsBlock)
 						block = argsBlock
 						prestate = state
 						state = _statel1_args_started
@@ -381,8 +381,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				}
 			case _statel2_operator_started:
 				if chr == '{' || unicode.IsSpace(chr) {
-					block.Operator = Token{
-						Value: "=",
+					block.operator = Token{
+						value: "=",
 					}
 					block.state = _statel2_operator_done
 					if chr == '{' {
@@ -417,7 +417,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if newline == "}" {
 					prestate = state
 					state = _statel1_fn_body_inside
-					block = block.Parent
+					block = block.parent
 					block.state = _statel2_unknow
 				} else {
 					if err := block.BlockBody.Append(newline); err != nil {
