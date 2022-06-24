@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadTestingdata2(data string) ([]*Block, *AST, *RunQueue, error) {
+func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
 	rd := strings.NewReader(data)
 	rq, bl, err := ParseFlowl(rd)
 	if err != nil {
@@ -58,31 +58,31 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.NotNil(t, rq)
 
 		assert.Len(t, rq.configuredNodes, 1)
-		assert.Equal(t, "function1", rq.configuredNodes["f1"].Driver.FunctionName())
-		assert.Len(t, rq.queue, 5)
+		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
+		assert.Len(t, rq.stage, 5)
 
 		rq.Forstage(func(stage int, node *Node) error {
 			if stage == 1 {
-				assert.Equal(t, "f1", node.Name)
+				assert.Equal(t, "f1", node.name)
 				assert.Len(t, node.args, 2)
 				assert.Equal(t, "v1", node.args["k"])
 			}
 			if stage == 2 {
-				assert.Equal(t, "function2", node.Name)
+				assert.Equal(t, "function2", node.name)
 				assert.Len(t, node.args, 1)
 				assert.Equal(t, "v2", node.args["k"])
 			}
 			if stage == 3 {
-				assert.Equal(t, "function3", node.Name)
+				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.args, 0)
 			}
 			if stage == 4 {
-				assert.Equal(t, "function4", node.Name)
-				assert.NotNil(t, node.Parallel)
-				assert.Equal(t, "function5", node.Parallel.Name)
+				assert.Equal(t, "function4", node.name)
+				assert.NotNil(t, node.parallel)
+				assert.Equal(t, "function5", node.parallel.name)
 			}
 			if stage == 5 {
-				assert.Equal(t, "function3", node.Name)
+				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.args, 1)
 				assert.Equal(t, "v3", node.args["k"])
 			}

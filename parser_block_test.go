@@ -11,7 +11,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "100",
-			typ:   IntT,
+			typ:   _int_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -19,7 +19,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "0100",
-			typ:   IntT,
+			typ:   _int_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -27,7 +27,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "100.0",
-			typ:   IntT,
+			typ:   _int_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -37,7 +37,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "go:print",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -45,7 +45,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "go1:print",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -53,7 +53,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "go:/path/print:1.0",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -62,7 +62,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "go:print/",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -70,7 +70,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "go-:print",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -78,7 +78,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "1go:print",
-			typ:   LoadT,
+			typ:   _load_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -88,7 +88,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "abcABC123-",
-			typ:   MapKeyT,
+			typ:   _mapkey_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -96,7 +96,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "===",
-			typ:   MapKeyT,
+			typ:   _mapkey_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -105,7 +105,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "abc:1",
-			typ:   MapKeyT,
+			typ:   _mapkey_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -113,7 +113,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "abc:",
-			typ:   MapKeyT,
+			typ:   _mapkey_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -123,7 +123,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "printPrint123-a_",
-			typ:   FunctionNameT,
+			typ:   _functionname_t,
 		}
 		err := tk.Validate()
 		assert.NoError(t, err)
@@ -132,7 +132,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "123print",
-			typ:   FunctionNameT,
+			typ:   _functionname_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -140,7 +140,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "print.",
-			typ:   FunctionNameT,
+			typ:   _functionname_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)
@@ -148,7 +148,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			value: "print/",
-			typ:   FunctionNameT,
+			typ:   _functionname_t,
 		}
 		err := tk.Validate()
 		assert.Error(t, err)

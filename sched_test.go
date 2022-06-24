@@ -26,51 +26,51 @@ func TestAddReadyStartFlow(t *testing.T) {
 	run	sleep
 	`
 
-	ctrl := NewController()
+	sd := NewScheduler()
 
 	ctx := context.Background()
 	id := feedbackid.NewDefaultID("testingdata.flowl")
 
 	{
-		err := ctrl.AddFlow(ctx, id, strings.NewReader(testingdata))
+		err := sd.AddFlow(ctx, id, strings.NewReader(testingdata))
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b flowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FLOW_ADDED, status)
+		assert.Equal(t, _flow_added, status)
 	}
 
 	{
-		err := ctrl.ReadyFlow(ctx, id)
+		err := sd.ReadyFlow(ctx, id)
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b flowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FLOW_READY, status)
+		assert.Equal(t, _flow_ready, status)
 	}
 
 	{
-		err := ctrl.StartFlow(ctx, id)
+		err := sd.StartFlow(ctx, id)
 		assert.NoError(t, err)
 
 		time.Sleep(time.Second * 5)
 
 		var status FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b flowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FLOW_STOPPED, status)
+		assert.Equal(t, _flow_stopped, status)
 	}
 
-	assert.Len(t, ctrl.store.entity, 1)
+	assert.Len(t, sd.store.entity, 1)
 }

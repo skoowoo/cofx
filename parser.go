@@ -11,7 +11,7 @@ import (
 )
 
 func ParseAST(rd io.Reader) (*AST, error) {
-	a := NewAST()
+	a := newAST()
 	num := 0
 	scanner := bufio.NewScanner(rd)
 	for {
@@ -42,8 +42,8 @@ func validateBlocks(b *Block) error {
 		return err
 	}
 
-	if b.BlockBody != nil {
-		lines := b.BlockBody.Statements()
+	if b.blockBody != nil {
+		lines := b.blockBody.Statements()
 		for _, ln := range lines {
 			for _, t := range ln.tokens {
 				if err := t.Validate(); err != nil {
@@ -117,7 +117,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 			if !unicode.IsSpace(chr) && chr != '{' {
 				break
 			}
-			var body BlockBody = nil
+			var body blockBody = nil
 			word := newline[startPos:last]
 			switch word {
 			case "load":
@@ -143,8 +143,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 					value: word,
 				},
 				state:     _statel2_kind_done,
-				level:     LevelParent,
-				BlockBody: body,
+				level:     _level_parent,
+				blockBody: body,
 			}
 			ast.global.child = append(ast.global.child, block)
 			ast.parsing = block
@@ -183,7 +183,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// run function
 				block.target = Token{
 					value: strings.TrimSpace(newline[startPos:last]),
-					typ:   FunctionNameT,
+					typ:   _functionname_t,
 				}
 				block.state = _statel2_typeorvalue_done
 				prestate = state
@@ -204,9 +204,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 					*/
 					block.target = Token{
 						value: strings.TrimSpace(newline[startPos:last]),
-						typ:   FunctionNameT,
+						typ:   _functionname_t,
 					}
-					block.BlockBody = &FMap{}
+					block.blockBody = &FMap{}
 				} else {
 					/*
 						run {
@@ -214,7 +214,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 							f2
 						}
 					*/
-					block.BlockBody = &FList{etype: FunctionNameT}
+					block.blockBody = &FList{etype: _functionname_t}
 				}
 
 				block.state = _statel2_typeorvalue_done
@@ -245,7 +245,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					prestate = state
 					state = _statel1_global
 				} else if newline != "" {
-					if err := block.BlockBody.Append(newline); err != nil {
+					if err := block.blockBody.Append(newline); err != nil {
 						return err
 					}
 				}
@@ -342,9 +342,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 								value: s,
 							},
 							state:     _statel2_kind_done,
-							level:     LevelChild,
+							level:     _level_child,
 							parent:    block,
-							BlockBody: &FMap{},
+							blockBody: &FMap{},
 						}
 						block.child = append(block.child, argsBlock)
 						block = argsBlock
@@ -420,7 +420,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block = block.parent
 					block.state = _statel2_unknow
 				} else {
-					if err := block.BlockBody.Append(newline); err != nil {
+					if err := block.blockBody.Append(newline); err != nil {
 						return err
 					}
 				}

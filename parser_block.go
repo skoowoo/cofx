@@ -14,23 +14,23 @@ import (
 type TokenType int
 
 const (
-	UnknowT TokenType = iota
-	IntT
-	TextT
-	MapKeyT
-	OperatorT
-	FunctionNameT
-	LoadT
+	_unknow_t TokenType = iota
+	_int_t
+	_text_t
+	_mapkey_t
+	_operator_t
+	_functionname_t
+	_load_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
-	UnknowT:       regexp.MustCompile(`^*$`),
-	IntT:          regexp.MustCompile(`^[1-9][0-9]*$`),
-	TextT:         regexp.MustCompile(`^*$`),
-	MapKeyT:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
-	OperatorT:     regexp.MustCompile(`^=$`),
-	LoadT:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
-	FunctionNameT: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_unknow_t:       regexp.MustCompile(`^*$`),
+	_int_t:          regexp.MustCompile(`^[1-9][0-9]*$`),
+	_text_t:         regexp.MustCompile(`^*$`),
+	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
+	_operator_t:     regexp.MustCompile(`^=$`),
+	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
+	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
 }
 
 type Token struct {
@@ -43,11 +43,11 @@ type Token struct {
 	}
 }
 
-func NewTextToken(s string) *Token {
-	return NewToken(s, TextT)
+func newTextToken(s string) *Token {
+	return newToken(s, _text_t)
 }
 
-func NewToken(s string, typ TokenType) *Token {
+func newToken(s string, typ TokenType) *Token {
 	return &Token{
 		value: s,
 		typ:   typ,
@@ -62,13 +62,13 @@ func (t *Token) IsEmpty() bool {
 	return len(t.value) == 0
 }
 
-// TODO: when running
-func (t *Token) AssignVar(b *Block) error {
-	return nil
-}
-
 func (t *Token) HasVar() bool {
 	return len(t.vars) != 0
+}
+
+// TODO: when running
+func (t *Token) assignVar(b *Block) error {
+	return nil
 }
 
 func (t *Token) Validate() error {
@@ -85,15 +85,15 @@ type Statement struct {
 	tokens  []*Token
 }
 
-func NewStatement(ss ...string) *Statement {
+func newStatement(ss ...string) *Statement {
 	stm := &Statement{}
 	for _, s := range ss {
-		stm.tokens = append(stm.tokens, NewTextToken(s))
+		stm.tokens = append(stm.tokens, newTextToken(s))
 	}
 	return stm
 }
 
-func NewStatementWithToken(ts ...*Token) *Statement {
+func newStatementWithToken(ts ...*Token) *Statement {
 	stm := &Statement{}
 	stm.tokens = append(stm.tokens, ts...)
 	return stm
@@ -109,36 +109,36 @@ func (s *Statement) LastToken() *Token {
 
 // Block
 //
-type BlockBody interface {
+type blockBody interface {
 	Type() string
 	Append(o interface{}) error
 	Statements() []*Statement
 	Len() int
 }
 
-type RawBody struct {
+type rawbody struct {
 	lines []*Statement
 }
 
-func (r *RawBody) Len() int {
+func (r *rawbody) Len() int {
 	return len(r.lines)
 }
 
-func (r *RawBody) Statements() []*Statement {
+func (r *rawbody) Statements() []*Statement {
 	return r.lines
 }
 
-func (r *RawBody) Type() string {
+func (r *rawbody) Type() string {
 	return "raw"
 }
 
-func (r *RawBody) Append(o interface{}) error {
+func (r *rawbody) append(o interface{}) error {
 	stm := o.(*Statement)
 	r.lines = append(r.lines, stm)
 	return nil
 }
 
-func (r *RawBody) LastStatement() *Statement {
+func (r *rawbody) LastStatement() *Statement {
 	l := len(r.lines)
 	if l == 0 {
 		panic("not found statement")
@@ -149,9 +149,9 @@ func (r *RawBody) LastStatement() *Statement {
 type BlockLevel int
 
 const (
-	LevelGlobal BlockLevel = iota
-	LevelParent
-	LevelChild
+	_level_global BlockLevel = iota
+	_level_parent
+	_level_child
 )
 
 type Block struct {
@@ -163,12 +163,12 @@ type Block struct {
 	level     BlockLevel
 	child     []*Block
 	parent    *Block
-	BlockBody
+	blockBody
 }
 
 func (b *Block) String() string {
-	if b.BlockBody != nil {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.BlockBody.Len())
+	if b.blockBody != nil {
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.blockBody.Len())
 	} else {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.kind, &b.target, &b.operator, &b.typevalue)
 	}
@@ -189,11 +189,11 @@ type AST struct {
 	prestate parserStateL1
 }
 
-func NewAST() *AST {
+func newAST() *AST {
 	return &AST{
 		global: Block{
 			child: make([]*Block, 0),
-			level: LevelGlobal,
+			level: _level_global,
 		},
 		parsing: nil,
 		state:   _statel1_global,
@@ -207,7 +207,7 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	// 		return err
 	// 	}
 	// }
-	if b.level != LevelGlobal {
+	if b.level != _level_global {
 		if err := do(b); err != nil {
 			return err
 		}
@@ -222,8 +222,4 @@ func deepwalk(b *Block, do func(*Block) error) error {
 
 func (a *AST) Foreach(do func(*Block) error) error {
 	return deepwalk(&a.global, do)
-}
-
-func (a *AST) String() string {
-	return ""
 }

@@ -26,13 +26,13 @@ func parseFlowl(name string, all bool) error {
 		return err
 	}
 	if all {
-		printBlocks(ast, name)
+		printAST(ast, name)
 	}
-	printRunQueue(rq, name)
+	printRunQ(rq, name)
 	return nil
 }
 
-func printBlocks(ast *co.AST, name string) {
+func printAST(ast *co.AST, name string) {
 	fmt.Printf("blocks in %s:\n", name)
 	ast.Foreach(func(b *co.Block) error {
 		fmt.Printf("  %s\n", b.String())
@@ -40,7 +40,7 @@ func printBlocks(ast *co.AST, name string) {
 	})
 }
 
-func printRunQueue(rq *co.RunQueue, name string) {
+func printRunQ(rq *co.RunQ, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
 	rq.Forstage(func(stage int, n *co.Node) error {
@@ -49,10 +49,8 @@ func printRunQueue(rq *co.RunQueue, name string) {
 		buf.WriteString("Stage ")
 		buf.WriteString(strconv.Itoa(i))
 		buf.WriteString(": ")
-		for p := n; p != nil; p = p.Parallel {
-			buf.WriteString(p.Name)
-			buf.WriteString("->")
-			buf.WriteString(p.Driver.FunctionName())
+		for p := n; p != nil; p = p.Parallel() {
+			buf.WriteString(p.String())
 			buf.WriteString(" ")
 		}
 		fmt.Printf("  %s\n", buf.String())

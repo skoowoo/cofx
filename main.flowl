@@ -21,9 +21,9 @@ fn gobuild = command {
 fn unittest = command {
 	args = {
 		script: ***
+			go test -v -timeout 30s github.com/cofunclabs/cofunc
 			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/builtins/command
 			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/functiondriver/go
-			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/flowl
 		***
 	}
 }

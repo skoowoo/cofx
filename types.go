@@ -8,7 +8,7 @@ import (
 // Map
 //
 type FMap struct {
-	RawBody
+	rawbody
 	state parserStateL2
 }
 
@@ -48,9 +48,9 @@ func (m *FMap) Append(o interface{}) error {
 		if strings.HasPrefix(v, multiline) {
 			v = strings.TrimPrefix(v, multiline)
 			m.state = _statel2_multilines_started
-			m.lines = append(m.lines, NewStatement(k, v))
+			m.lines = append(m.lines, newStatement(k, v))
 		} else {
-			m.lines = append(m.lines, NewStatement(k, v))
+			m.lines = append(m.lines, newStatement(k, v))
 		}
 	}
 	return nil
@@ -59,7 +59,7 @@ func (m *FMap) Append(o interface{}) error {
 // List
 //
 type FList struct {
-	RawBody
+	rawbody
 	etype TokenType
 }
 
@@ -82,6 +82,6 @@ func (l *FList) Append(o interface{}) error {
 		value: s,
 		typ:   l.etype,
 	}
-	l.lines = append(l.lines, NewStatementWithToken(t))
+	l.lines = append(l.lines, newStatementWithToken(t))
 	return nil
 }

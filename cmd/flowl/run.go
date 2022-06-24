@@ -6,7 +6,6 @@ import (
 	"os"
 
 	co "github.com/cofunclabs/cofunc"
-	. "github.com/cofunclabs/cofunc/pkg/assertutils"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
@@ -22,20 +21,19 @@ func runFlowl(name string) error {
 		f.Close()
 	}()
 
-	ctrl := co.NewController()
-	PanicIfNil(ctrl)
+	sd := co.NewScheduler()
 
 	fid := feedbackid.NewDefaultID(name)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := ctrl.AddFlow(ctx, fid, f); err != nil {
+	if err := sd.AddFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if err := ctrl.ReadyFlow(ctx, fid); err != nil {
+	if err := sd.ReadyFlow(ctx, fid); err != nil {
 		return err
 	}
-	if err := ctrl.StartFlow(ctx, fid); err != nil {
+	if err := sd.StartFlow(ctx, fid); err != nil {
 		return err
 	}
 	return nil

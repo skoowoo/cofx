@@ -12,15 +12,15 @@ import (
 type FlowStatus int
 
 const (
-	FLOW_UNKNOWN FlowStatus = iota
-	FLOW_STOPPED
-	FLOW_RUNNING
-	FLOW_READY
-	FLOW_ERROR
-	FLOW_ADDED
-	FLOW_UPDATED
-	FLOW_RUNNING_AND_UPDATED
-	FLOW_DELETED
+	_flow_unknown FlowStatus = iota
+	_flow_stopped
+	_flow_running
+	_flow_ready
+	_flow_error
+	_flow_added
+	_flow_updated
+	_flow_running_and_updated
+	_flow_deleted
 )
 
 type FunctionResult struct {
@@ -36,10 +36,10 @@ type FunctionResult struct {
 //
 type Flow struct {
 	sync.RWMutex
-	FlowBody
+	flowBody
 }
 
-type FlowBody struct {
+type flowBody struct {
 	id      feedbackid.ID
 	status  FlowStatus
 	begin   time.Time
@@ -48,21 +48,21 @@ type FlowBody struct {
 	ready   int
 	results map[string]*FunctionResult
 
-	runq *RunQueue
+	runq *RunQ
 	ast  *AST
 }
 
-func (b *FlowBody) Runq() *RunQueue {
+func (b *flowBody) GetRunQ() *RunQ {
 	return b.runq
 }
 
-func (b *FlowBody) BlockStore() *AST {
+func (b *flowBody) GetAST() *AST {
 	return b.ast
 }
 
-func NewFlow(id feedbackid.ID, runq *RunQueue, ast *AST) *Flow {
+func newFlow(id feedbackid.ID, runq *RunQ, ast *AST) *Flow {
 	return &Flow{
-		FlowBody: FlowBody{
+		flowBody: flowBody{
 			id:   id,
 			runq: runq,
 			ast:  ast,
@@ -70,60 +70,60 @@ func NewFlow(id feedbackid.ID, runq *RunQueue, ast *AST) *Flow {
 	}
 }
 
-func (f *Flow) ReadField(read ...func(FlowBody) error) error {
+func (f *Flow) readField(read ...func(flowBody) error) error {
 	f.RLock()
 	defer f.RUnlock()
 	for _, rd := range read {
-		if err := rd(f.FlowBody); err != nil {
+		if err := rd(f.flowBody); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (f *Flow) UpdateField(update ...func(*FlowBody) error) error {
+func (f *Flow) updateField(update ...func(*flowBody) error) error {
 	f.Lock()
 	defer f.Unlock()
 	for _, up := range update {
-		if err := up(&f.FlowBody); err != nil {
+		if err := up(&f.flowBody); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func updateBeginTime(b *FlowBody) error {
+func updateBeginTime(b *flowBody) error {
 	b.begin = time.Now()
 	return nil
 }
 
-func updateEndTime(b *FlowBody) error {
+func updateEndTime(b *flowBody) error {
 	b.end = time.Now()
 	return nil
 }
 
-func toRunning(b *FlowBody) error {
-	if b.status == FLOW_RUNNING {
+func toRunning(b *flowBody) error {
+	if b.status == _flow_running {
 		return errors.New("function is running: " + b.id.Value())
 	}
-	if b.status == FLOW_ADDED {
+	if b.status == _flow_added {
 		return errors.New("function is not ready: " + b.id.Value())
 	}
-	b.status = FLOW_RUNNING
+	b.status = _flow_running
 	return nil
 }
 
-func toStopped(b *FlowBody) error {
-	if b.status == FLOW_ERROR {
-		// todo
+func toStopped(b *flowBody) error {
+	if b.status == _flow_error {
+		// TODO:
 	}
-	if b.status == FLOW_RUNNING {
-		b.status = FLOW_STOPPED
+	if b.status == _flow_running {
+		b.status = _flow_stopped
 	}
 	return nil
 }
 
-func toError(b *FlowBody) error {
-	b.status = FLOW_ERROR
+func toError(b *flowBody) error {
+	b.status = _flow_error
 	return nil
 }

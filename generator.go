@@ -9,51 +9,59 @@ import (
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
 )
 
-func ParseFlowl(rd io.Reader) (runq *RunQueue, ast *AST, err error) {
+func ParseFlowl(rd io.Reader) (rq *RunQ, ast *AST, err error) {
 	if ast, err = ParseAST(rd); err != nil {
 		return
 	}
-	runq, err = NewRunQueue(ast)
+	rq, err = NewRunQ(ast)
 	if err != nil {
 		return
 	}
 	return
 }
 
-// LoadedLocation
+// location
 //
-type LoadedLocation struct {
-	driverName   string
-	functionName string
-	path         string
+type location struct {
+	dname string
+	fname string
+	path  string
 }
 
 // Node
 //
 type Node struct {
-	Name     string
-	Driver   functiondriver.FunctionDriver
-	Parallel *Node
+	name     string
+	driver   functiondriver.Driver
+	parallel *Node
 	args     map[string]string
 	// TODO:
-	runBlock *Block
-	fnBlock  *Block
+	runb *Block
+	fnb  *Block
 }
 
-// RunQueue
+func (n *Node) String() string {
+	return n.name + "->" + n.driver.FunctionName()
+}
+
+func (n *Node) Parallel() *Node {
+	return n.parallel
+}
+
+// RunQ
 //
-type RunQueue struct {
-	locations       map[string]LoadedLocation
+type RunQ struct {
+	locations       map[string]location
 	configuredNodes map[string]*Node
-	queue           []*Node
+	stage           []*Node
 	ast             *AST
 }
 
-func NewRunQueue(ast *AST) (*RunQueue, error) {
-	q := &RunQueue{
-		locations:       make(map[string]LoadedLocation),
+func NewRunQ(ast *AST) (*RunQ, error) {
+	q := &RunQ{
+		locations:       make(map[string]location),
 		configuredNodes: make(map[string]*Node),
-		queue:           make([]*Node, 0),
+		stage:           make([]*Node, 0),
 		ast:             ast,
 	}
 	if err := q.processLoad(ast); err != nil {
@@ -68,24 +76,24 @@ func NewRunQueue(ast *AST) (*RunQueue, error) {
 	return q, nil
 }
 
-func (rq *RunQueue) createNode(nodeName, fName string) (*Node, error) {
-	loc, ok := rq.locations[fName]
+func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
+	loc, ok := rq.locations[fname]
 	if !ok {
-		return nil, errors.New("not load function: " + fName)
+		return nil, errors.New("not load function: " + fname)
 	}
-	loadTarget := loc.driverName + ":" + loc.path
-	driver := functiondriver.New(loadTarget)
+	l := loc.dname + ":" + loc.path
+	driver := functiondriver.New(l)
 	if driver == nil {
-		return nil, errors.New("not found driver: " + loadTarget)
+		return nil, errors.New("not found driver: " + l)
 	}
 	return &Node{
-		Name:   nodeName,
-		Driver: driver,
+		name:   nodename,
+		driver: driver,
 		args:   make(map[string]string),
 	}, nil
 }
 
-func (rq *RunQueue) processLoad(ast *AST) error {
+func (rq *RunQ) processLoad(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if b.kind.value != "load" {
 			return nil
@@ -96,42 +104,42 @@ func (rq *RunQueue) processLoad(ast *AST) error {
 		if _, ok := rq.locations[fname]; ok {
 			return errors.New("repeat to load function: " + fname)
 		}
-		rq.locations[fname] = LoadedLocation{
-			driverName:   dname,
-			path:         p,
-			functionName: fname,
+		rq.locations[fname] = location{
+			dname: dname,
+			path:  p,
+			fname: fname,
 		}
 		return nil
 	})
 }
 
-func (rq *RunQueue) processFn(ast *AST) error {
+func (rq *RunQ) processFn(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if b.kind.value != "fn" {
 			return nil
 		}
-		nodeName, fName := b.target.value, b.typevalue.value
-		if nodeName == fName {
-			return errors.New("node and function name are the same: " + nodeName)
+		nodename, fname := b.target.value, b.typevalue.value
+		if nodename == fname {
+			return errors.New("node and function name are the same: " + nodename)
 		}
-		node, err := rq.createNode(nodeName, fName)
+		node, err := rq.createNode(nodename, fname)
 		if err != nil {
 			return err
 		}
-		if _, ok := rq.configuredNodes[node.Name]; ok {
-			return errors.New("repeat to configure function:" + node.Name)
+		if _, ok := rq.configuredNodes[node.name]; ok {
+			return errors.New("repeat to configure function:" + node.name)
 		}
-		rq.configuredNodes[node.Name] = node
+		rq.configuredNodes[node.name] = node
 		for _, child := range b.child {
 			if child.kind.value == "args" {
-				node.args = child.BlockBody.(*FMap).ToMap()
+				node.args = child.blockBody.(*FMap).ToMap()
 			}
 		}
 		return nil
 	})
 }
 
-func (rq *RunQueue) processRun(ast *AST) error {
+func (rq *RunQ) processRun(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if b.kind.value != "run" {
 			return nil
@@ -146,23 +154,23 @@ func (rq *RunQueue) processRun(ast *AST) error {
 				if node, err = rq.createNode(name, name); err != nil {
 					return err
 				}
-				if b.BlockBody != nil {
-					node.args = b.BlockBody.(*FMap).ToMap()
+				if b.blockBody != nil {
+					node.args = b.blockBody.(*FMap).ToMap()
 				}
 			} else {
 				// the function is configured
-				if b.BlockBody != nil {
-					node.args = b.BlockBody.(*FMap).ToMap()
+				if b.blockBody != nil {
+					node.args = b.blockBody.(*FMap).ToMap()
 				}
 			}
-			rq.queue = append(rq.queue, node)
+			rq.stage = append(rq.stage, node)
 			return nil
 		}
 
 		// Here is the parallel run function
 		//
 		var last *Node
-		names := b.BlockBody.(*FList).ToSlice()
+		names := b.blockBody.(*FList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.configuredNodes[name]
 			if !ok {
@@ -173,9 +181,9 @@ func (rq *RunQueue) processRun(ast *AST) error {
 				}
 			}
 			if last == nil {
-				rq.queue = append(rq.queue, node)
+				rq.stage = append(rq.stage, node)
 			} else {
-				last.Parallel = node
+				last.parallel = node
 			}
 			last = node
 		}
@@ -183,8 +191,8 @@ func (rq *RunQueue) processRun(ast *AST) error {
 	})
 }
 
-func (rq *RunQueue) Forstage(do func(int, *Node) error) error {
-	for i, e := range rq.queue {
+func (rq *RunQ) Forstage(do func(int, *Node) error) error {
+	for i, e := range rq.stage {
 		if err := do(i+1, e); err != nil {
 			return err
 		}
@@ -192,9 +200,9 @@ func (rq *RunQueue) Forstage(do func(int, *Node) error) error {
 	return nil
 }
 
-func (rq *RunQueue) Foreach(do func(int, *Node) error) error {
-	for i, e := range rq.queue {
-		for p := e; p != nil; p = p.Parallel {
+func (rq *RunQ) Foreach(do func(int, *Node) error) error {
+	for i, e := range rq.stage {
+		for p := e; p != nil; p = p.parallel {
 			if err := do(i+1, p); err != nil {
 				return err
 			}
@@ -203,10 +211,10 @@ func (rq *RunQueue) Foreach(do func(int, *Node) error) error {
 	return nil
 }
 
-func (rq *RunQueue) NodeNum() int {
+func (rq *RunQ) NodeNum() int {
 	var n int
-	for _, e := range rq.queue {
-		for p := e; p != nil; p = p.Parallel {
+	for _, e := range rq.stage {
+		for p := e; p != nil; p = p.parallel {
 			n += 1
 		}
 	}

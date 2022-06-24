@@ -165,16 +165,16 @@ run function3 {
 	check := func(b *Block, obj string) {
 		assert.Nil(t, b.child)
 		assert.Nil(t, b.parent)
-		assert.Equal(t, LevelParent, b.level)
+		assert.Equal(t, _level_parent, b.level)
 		assert.Equal(t, "run", b.kind.value)
 		assert.Equal(t, obj, b.target.value)
 
 		if obj == "function2" {
-			kvs := b.BlockBody.(*FMap).ToMap()
+			kvs := b.blockBody.(*FMap).ToMap()
 			assert.Len(t, kvs, 2)
 		}
 		if obj == "function3" {
-			kvs := b.BlockBody.(*FMap).ToMap()
+			kvs := b.blockBody.(*FMap).ToMap()
 			assert.Len(t, kvs, 4)
 			assert.Equal(t, "{(1+2+3)}", kvs["k"])
 			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
@@ -211,7 +211,7 @@ run    {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
 
-		slice := b.BlockBody.(*FList).ToSlice()
+		slice := b.blockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -240,7 +240,7 @@ run    {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
 
-		slice := b.BlockBody.(*FList).ToSlice()
+		slice := b.blockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)

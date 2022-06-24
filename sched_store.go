@@ -6,16 +6,16 @@ import (
 )
 
 // TODO:
-type PersistentStore interface {
+type persistentstore interface {
 }
 
-type FlowStore struct {
+type flowstore struct {
 	sync.RWMutex
 	entity map[string]*Flow
 }
 
-// Store store a kv into flowstore
-func (s *FlowStore) Store(k string, f *Flow) (err error) {
+// store store a kv into flowstore
+func (s *flowstore) store(k string, f *Flow) (err error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -28,7 +28,7 @@ func (s *FlowStore) Store(k string, f *Flow) (err error) {
 	return nil
 }
 
-func (s *FlowStore) Update(k string, f *Flow) (err error) {
+func (s *flowstore) update(k string, f *Flow) (err error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -40,7 +40,7 @@ func (s *FlowStore) Update(k string, f *Flow) (err error) {
 	return nil
 }
 
-func (s *FlowStore) Get(k string) (*Flow, error) {
+func (s *flowstore) get(k string) (*Flow, error) {
 	s.RLock()
 	defer s.RUnlock()
 	v, ok := s.entity[k]
@@ -50,8 +50,8 @@ func (s *FlowStore) Get(k string) (*Flow, error) {
 	return v, nil
 }
 
-// If 'do' return a error, will stop the 'Foreach'
-func (s *FlowStore) Foreach(do func(string, *Flow) error) {
+// If 'do' return a error, will stop the 'foreach'
+func (s *flowstore) foreach(do func(string, *Flow) error) {
 	s.RLock()
 	defer s.RUnlock()
 	for k, v := range s.entity {
