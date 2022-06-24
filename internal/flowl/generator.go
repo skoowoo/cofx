@@ -124,7 +124,7 @@ func (rq *RunQueue) processFn(ast *AST) error {
 		rq.ConfiguredNodes[node.Name] = node
 		for _, child := range b.Child {
 			if child.Kind.Value == "args" {
-				node.Args = child.BlockBody.(*FlMap).ToMap()
+				node.Args = child.BlockBody.(*FMap).ToMap()
 			}
 		}
 		return nil
@@ -147,12 +147,12 @@ func (rq *RunQueue) processRun(ast *AST) error {
 					return err
 				}
 				if b.BlockBody != nil {
-					node.Args = b.BlockBody.(*FlMap).ToMap()
+					node.Args = b.BlockBody.(*FMap).ToMap()
 				}
 			} else {
 				// the function is configured
 				if b.BlockBody != nil {
-					node.Args = b.BlockBody.(*FlMap).ToMap()
+					node.Args = b.BlockBody.(*FMap).ToMap()
 				}
 			}
 			rq.Queue = append(rq.Queue, node)
@@ -162,7 +162,7 @@ func (rq *RunQueue) processRun(ast *AST) error {
 		// Here is the parallel run function
 		//
 		var last *Node
-		names := b.BlockBody.(*FlList).ToSlice()
+		names := b.BlockBody.(*FList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.ConfiguredNodes[name]
 			if !ok {

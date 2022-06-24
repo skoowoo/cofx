@@ -130,7 +130,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if chr == '{' {
 					prestate = state
 					state = _statel1_run_body_started
-					body = &FlList{}
+					body = &FList{}
 				} else {
 					prestate = state
 					state = _statel1_run_block_started
@@ -206,7 +206,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 						Value: strings.TrimSpace(newline[startPos:last]),
 						Type:  FunctionNameT,
 					}
-					block.BlockBody = &FlMap{}
+					block.BlockBody = &FMap{}
 				} else {
 					/*
 						run {
@@ -214,7 +214,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 							f2
 						}
 					*/
-					block.BlockBody = &FlList{EType: FunctionNameT}
+					block.BlockBody = &FList{EType: FunctionNameT}
 				}
 
 				block.state = _statel2_typeorvalue_done
@@ -344,7 +344,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 							state:     _statel2_kind_done,
 							Level:     LevelChild,
 							Parent:    block,
-							BlockBody: &FlMap{},
+							BlockBody: &FMap{},
 						}
 						block.Child = append(block.Child, argsBlock)
 						block = argsBlock

@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cofunclabs/cofunc/internal/flow"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +26,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 	run	sleep
 	`
 
-	ctrl := NewFlowController()
+	ctrl := NewController()
 
 	ctx := context.Background()
 	id := feedbackid.NewDefaultID("testingdata.flowl")
@@ -36,26 +35,26 @@ func TestAddReadyStartFlow(t *testing.T) {
 		err := ctrl.AddFlow(ctx, id, strings.NewReader(testingdata))
 		assert.NoError(t, err)
 
-		var status flow.FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b flow.Body) error {
-			status = b.Status
+		var status FlowStatus
+		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, flow.FLOW_ADDED, status)
+		assert.Equal(t, FLOW_ADDED, status)
 	}
 
 	{
 		err := ctrl.ReadyFlow(ctx, id)
 		assert.NoError(t, err)
 
-		var status flow.FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b flow.Body) error {
-			status = b.Status
+		var status FlowStatus
+		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, flow.FLOW_READY, status)
+		assert.Equal(t, FLOW_READY, status)
 	}
 
 	{
@@ -64,14 +63,14 @@ func TestAddReadyStartFlow(t *testing.T) {
 
 		time.Sleep(time.Second * 5)
 
-		var status flow.FlowStatus
-		err = ctrl.InspectFlow(ctx, id, func(b flow.Body) error {
-			status = b.Status
+		var status FlowStatus
+		err = ctrl.InspectFlow(ctx, id, func(b FlowBody) error {
+			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, flow.FLOW_STOPPED, status)
+		assert.Equal(t, FLOW_STOPPED, status)
 	}
 
-	assert.Len(t, ctrl.flowstore.entity, 1)
+	assert.Len(t, ctrl.store.entity, 1)
 }

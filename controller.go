@@ -6,112 +6,111 @@ import (
 	"io"
 	"time"
 
-	"github.com/cofunclabs/cofunc/internal/flow"
 	"github.com/cofunclabs/cofunc/internal/flowl"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
-// FlowController
+// Controller
 //
-type FlowController struct {
-	flowstore *FlowStore
+type Controller struct {
+	store *FlowStore
 }
 
-func NewFlowController() *FlowController {
-	fc := &FlowController{}
-	fc.flowstore = &FlowStore{
-		entity: make(map[string]*flow.Flow),
+func NewController() *Controller {
+	c := &Controller{}
+	c.store = &FlowStore{
+		entity: make(map[string]*Flow),
 	}
-	return fc
+	return c
 }
 
-func (ctrl *FlowController) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
+func (ctl *Controller) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
 	rq, ast, err := flowl.ParseFlowl(rd)
 	if err != nil {
 		return err
 	}
-	fw := flow.New(fid, rq, ast)
-	if err := ctrl.flowstore.Store(fid.Value(), fw); err != nil {
+	fw := NewFlow(fid, rq, ast)
+	if err := ctl.store.Store(fid.Value(), fw); err != nil {
 		return err
 	}
-	fw.UpdateField(func(b *flow.Body) error {
-		b.Status = flow.FLOW_ADDED
+	fw.UpdateField(func(b *FlowBody) error {
+		b.status = FLOW_ADDED
 		return nil
 	})
 	return nil
 }
 
-func (ctrl *FlowController) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
-	fw, err := ctrl.flowstore.Get(fid.Value())
+func (ctl *Controller) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
+	fw, err := ctl.store.Get(fid.Value())
 	if err != nil {
 		return err
 	}
 
-	ready := func(body *flow.Body) error {
-		if body.Status == flow.FLOW_READY || body.Status == flow.FLOW_RUNNING {
+	ready := func(body *FlowBody) error {
+		if body.status == FLOW_READY || body.status == FLOW_RUNNING {
 			return nil
 		}
-		body.FnTotal = body.Runq().NodeNum()
-		body.Results = make(map[string]*flow.FunctionResult)
+		body.total = body.Runq().NodeNum()
+		body.results = make(map[string]*FunctionResult)
 
 		body.Runq().Foreach(func(stage int, n *flowl.Node) error {
 			if err := n.Driver.Load(ctx, n.Args); err != nil {
 				return err
 			}
-			body.ReadyFnCount += 1
+			body.ready += 1
 
-			body.Results[n.Name] = &flow.FunctionResult{
-				FID:          body.ID,
-				Node:         n,
-				ReturnValues: make(map[string]string),
+			body.results[n.Name] = &FunctionResult{
+				fid:     body.id,
+				node:    n,
+				returns: make(map[string]string),
 			}
 			return nil
 		})
-		body.Status = flow.FLOW_READY
+		body.status = FLOW_READY
 		return nil
 	}
 
 	return fw.UpdateField(ready)
 }
 
-func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) error {
-	fw, err := ctrl.flowstore.Get(fid.Value())
+func (ctl *Controller) StartFlow(ctx context.Context, fid feedbackid.ID) error {
+	fw, err := ctl.store.Get(fid.Value())
 	if err != nil {
 		return err
 	}
 
-	if err := fw.UpdateField(flow.ToRunning, flow.UpdateBegineTime); err != nil {
+	if err := fw.UpdateField(toRunning, updateBeginTime); err != nil {
 		return err
 	}
 
 	fw.Runq().Forstage(func(stage int, node *flowl.Node) error {
 		// find out functions at the stage
-		errResults := make([]*flow.FunctionResult, 0)
-		results := make([]*flow.FunctionResult, 0)
+		errResults := make([]*FunctionResult, 0)
+		results := make([]*FunctionResult, 0)
 		for p := node; p != nil; p = p.Parallel {
-			results = append(results, fw.Results[p.Name])
+			results = append(results, fw.results[p.Name])
 		}
-		ch := make(chan *flow.FunctionResult, len(results))
+		ch := make(chan *FunctionResult, len(results))
 
 		// parallel run functions at the stage
 		for p := node; p != nil; p = p.Parallel {
-			go func(n *flowl.Node, fr *flow.FunctionResult) {
-				fr.BeginTime = time.Now()
-				fr.ReturnValues, fr.Err = n.Driver.Run(ctx)
-				fr.EndTime = time.Now()
+			go func(n *flowl.Node, fr *FunctionResult) {
+				fr.begin = time.Now()
+				fr.returns, fr.err = n.Driver.Run(ctx)
+				fr.end = time.Now()
 				select {
 				case ch <- fr:
 				case <-ctx.Done():
 				}
-			}(p, fw.Results[p.Name])
+			}(p, fw.results[p.Name])
 		}
 
 		// waiting functions at the stage to finish running
 		for i := 0; i < len(results); i++ {
 			select {
 			case r := <-ch:
-				if r.Err != nil {
-					fw.UpdateField(flow.ToError)
+				if r.err != nil {
+					fw.UpdateField(toError)
 					errResults = append(errResults, r)
 				}
 			case <-ctx.Done():
@@ -126,14 +125,14 @@ func (ctrl *FlowController) StartFlow(ctx context.Context, fid feedbackid.ID) er
 		return nil
 	})
 
-	if err := fw.UpdateField(flow.ToStopped, flow.UpdateEndTime); err != nil {
+	if err := fw.UpdateField(toStopped, updateEndTime); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ctrl *FlowController) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(flow.Body) error) error {
-	flow, err := ctrl.flowstore.Get(fid.Value())
+func (ctl *Controller) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(FlowBody) error) error {
+	flow, err := ctl.store.Get(fid.Value())
 	if err != nil {
 		return err
 	}
@@ -143,10 +142,10 @@ func (ctrl *FlowController) InspectFlow(ctx context.Context, fid feedbackid.ID, 
 	return nil
 }
 
-func (ctrl *FlowController) StopFlow(ctx context.Context, fid feedbackid.ID) error {
+func (ctl *Controller) StopFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (ctrl *FlowController) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
+func (ctl *Controller) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }

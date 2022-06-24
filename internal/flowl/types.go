@@ -7,12 +7,12 @@ import (
 
 // Map
 //
-type FlMap struct {
+type FMap struct {
 	RawBody
 	state parserStateL2
 }
 
-func (m *FlMap) ToMap() map[string]string {
+func (m *FMap) ToMap() map[string]string {
 	ret := make(map[string]string)
 	for _, line := range m.Lines {
 		k, v := line.Tokens[0].Value, line.Tokens[1].Value
@@ -21,11 +21,11 @@ func (m *FlMap) ToMap() map[string]string {
 	return ret
 }
 
-func (m *FlMap) Type() string {
+func (m *FMap) Type() string {
 	return "map"
 }
 
-func (m *FlMap) Append(o interface{}) error {
+func (m *FMap) Append(o interface{}) error {
 	const multiline = "***"
 	s := o.(string)
 	if m.state == _statel2_multilines_started {
@@ -58,12 +58,12 @@ func (m *FlMap) Append(o interface{}) error {
 
 // List
 //
-type FlList struct {
+type FList struct {
 	RawBody
 	EType TokenType
 }
 
-func (l *FlList) ToSlice() []string {
+func (l *FList) ToSlice() []string {
 	var ret []string
 	for _, line := range l.Lines {
 		v := line.Tokens[0].Value
@@ -72,11 +72,11 @@ func (l *FlList) ToSlice() []string {
 	return ret
 }
 
-func (l *FlList) Type() string {
+func (l *FList) Type() string {
 	return "list"
 }
 
-func (l *FlList) Append(o interface{}) error {
+func (l *FList) Append(o interface{}) error {
 	s := o.(string)
 	t := &Token{
 		Value: s,

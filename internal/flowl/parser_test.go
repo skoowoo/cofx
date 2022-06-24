@@ -170,11 +170,11 @@ run function3 {
 		assert.Equal(t, obj, b.Target.Value)
 
 		if obj == "function2" {
-			kvs := b.BlockBody.(*FlMap).ToMap()
+			kvs := b.BlockBody.(*FMap).ToMap()
 			assert.Len(t, kvs, 2)
 		}
 		if obj == "function3" {
-			kvs := b.BlockBody.(*FlMap).ToMap()
+			kvs := b.BlockBody.(*FMap).ToMap()
 			assert.Len(t, kvs, 4)
 			assert.Equal(t, "{(1+2+3)}", kvs["k"])
 			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
@@ -211,7 +211,7 @@ run    {
 		assert.True(t, b.Operator.IsEmpty())
 		assert.True(t, b.TypeOrValue.IsEmpty())
 
-		slice := b.BlockBody.(*FlList).ToSlice()
+		slice := b.BlockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -240,7 +240,7 @@ run    {
 		assert.True(t, b.Operator.IsEmpty())
 		assert.True(t, b.TypeOrValue.IsEmpty())
 
-		slice := b.BlockBody.(*FlList).ToSlice()
+		slice := b.BlockBody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)

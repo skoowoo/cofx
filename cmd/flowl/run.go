@@ -11,7 +11,7 @@ import (
 )
 
 func runFlowl(name string) error {
-	if err := flowl.ValidateFileName(name); err != nil {
+	if err := flowl.IsFlowl(name); err != nil {
 		return err
 	}
 	f, err := os.Open(name)
@@ -22,7 +22,7 @@ func runFlowl(name string) error {
 		f.Close()
 	}()
 
-	ctrl := cofunc.NewFlowController()
+	ctrl := cofunc.NewController()
 	PanicIfNil(ctrl)
 
 	fid := feedbackid.NewDefaultID(name)

@@ -3,8 +3,6 @@ package cofunc
 import (
 	"errors"
 	"sync"
-
-	"github.com/cofunclabs/cofunc/internal/flow"
 )
 
 // TODO:
@@ -13,11 +11,11 @@ type PersistentStore interface {
 
 type FlowStore struct {
 	sync.RWMutex
-	entity map[string]*flow.Flow
+	entity map[string]*Flow
 }
 
 // Store store a kv into flowstore
-func (s *FlowStore) Store(k string, f *flow.Flow) (err error) {
+func (s *FlowStore) Store(k string, f *Flow) (err error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -30,7 +28,7 @@ func (s *FlowStore) Store(k string, f *flow.Flow) (err error) {
 	return nil
 }
 
-func (s *FlowStore) Update(k string, f *flow.Flow) (err error) {
+func (s *FlowStore) Update(k string, f *Flow) (err error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -42,7 +40,7 @@ func (s *FlowStore) Update(k string, f *flow.Flow) (err error) {
 	return nil
 }
 
-func (s *FlowStore) Get(k string) (*flow.Flow, error) {
+func (s *FlowStore) Get(k string) (*Flow, error) {
 	s.RLock()
 	defer s.RUnlock()
 	v, ok := s.entity[k]
@@ -53,7 +51,7 @@ func (s *FlowStore) Get(k string) (*flow.Flow, error) {
 }
 
 // If 'do' return a error, will stop the 'Foreach'
-func (s *FlowStore) Foreach(do func(string, *flow.Flow) error) {
+func (s *FlowStore) Foreach(do func(string, *Flow) error) {
 	s.RLock()
 	defer s.RUnlock()
 	for k, v := range s.entity {

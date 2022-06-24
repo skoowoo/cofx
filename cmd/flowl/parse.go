@@ -10,7 +10,7 @@ import (
 )
 
 func parseFlowLAndPrint(name string, all bool) error {
-	if err := flowl.ValidateFileName(name); err != nil {
+	if err := flowl.IsFlowl(name); err != nil {
 		return err
 	}
 	f, err := os.Open(name)
