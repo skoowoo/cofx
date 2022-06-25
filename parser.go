@@ -1,5 +1,5 @@
-//go:generate stringer -type parserStateL1
-//go:generate stringer -type parserStateL2
+//go:generate stringer -type stateL1
+//go:generate stringer -type stateL2
 package cofunc
 
 import (
@@ -87,42 +87,35 @@ const (
 )
 
 func scanToken(ast *AST, line string, linenum int) error {
-	prestate := ast.prestate
-	state := ast.state
 	block := ast.parsing
 
 	var start int
 
-	finiteAutomata := func(last int, chr rune, newline string) error {
-		switch state {
+	finiteAutomata := func(last int, current rune, newline string) error {
+		switch ast.phase() {
 		case _l1_global:
-			if unicode.IsSpace(chr) {
+			if isSpace(current) {
 				break
 			}
-			prestate = state
-			state = _l1_block_started
 			start = last
+			ast.transfer(_l1_block_started)
 		case _l1_block_started:
-			if !unicode.IsSpace(chr) && chr != '{' {
+			if !unicode.IsSpace(current) && current != '{' {
 				break
 			}
 			var body blockBody = nil
 			word := newline[start:last]
 			switch word {
 			case "load":
-				prestate = state
-				state = _l1_load_block_started
+				ast.transfer(_l1_load_block_started)
 			case "fn":
-				prestate = state
-				state = _l1_fn_block_started
+				ast.transfer(_l1_fn_block_started)
 			case "run":
-				if chr == '{' {
-					prestate = state
-					state = _l1_run_body_started
+				if current == '{' {
 					body = &FList{}
+					ast.transfer(_l1_run_body_started)
 				} else {
-					prestate = state
-					state = _l1_run_block_started
+					ast.transfer(_l1_run_block_started)
 				}
 			default:
 				return errors.New("invalid block define: " + word)
@@ -141,16 +134,15 @@ func scanToken(ast *AST, line string, linenum int) error {
 			///
 			// load go:sleep
 			//
-			if chr == '\n' {
+			if current == '\n' {
 				block.target = Token{
 					value: strings.TrimSpace(newline[start:last]),
 				}
 				block.state = _l2_typevalue_done
-				prestate = state
-				state = _l1_global
+				ast.transfer(_l1_global)
 				break
 			}
-			if unicode.IsSpace(chr) {
+			if unicode.IsSpace(current) {
 				break
 			}
 			if block.state != _l2_typevalue_started {
@@ -168,23 +160,22 @@ func scanToken(ast *AST, line string, linenum int) error {
 				time: 1s
 			}
 			*/
-			if chr == '\n' {
+			if current == '\n' {
 				// run function
 				block.target = Token{
 					value: strings.TrimSpace(newline[start:last]),
 					typ:   _functionname_t,
 				}
 				block.state = _l2_typevalue_done
-				prestate = state
-				state = _l1_global
+				ast.transfer(_l1_global)
 				break
 			}
 
-			if unicode.IsSpace(chr) {
+			if unicode.IsSpace(current) {
 				break
 			}
 
-			if chr == '{' {
+			if current == '{' {
 				if block.state == _l2_typevalue_started {
 					/*
 						run sleep {
@@ -207,8 +198,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				}
 
 				block.state = _l2_typevalue_done
-				prestate = state
-				state = _l1_run_body_started
+				ast.transfer(_l1_run_body_started)
 				break
 			}
 
@@ -217,22 +207,20 @@ func scanToken(ast *AST, line string, linenum int) error {
 				start = last
 			}
 		case _l1_run_body_started:
-			if chr == '\n' {
-				prestate = state
-				state = _l1_run_body_inside
+			if current == '\n' {
+				ast.transfer(_l1_run_body_inside)
 				break
 			}
-			if !unicode.IsSpace(chr) {
+			if !unicode.IsSpace(current) {
 				return errors.New("invalid run block: " + newline)
 			}
 		case _l1_run_body_inside:
 			// 1. k: v
 			// 2. f
 			// 3. }
-			if chr == '\n' {
+			if current == '\n' {
 				if newline == "}" {
-					prestate = state
-					state = _l1_global
+					ast.transfer(_l1_global)
 				} else if newline != "" {
 					if err := block.blockBody.Append(newline); err != nil {
 						return err
@@ -247,15 +235,15 @@ func scanToken(ast *AST, line string, linenum int) error {
 			*/
 			switch block.state {
 			case _l2_kind_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
 				block.state = _l2_target_started
 				start = last
 			case _l2_target_started:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					block.state = _l2_target_done
-				} else if chr == '=' {
+				} else if current == '=' {
 					block.state = _l2_operator_started
 				}
 				s := newline[start:last]
@@ -263,16 +251,16 @@ func scanToken(ast *AST, line string, linenum int) error {
 					value: s,
 				}
 			case _l2_target_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
-				if chr == '=' {
+				if current == '=' {
 					block.state = _l2_operator_started
 				} else {
 					return errors.New("invalid fn block: " + newline)
 				}
 			case _l2_operator_started:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					block.state = _l2_operator_done
 				} else {
 					block.state = _l2_typevalue_started
@@ -282,46 +270,43 @@ func scanToken(ast *AST, line string, linenum int) error {
 					value: "=",
 				}
 			case _l2_operator_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
 				block.state = _l2_typevalue_started
 				start = last
 			case _l2_typevalue_started:
-				if unicode.IsSpace(chr) || chr == '{' {
+				if unicode.IsSpace(current) || current == '{' {
 					block.state = _l2_typevalue_done
 					s := newline[start:last]
 					block.typevalue = Token{
 						value: s,
 					}
-					if chr == '{' {
-						prestate = state
-						state = _l1_fn_body_started
+					if current == '{' {
+						ast.transfer(_l1_fn_body_started)
 					}
 				}
 			case _l2_typevalue_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
-				if chr == '{' {
-					prestate = state
-					state = _l1_fn_body_started
+				if current == '{' {
+					ast.transfer(_l1_fn_body_started)
 				} else {
 					return errors.New("invalid fn block: " + newline)
 				}
 			}
 		case _l1_fn_body_started:
-			if chr == '\n' {
-				prestate = state
-				state = _l1_fn_body_inside
+			if current == '\n' {
+				ast.transfer(_l1_fn_body_inside)
 				break
 			}
-			if !unicode.IsSpace(chr) {
+			if !unicode.IsSpace(current) {
 				return errors.New("invalid fn block: " + newline)
 			}
 		case _l1_fn_body_inside:
 			if block.state == _l2_word_stared {
-				if unicode.IsSpace(chr) || chr == '=' {
+				if unicode.IsSpace(current) || current == '=' {
 					block.state = _l2_unknow
 					s := newline[start:last]
 					switch s {
@@ -337,21 +322,19 @@ func scanToken(ast *AST, line string, linenum int) error {
 						}
 						block.child = append(block.child, argsBlock)
 						block = argsBlock
-						prestate = state
-						state = _l1_args_started
+						ast.transfer(_l1_args_started)
 					default:
 						return errors.New("invalid statement in fn block: " + newline)
 					}
 				}
 			} else {
 				// the right bracket of fn block body is appeared, so fn block should be closed
-				if chr == '\n' && newline == "}" {
-					prestate = state
-					state = _l1_global
+				if current == '\n' && newline == "}" {
+					ast.transfer(_l1_global)
 					block.state = _l2_unknow
 					break
 				}
-				if unicode.IsSpace(chr) || chr == '}' {
+				if unicode.IsSpace(current) || current == '}' {
 					break
 				}
 				start = last
@@ -360,54 +343,50 @@ func scanToken(ast *AST, line string, linenum int) error {
 		case _l1_args_started:
 			switch block.state {
 			case _l2_kind_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
-				if chr == '=' {
+				if current == '=' {
 					block.state = _l2_operator_started
 				} else {
 					return errors.New("invliad args block: " + newline)
 				}
 			case _l2_operator_started:
-				if chr == '{' || unicode.IsSpace(chr) {
+				if current == '{' || unicode.IsSpace(current) {
 					block.operator = Token{
 						value: "=",
 					}
 					block.state = _l2_operator_done
-					if chr == '{' {
-						prestate = state
-						state = _l1_args_body_started
+					if current == '{' {
+						ast.transfer(_l1_args_body_started)
 					}
 				} else {
 					return errors.New("invalid args block: " + newline)
 				}
 			case _l2_operator_done:
-				if unicode.IsSpace(chr) {
+				if unicode.IsSpace(current) {
 					break
 				}
-				if chr == '{' {
-					prestate = state
-					state = _l1_args_body_started
+				if current == '{' {
+					ast.transfer(_l1_args_body_started)
 				} else {
 					return errors.New("invalid args block: " + newline)
 				}
 			}
 		case _l1_args_body_started:
-			if chr == '\n' {
-				prestate = state
-				state = _l1_args_body_inside
+			if current == '\n' {
+				ast.transfer(_l1_args_body_inside)
 				break
 			}
-			if !unicode.IsSpace(chr) {
+			if !unicode.IsSpace(current) {
 				return errors.New("invalid args block: " + newline)
 			}
 		case _l1_args_body_inside:
-			if chr == '\n' {
+			if current == '\n' {
 				if newline == "}" {
-					prestate = state
-					state = _l1_fn_body_inside
 					block = block.parent
 					block.state = _l2_unknow
+					ast.transfer(_l1_fn_body_inside)
 				} else {
 					if err := block.blockBody.Append(newline); err != nil {
 						return err
@@ -428,8 +407,33 @@ func scanToken(ast *AST, line string, linenum int) error {
 	if err := finiteAutomata(len(line), '\n', line); err != nil {
 		return err
 	}
-	ast.prestate = prestate
-	ast.state = state
 	ast.parsing = block
 	return nil
+}
+
+func isSpace(x rune) bool {
+	return unicode.IsSpace(x)
+}
+
+func isEndofline(x rune) bool {
+	return x == '\n'
+}
+
+func isLeftBracket(x rune) bool {
+	return x == '{'
+}
+
+func isRightBracket(x rune) bool {
+	return x == '}'
+}
+
+func isEq(x rune) bool {
+	return x == '='
+}
+
+func maybeWord(x rune) bool {
+	if isSpace(x) || isEndofline(x) || isLeftBracket(x) || isRightBracket(x) || isEq(x) {
+		return false
+	}
+	return true
 }

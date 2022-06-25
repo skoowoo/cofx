@@ -184,6 +184,7 @@ func (b *Block) InputVar() error {
 type AST struct {
 	global Block
 
+	// for parsing
 	parsing  *Block
 	state    stateL1
 	prestate stateL1
@@ -222,4 +223,13 @@ func deepwalk(b *Block, do func(*Block) error) error {
 
 func (a *AST) Foreach(do func(*Block) error) error {
 	return deepwalk(&a.global, do)
+}
+
+func (a *AST) transfer(s stateL1) {
+	a.prestate = a.state
+	a.state = s
+}
+
+func (a *AST) phase() stateL1 {
+	return a.state
 }
