@@ -11,7 +11,7 @@ import (
 )
 
 func ParseAST(rd io.Reader) (*AST, error) {
-	a := newAST()
+	ast := newAST()
 	num := 0
 	scanner := bufio.NewScanner(rd)
 	for {
@@ -19,82 +19,71 @@ func ParseAST(rd io.Reader) (*AST, error) {
 			break
 		}
 		num += 1
-		err := scanToken(a, scanner.Text(), num)
+		err := scanToken(ast, scanner.Text(), num)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return a, a.Foreach(validateBlocks)
-}
+	return ast, ast.Foreach(func(b *Block) error {
+		if err := b.kind.Validate(); err != nil {
+			return err
+		}
+		if err := b.target.Validate(); err != nil {
+			return err
+		}
+		if err := b.operator.Validate(); err != nil {
+			return err
+		}
+		if err := b.typevalue.Validate(); err != nil {
+			return err
+		}
 
-func validateBlocks(b *Block) error {
-	if err := b.kind.Validate(); err != nil {
-		return err
-	}
-	if err := b.target.Validate(); err != nil {
-		return err
-	}
-	if err := b.operator.Validate(); err != nil {
-		return err
-	}
-	if err := b.typevalue.Validate(); err != nil {
-		return err
-	}
-
-	if b.blockBody != nil {
-		lines := b.blockBody.Statements()
-		for _, ln := range lines {
-			for _, t := range ln.tokens {
-				if err := t.Validate(); err != nil {
-					return err
+		if b.blockBody != nil {
+			lines := b.blockBody.GetStatements()
+			for _, ln := range lines {
+				for _, t := range ln.tokens {
+					if err := t.Validate(); err != nil {
+						return err
+					}
 				}
 			}
 		}
-	}
-
-	if len(b.child) == 0 {
 		return nil
-	}
-	for _, c := range b.child {
-		if err := validateBlocks(c); err != nil {
-			return err
-		}
-	}
-	return nil
+	})
 }
 
-type parserStateL1 int
-type parserStateL2 int
+type stateL1 int
+type stateL2 int
 
 const (
-	_statel1_global parserStateL1 = iota
-	_statel1_block_started
-	_statel1_block_end
-	_statel1_load_block_started
-	_statel1_run_block_started
-	_statel1_run_body_started
-	_statel1_run_body_inside
-	_statel1_fn_block_started
-	_statel1_fn_body_started
-	_statel1_fn_body_inside
-	_statel1_args_started
-	_statel1_args_body_started
-	_statel1_args_body_inside
+	_l1_global stateL1 = iota
+	_l1_block_started
+	_l1_block_end
+	_l1_load_block_started
+	_l1_run_block_started
+	_l1_run_body_started
+	_l1_run_body_inside
+	_l1_fn_block_started
+	_l1_fn_body_started
+	_l1_fn_body_inside
+	_l1_args_started
+	_l1_args_body_started
+	_l1_args_body_inside
 )
 
 const (
-	_statel2_unknow parserStateL2 = iota
-	_statel2_multilines_started
-	_statel2_word_stared
-	_statel2_kind_started
-	_statel2_kind_done
-	_statel2_target_started
-	_statel2_target_done
-	_statel2_operator_started
-	_statel2_operator_done
-	_statel2_typeorvalue_started
-	_statel2_typeorvalue_done
+	_l2_unknow stateL2 = iota
+	_l2_multilines_started
+	_l2_word_stared
+	_l2_kind_started
+	_l2_kind_done
+	_l2_target_started
+	_l2_target_done
+	_l2_operator_started
+	_l2_operator_done
+	_l2_typevalue_started
+	_l2_typevalue_done
 )
 
 func scanToken(ast *AST, line string, linenum int) error {
@@ -102,38 +91,38 @@ func scanToken(ast *AST, line string, linenum int) error {
 	state := ast.state
 	block := ast.parsing
 
-	var startPos int
+	var start int
 
 	finiteAutomata := func(last int, chr rune, newline string) error {
 		switch state {
-		case _statel1_global:
+		case _l1_global:
 			if unicode.IsSpace(chr) {
 				break
 			}
 			prestate = state
-			state = _statel1_block_started
-			startPos = last
-		case _statel1_block_started:
+			state = _l1_block_started
+			start = last
+		case _l1_block_started:
 			if !unicode.IsSpace(chr) && chr != '{' {
 				break
 			}
 			var body blockBody = nil
-			word := newline[startPos:last]
+			word := newline[start:last]
 			switch word {
 			case "load":
 				prestate = state
-				state = _statel1_load_block_started
+				state = _l1_load_block_started
 			case "fn":
 				prestate = state
-				state = _statel1_fn_block_started
+				state = _l1_fn_block_started
 			case "run":
 				if chr == '{' {
 					prestate = state
-					state = _statel1_run_body_started
+					state = _l1_run_body_started
 					body = &FList{}
 				} else {
 					prestate = state
-					state = _statel1_run_block_started
+					state = _l1_run_block_started
 				}
 			default:
 				return errors.New("invalid block define: " + word)
@@ -142,33 +131,33 @@ func scanToken(ast *AST, line string, linenum int) error {
 				kind: Token{
 					value: word,
 				},
-				state:     _statel2_kind_done,
+				state:     _l2_kind_done,
 				level:     _level_parent,
 				blockBody: body,
 			}
 			ast.global.child = append(ast.global.child, block)
 			ast.parsing = block
-		case _statel1_load_block_started:
+		case _l1_load_block_started:
 			///
 			// load go:sleep
 			//
 			if chr == '\n' {
 				block.target = Token{
-					value: strings.TrimSpace(newline[startPos:last]),
+					value: strings.TrimSpace(newline[start:last]),
 				}
-				block.state = _statel2_typeorvalue_done
+				block.state = _l2_typevalue_done
 				prestate = state
-				state = _statel1_global
+				state = _l1_global
 				break
 			}
 			if unicode.IsSpace(chr) {
 				break
 			}
-			if block.state != _statel2_typeorvalue_started {
-				block.state = _statel2_typeorvalue_started
-				startPos = last
+			if block.state != _l2_typevalue_started {
+				block.state = _l2_typevalue_started
+				start = last
 			}
-		case _statel1_run_block_started:
+		case _l1_run_block_started:
 			/**
 			 1. run sleep
 			 2. run {
@@ -182,12 +171,12 @@ func scanToken(ast *AST, line string, linenum int) error {
 			if chr == '\n' {
 				// run function
 				block.target = Token{
-					value: strings.TrimSpace(newline[startPos:last]),
+					value: strings.TrimSpace(newline[start:last]),
 					typ:   _functionname_t,
 				}
-				block.state = _statel2_typeorvalue_done
+				block.state = _l2_typevalue_done
 				prestate = state
-				state = _statel1_global
+				state = _l1_global
 				break
 			}
 
@@ -196,14 +185,14 @@ func scanToken(ast *AST, line string, linenum int) error {
 			}
 
 			if chr == '{' {
-				if block.state == _statel2_typeorvalue_started {
+				if block.state == _l2_typevalue_started {
 					/*
 						run sleep {
 							time: 1s
 						}
 					*/
 					block.target = Token{
-						value: strings.TrimSpace(newline[startPos:last]),
+						value: strings.TrimSpace(newline[start:last]),
 						typ:   _functionname_t,
 					}
 					block.blockBody = &FMap{}
@@ -217,131 +206,131 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.blockBody = &FList{etype: _functionname_t}
 				}
 
-				block.state = _statel2_typeorvalue_done
+				block.state = _l2_typevalue_done
 				prestate = state
-				state = _statel1_run_body_started
+				state = _l1_run_body_started
 				break
 			}
 
-			if block.state != _statel2_typeorvalue_started {
-				block.state = _statel2_typeorvalue_started
-				startPos = last
+			if block.state != _l2_typevalue_started {
+				block.state = _l2_typevalue_started
+				start = last
 			}
-		case _statel1_run_body_started:
+		case _l1_run_body_started:
 			if chr == '\n' {
 				prestate = state
-				state = _statel1_run_body_inside
+				state = _l1_run_body_inside
 				break
 			}
 			if !unicode.IsSpace(chr) {
 				return errors.New("invalid run block: " + newline)
 			}
-		case _statel1_run_body_inside:
+		case _l1_run_body_inside:
 			// 1. k: v
 			// 2. f
 			// 3. }
 			if chr == '\n' {
 				if newline == "}" {
 					prestate = state
-					state = _statel1_global
+					state = _l1_global
 				} else if newline != "" {
 					if err := block.blockBody.Append(newline); err != nil {
 						return err
 					}
 				}
 			}
-		case _statel1_fn_block_started:
+		case _l1_fn_block_started:
 			/*
 				fn f = f {
 
 				}
 			*/
 			switch block.state {
-			case _statel2_kind_done:
+			case _l2_kind_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
-				block.state = _statel2_target_started
-				startPos = last
-			case _statel2_target_started:
+				block.state = _l2_target_started
+				start = last
+			case _l2_target_started:
 				if unicode.IsSpace(chr) {
-					block.state = _statel2_target_done
+					block.state = _l2_target_done
 				} else if chr == '=' {
-					block.state = _statel2_operator_started
+					block.state = _l2_operator_started
 				}
-				s := newline[startPos:last]
+				s := newline[start:last]
 				block.target = Token{
 					value: s,
 				}
-			case _statel2_target_done:
+			case _l2_target_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
 				if chr == '=' {
-					block.state = _statel2_operator_started
+					block.state = _l2_operator_started
 				} else {
 					return errors.New("invalid fn block: " + newline)
 				}
-			case _statel2_operator_started:
+			case _l2_operator_started:
 				if unicode.IsSpace(chr) {
-					block.state = _statel2_operator_done
+					block.state = _l2_operator_done
 				} else {
-					block.state = _statel2_typeorvalue_started
-					startPos = last
+					block.state = _l2_typevalue_started
+					start = last
 				}
 				block.operator = Token{
 					value: "=",
 				}
-			case _statel2_operator_done:
+			case _l2_operator_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
-				block.state = _statel2_typeorvalue_started
-				startPos = last
-			case _statel2_typeorvalue_started:
+				block.state = _l2_typevalue_started
+				start = last
+			case _l2_typevalue_started:
 				if unicode.IsSpace(chr) || chr == '{' {
-					block.state = _statel2_typeorvalue_done
-					s := newline[startPos:last]
+					block.state = _l2_typevalue_done
+					s := newline[start:last]
 					block.typevalue = Token{
 						value: s,
 					}
 					if chr == '{' {
 						prestate = state
-						state = _statel1_fn_body_started
+						state = _l1_fn_body_started
 					}
 				}
-			case _statel2_typeorvalue_done:
+			case _l2_typevalue_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
 				if chr == '{' {
 					prestate = state
-					state = _statel1_fn_body_started
+					state = _l1_fn_body_started
 				} else {
 					return errors.New("invalid fn block: " + newline)
 				}
 			}
-		case _statel1_fn_body_started:
+		case _l1_fn_body_started:
 			if chr == '\n' {
 				prestate = state
-				state = _statel1_fn_body_inside
+				state = _l1_fn_body_inside
 				break
 			}
 			if !unicode.IsSpace(chr) {
 				return errors.New("invalid fn block: " + newline)
 			}
-		case _statel1_fn_body_inside:
-			if block.state == _statel2_word_stared {
+		case _l1_fn_body_inside:
+			if block.state == _l2_word_stared {
 				if unicode.IsSpace(chr) || chr == '=' {
-					block.state = _statel2_unknow
-					s := newline[startPos:last]
+					block.state = _l2_unknow
+					s := newline[start:last]
 					switch s {
 					case "args":
 						argsBlock := &Block{
 							kind: Token{
 								value: s,
 							},
-							state:     _statel2_kind_done,
+							state:     _l2_kind_done,
 							level:     _level_child,
 							parent:    block,
 							blockBody: &FMap{},
@@ -349,7 +338,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 						block.child = append(block.child, argsBlock)
 						block = argsBlock
 						prestate = state
-						state = _statel1_args_started
+						state = _l1_args_started
 					default:
 						return errors.New("invalid statement in fn block: " + newline)
 					}
@@ -358,67 +347,67 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// the right bracket of fn block body is appeared, so fn block should be closed
 				if chr == '\n' && newline == "}" {
 					prestate = state
-					state = _statel1_global
-					block.state = _statel2_unknow
+					state = _l1_global
+					block.state = _l2_unknow
 					break
 				}
 				if unicode.IsSpace(chr) || chr == '}' {
 					break
 				}
-				startPos = last
-				block.state = _statel2_word_stared
+				start = last
+				block.state = _l2_word_stared
 			}
-		case _statel1_args_started:
+		case _l1_args_started:
 			switch block.state {
-			case _statel2_kind_done:
+			case _l2_kind_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
 				if chr == '=' {
-					block.state = _statel2_operator_started
+					block.state = _l2_operator_started
 				} else {
 					return errors.New("invliad args block: " + newline)
 				}
-			case _statel2_operator_started:
+			case _l2_operator_started:
 				if chr == '{' || unicode.IsSpace(chr) {
 					block.operator = Token{
 						value: "=",
 					}
-					block.state = _statel2_operator_done
+					block.state = _l2_operator_done
 					if chr == '{' {
 						prestate = state
-						state = _statel1_args_body_started
+						state = _l1_args_body_started
 					}
 				} else {
 					return errors.New("invalid args block: " + newline)
 				}
-			case _statel2_operator_done:
+			case _l2_operator_done:
 				if unicode.IsSpace(chr) {
 					break
 				}
 				if chr == '{' {
 					prestate = state
-					state = _statel1_args_body_started
+					state = _l1_args_body_started
 				} else {
 					return errors.New("invalid args block: " + newline)
 				}
 			}
-		case _statel1_args_body_started:
+		case _l1_args_body_started:
 			if chr == '\n' {
 				prestate = state
-				state = _statel1_args_body_inside
+				state = _l1_args_body_inside
 				break
 			}
 			if !unicode.IsSpace(chr) {
 				return errors.New("invalid args block: " + newline)
 			}
-		case _statel1_args_body_inside:
+		case _l1_args_body_inside:
 			if chr == '\n' {
 				if newline == "}" {
 					prestate = state
-					state = _statel1_fn_body_inside
+					state = _l1_fn_body_inside
 					block = block.parent
-					block.state = _statel2_unknow
+					block.state = _l2_unknow
 				} else {
 					if err := block.blockBody.Append(newline); err != nil {
 						return err

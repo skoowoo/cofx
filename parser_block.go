@@ -112,7 +112,7 @@ func (s *Statement) LastToken() *Token {
 type blockBody interface {
 	Type() string
 	Append(o interface{}) error
-	Statements() []*Statement
+	GetStatements() []*Statement
 	Len() int
 }
 
@@ -124,7 +124,7 @@ func (r *rawbody) Len() int {
 	return len(r.lines)
 }
 
-func (r *rawbody) Statements() []*Statement {
+func (r *rawbody) GetStatements() []*Statement {
 	return r.lines
 }
 
@@ -159,7 +159,7 @@ type Block struct {
 	target    Token
 	operator  Token
 	typevalue Token
-	state     parserStateL2
+	state     stateL2
 	level     BlockLevel
 	child     []*Block
 	parent    *Block
@@ -185,8 +185,8 @@ type AST struct {
 	global Block
 
 	parsing  *Block
-	state    parserStateL1
-	prestate parserStateL1
+	state    stateL1
+	prestate stateL1
 }
 
 func newAST() *AST {
@@ -196,7 +196,7 @@ func newAST() *AST {
 			level: _level_global,
 		},
 		parsing: nil,
-		state:   _statel1_global,
+		state:   _l1_global,
 	}
 }
 

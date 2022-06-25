@@ -5,11 +5,14 @@ import (
 	"strings"
 )
 
-// Map
-//
+const (
+	_map  = "map"
+	_list = "list"
+)
+
 type FMap struct {
 	rawbody
-	state parserStateL2
+	state stateL2
 }
 
 func (m *FMap) ToMap() map[string]string {
@@ -22,16 +25,16 @@ func (m *FMap) ToMap() map[string]string {
 }
 
 func (m *FMap) Type() string {
-	return "map"
+	return _map
 }
 
 func (m *FMap) Append(o interface{}) error {
 	const multiline = "***"
 	s := o.(string)
-	if m.state == _statel2_multilines_started {
+	if m.state == _l2_multilines_started {
 		if strings.HasSuffix(s, multiline) {
 			s = strings.TrimSuffix(s, multiline)
-			m.state = _statel2_unknow
+			m.state = _l2_unknow
 		}
 		t := m.LastStatement().LastToken()
 		t.value = t.value + "\n" + s
@@ -47,7 +50,7 @@ func (m *FMap) Append(o interface{}) error {
 		v := strings.TrimSpace(s[idx+1:])
 		if strings.HasPrefix(v, multiline) {
 			v = strings.TrimPrefix(v, multiline)
-			m.state = _statel2_multilines_started
+			m.state = _l2_multilines_started
 			m.lines = append(m.lines, newStatement(k, v))
 		} else {
 			m.lines = append(m.lines, newStatement(k, v))
@@ -56,8 +59,6 @@ func (m *FMap) Append(o interface{}) error {
 	return nil
 }
 
-// List
-//
 type FList struct {
 	rawbody
 	etype TokenType
@@ -73,7 +74,7 @@ func (l *FList) ToSlice() []string {
 }
 
 func (l *FList) Type() string {
-	return "list"
+	return _list
 }
 
 func (l *FList) Append(o interface{}) error {
