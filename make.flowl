@@ -5,7 +5,14 @@ run print {
 	STARING: build "cofunc"
 }
 
+run print {
+	go build: starting to run ...
+}
 run gobuild
+
+run print {
+	go test: starting to run ...
+}
 run unittest
 
 run print {

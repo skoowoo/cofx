@@ -131,20 +131,32 @@ func scanToken(ast *AST, line string, linenum int) error {
 			///
 			// load go:sleep
 			//
-			if current == '\n' {
-				block.target = Token{
-					value: strings.TrimSpace(newline[start:last]),
+			switch block.state {
+			case _l2_kind_done:
+				// skip
+				if isSpace(current) {
+					break
 				}
-				block.state = _l2_target_done
-				ast.transfer(_l1_global)
-				break
-			}
-			if unicode.IsSpace(current) {
-				break
-			}
-			if block.state != _l2_target_started {
-				block.state = _l2_target_started
-				start = last
+				// transfer
+				if isWord(current) {
+					start = last
+					block.state = _l2_target_started
+					break
+				}
+				// error
+				return errors.New("contain invalid character: " + newline)
+			case _l2_target_started:
+				// transfer
+				if isEndofline(current) {
+					block.target = Token{
+						value: strings.TrimSpace(newline[start:last]),
+					}
+					block.state = _l2_target_done
+					ast.transfer(_l1_global)
+					break
+				}
+			case _l2_target_done:
+
 			}
 		case _l1_run_block_started:
 			/**
@@ -226,7 +238,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 			}
 		case _l1_fn_block_started:
 			/*
-				fn f = f {
+				fn f1 = f {
 
 				}
 			*/
