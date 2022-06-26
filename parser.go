@@ -53,9 +53,6 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	})
 }
 
-type stateL1 int
-type stateL2 int
-
 const (
 	_l1_global stateL1 = iota
 	_l1_block_started
@@ -75,7 +72,7 @@ const (
 const (
 	_l2_unknow stateL2 = iota
 	_l2_multilines_started
-	_l2_word_stared
+	_l2_word_started
 	_l2_kind_started
 	_l2_kind_done
 	_l2_target_started
@@ -125,7 +122,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					value: word,
 				},
 				state:     _l2_kind_done,
-				level:     _level_parent,
+				parent:    &ast.global,
 				blockBody: body,
 			}
 			ast.global.child = append(ast.global.child, block)
@@ -138,15 +135,15 @@ func scanToken(ast *AST, line string, linenum int) error {
 				block.target = Token{
 					value: strings.TrimSpace(newline[start:last]),
 				}
-				block.state = _l2_typevalue_done
+				block.state = _l2_target_done
 				ast.transfer(_l1_global)
 				break
 			}
 			if unicode.IsSpace(current) {
 				break
 			}
-			if block.state != _l2_typevalue_started {
-				block.state = _l2_typevalue_started
+			if block.state != _l2_target_started {
+				block.state = _l2_target_started
 				start = last
 			}
 		case _l1_run_block_started:
@@ -166,7 +163,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					value: strings.TrimSpace(newline[start:last]),
 					typ:   _functionname_t,
 				}
-				block.state = _l2_typevalue_done
+				block.state = _l2_target_done
 				ast.transfer(_l1_global)
 				break
 			}
@@ -176,7 +173,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 			}
 
 			if current == '{' {
-				if block.state == _l2_typevalue_started {
+				if block.state == _l2_target_started {
 					/*
 						run sleep {
 							time: 1s
@@ -197,13 +194,13 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.blockBody = &FList{etype: _functionname_t}
 				}
 
-				block.state = _l2_typevalue_done
+				block.state = _l2_target_done
 				ast.transfer(_l1_run_body_started)
 				break
 			}
 
-			if block.state != _l2_typevalue_started {
-				block.state = _l2_typevalue_started
+			if block.state != _l2_target_started {
+				block.state = _l2_target_started
 				start = last
 			}
 		case _l1_run_body_started:
@@ -305,7 +302,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				return errors.New("invalid fn block: " + newline)
 			}
 		case _l1_fn_body_inside:
-			if block.state == _l2_word_stared {
+			if block.state == _l2_word_started {
 				if unicode.IsSpace(current) || current == '=' {
 					block.state = _l2_unknow
 					s := newline[start:last]
@@ -316,7 +313,6 @@ func scanToken(ast *AST, line string, linenum int) error {
 								value: s,
 							},
 							state:     _l2_kind_done,
-							level:     _level_child,
 							parent:    block,
 							blockBody: &FMap{},
 						}
@@ -338,7 +334,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					break
 				}
 				start = last
-				block.state = _l2_word_stared
+				block.state = _l2_word_started
 			}
 		case _l1_args_started:
 			switch block.state {
@@ -431,9 +427,94 @@ func isEq(x rune) bool {
 	return x == '='
 }
 
-func maybeWord(x rune) bool {
-	if isSpace(x) || isEndofline(x) || isLeftBracket(x) || isRightBracket(x) || isEq(x) {
-		return false
+func isWord(x rune) bool {
+	if x >= 'a' && x <= 'z' {
+		return true
 	}
-	return true
+	if x >= 'A' && x <= 'Z' {
+		return true
+	}
+	if x >= '0' && x <= '9' {
+		return true
+	}
+	if x == '_' || x == '-' {
+		return true
+	}
+	return false
+}
+
+type globalPhase struct{}
+
+func (g globalPhase) Skip(x byte) bool {
+	return isSpace(rune(x))
+}
+
+func (g globalPhase) Error(x byte) bool {
+	return !isWord(rune(x))
+}
+
+func (g globalPhase) Transfer(x byte) bool {
+	return isWord(rune(x))
+}
+
+func (g globalPhase) Keep(x byte) bool {
+	return false
+}
+
+// AST store all blocks in the flowl
+//
+type AST struct {
+	global Block
+
+	// for parsing
+	_FA
+}
+
+func newAST() *AST {
+	return &AST{
+		global: Block{
+			child: make([]*Block, 0),
+		},
+		_FA: _FA{
+			parsing: nil,
+			state:   _l1_global,
+		},
+	}
+}
+
+func deepwalk(b *Block, do func(*Block) error) error {
+	// skip the global block
+	if b.parent != nil {
+		if err := do(b); err != nil {
+			return err
+		}
+	}
+	for _, c := range b.child {
+		if err := deepwalk(c, do); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *AST) Foreach(do func(*Block) error) error {
+	return deepwalk(&a.global, do)
+}
+
+type stateL1 int
+type stateL2 int
+
+type _FA struct {
+	parsing  *Block
+	state    stateL1
+	prestate stateL1
+}
+
+func (f *_FA) transfer(s stateL1) {
+	f.prestate = f.state
+	f.state = s
+}
+
+func (f *_FA) phase() stateL1 {
+	return f.state
 }

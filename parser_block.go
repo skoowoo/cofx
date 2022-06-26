@@ -146,21 +146,12 @@ func (r *rawbody) LastStatement() *Statement {
 	return r.lines[l-1]
 }
 
-type BlockLevel int
-
-const (
-	_level_global BlockLevel = iota
-	_level_parent
-	_level_child
-)
-
 type Block struct {
 	kind      Token
 	target    Token
 	operator  Token
 	typevalue Token
 	state     stateL2
-	level     BlockLevel
 	child     []*Block
 	parent    *Block
 	blockBody
@@ -177,59 +168,4 @@ func (b *Block) String() string {
 // TODO: Call InputVar at running, not parsing
 func (b *Block) InputVar() error {
 	return nil
-}
-
-// AST store all blocks in the flowl
-//
-type AST struct {
-	global Block
-
-	// for parsing
-	parsing  *Block
-	state    stateL1
-	prestate stateL1
-}
-
-func newAST() *AST {
-	return &AST{
-		global: Block{
-			child: make([]*Block, 0),
-			level: _level_global,
-		},
-		parsing: nil,
-		state:   _l1_global,
-	}
-}
-
-func deepwalk(b *Block, do func(*Block) error) error {
-	// skip the global block
-	// if b.Parent != nil {
-	// 	if err := do(b); err != nil {
-	// 		return err
-	// 	}
-	// }
-	if b.level != _level_global {
-		if err := do(b); err != nil {
-			return err
-		}
-	}
-	for _, c := range b.child {
-		if err := deepwalk(c, do); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (a *AST) Foreach(do func(*Block) error) error {
-	return deepwalk(&a.global, do)
-}
-
-func (a *AST) transfer(s stateL1) {
-	a.prestate = a.state
-	a.state = s
-}
-
-func (a *AST) phase() stateL1 {
-	return a.state
 }

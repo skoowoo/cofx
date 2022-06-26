@@ -164,8 +164,7 @@ run function3 {
 	}
 	check := func(b *Block, obj string) {
 		assert.Nil(t, b.child)
-		assert.Nil(t, b.parent)
-		assert.Equal(t, _level_parent, b.level)
+		assert.NotNil(t, b.parent)
 		assert.Equal(t, "run", b.kind.value)
 		assert.Equal(t, obj, b.target.value)
 
