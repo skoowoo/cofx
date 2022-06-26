@@ -56,13 +56,12 @@ func ParseAST(rd io.Reader) (*AST, error) {
 
 const (
 	_l1_global stateL1 = iota
-	_l1_block_started
-	_l1_block_end
-	_l1_load_block_started
-	_l1_run_block_started
+	_l1_block_kind
+	_l1_load_started
+	_l1_run_started
 	_l1_run_body_started
 	_l1_run_body_inside
-	_l1_fn_block_started
+	_l1_fn_started
 	_l1_fn_body_started
 	_l1_fn_body_inside
 	_l1_args_started
@@ -92,43 +91,63 @@ func scanToken(ast *AST, line string, linenum int) error {
 	finiteAutomata := func(last int, current rune, newline string) error {
 		switch ast.phase() {
 		case _l1_global:
-			if isSpace(current) {
+			// skip
+			if isSpaceOrEOL(current) {
 				break
 			}
-			start = last
-			ast.transfer(_l1_block_started)
-		case _l1_block_started:
-			if !unicode.IsSpace(current) && current != '{' {
+			// transfer
+			if isWord(current) {
+				start = last
+				ast.transfer(_l1_block_kind)
 				break
 			}
-			var body blockBody = nil
-			word := newline[start:last]
-			switch word {
-			case "load":
-				ast.transfer(_l1_load_block_started)
-			case "fn":
-				ast.transfer(_l1_fn_block_started)
-			case "run":
-				if current == '{' {
-					body = &FList{}
-					ast.transfer(_l1_run_body_started)
-				} else {
-					ast.transfer(_l1_run_block_started)
+			// error
+			return errors.New("contain invalid character: " + newline)
+		case _l1_block_kind:
+			// keep
+			if isWord(current) {
+				break
+			}
+			// transfer
+			if isSpace(current) || isLeftBracket(current) {
+				var body blockBody = nil
+				word := newline[start:last]
+				switch word {
+				case "load":
+					if isLeftBracket(current) {
+						return errors.New("contain invalid character: " + newline)
+					}
+					ast.transfer(_l1_load_started)
+				case "fn":
+					if isLeftBracket(current) {
+						return errors.New("contain invalid character: " + newline)
+					}
+					ast.transfer(_l1_fn_started)
+				case "run":
+					if isLeftBracket(current) {
+						body = &FList{}
+						ast.transfer(_l1_run_body_started)
+					} else {
+						ast.transfer(_l1_run_started)
+					}
+				default:
+					return errors.New("invalid block define: " + word)
 				}
-			default:
-				return errors.New("invalid block define: " + word)
+				block = &Block{
+					kind: Token{
+						value: word,
+					},
+					state:     _l2_kind_done,
+					parent:    &ast.global,
+					blockBody: body,
+				}
+				ast.global.child = append(ast.global.child, block)
+				ast.parsing = block
+				break
 			}
-			block = &Block{
-				kind: Token{
-					value: word,
-				},
-				state:     _l2_kind_done,
-				parent:    &ast.global,
-				blockBody: body,
-			}
-			ast.global.child = append(ast.global.child, block)
-			ast.parsing = block
-		case _l1_load_block_started:
+			// error
+			return errors.New("contain invalid character: " + newline)
+		case _l1_load_started:
 			///
 			// load go:sleep
 			//
@@ -159,7 +178,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 			case _l2_target_done:
 
 			}
-		case _l1_run_block_started:
+		case _l1_run_started:
 			/**
 			 1. run sleep
 			 2. run {
@@ -193,6 +212,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					ast.transfer(_l1_run_body_started)
 					break
 				}
+				// error
 				return errors.New("contain invalid character: " + newline)
 			case _l2_target_started:
 				// keep
@@ -217,9 +237,16 @@ func scanToken(ast *AST, line string, linenum int) error {
 						typ:   _functionname_t,
 					}
 					block.state = _l2_target_done
-					if isEOL(current) {
-						ast.transfer(_l1_global)
+					break
+				}
+				// 3. transfer run sleep
+				if isEOL(current) {
+					block.target = Token{
+						value: strings.TrimSpace(newline[start:last]),
+						typ:   _functionname_t,
 					}
+					block.state = _l2_unknow
+					ast.transfer(_l1_global)
 					break
 				}
 				return errors.New("contain invalid character: " + newline)
@@ -267,7 +294,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				}
 			}
 
-		case _l1_fn_block_started:
+		case _l1_fn_started:
 			/*
 				fn f1 = f {
 
@@ -432,6 +459,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					}
 				}
 			}
+		default:
 		}
 		return nil
 	}
@@ -451,6 +479,10 @@ func scanToken(ast *AST, line string, linenum int) error {
 }
 
 func isSpace(x rune) bool {
+	return x == ' ' || x == '\t'
+}
+
+func isSpaceOrEOL(x rune) bool {
 	return unicode.IsSpace(x)
 }
 

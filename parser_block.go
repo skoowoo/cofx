@@ -1,5 +1,4 @@
 //go:generate stringer -type TokenType
-//go:generate stringer -type BlockLevel
 package cofunc
 
 import (
