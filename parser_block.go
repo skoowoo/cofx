@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/cofunclabs/cofunc/pkg/is"
 	"github.com/pkg/errors"
 )
 
@@ -20,6 +21,7 @@ const (
 	_operator_t
 	_functionname_t
 	_load_t
+	_word_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
@@ -30,6 +32,7 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_operator_t:     regexp.MustCompile(`^=$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
 	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
 }
 
 type Token struct {
@@ -40,10 +43,6 @@ type Token struct {
 		v    string // var's value, need to read from others
 		s, e int    // S is var start position in 'Token.Value', E is end position
 	}
-}
-
-func newTextToken(s string) *Token {
-	return newToken(s, _text_t)
 }
 
 func newToken(s string, typ TokenType) *Token {
@@ -65,12 +64,60 @@ func (t *Token) HasVar() bool {
 	return len(t.vars) != 0
 }
 
-// TODO: when running
-func (t *Token) assignVar(b *Block) error {
+func (t *Token) extractVar() error {
+	// $(var)
+	if t.typ != _text_t {
+		return nil
+	}
+	var (
+		pre   rune
+		start int
+		state stateL2
+	)
+	l := len(t.value)
+	next := func(i int) byte {
+		i += 1
+		if i >= l {
+			return 'x'
+		}
+		return t.value[i]
+	}
+	for i, c := range t.value {
+		switch state {
+		case _l2_unknow:
+			// skip
+			// transfer
+			if pre != '\\' && c == '$' && next(i) == '(' {
+				start = i
+				state = _l2_word_started
+			}
+		case _l2_word_started: // from '$'
+			// keep
+			if is.Word(c) || c == '(' {
+				break
+			}
+			// transfer
+			if c == ')' {
+				name := t.value[start+2 : i] // start +2: skip "$("
+				if name == "" {
+					return errors.New("contain invalid var: " + t.value)
+				}
+				t.vars = append(t.vars, &struct {
+					n string
+					v string
+					s int
+					e int
+				}{n: name, s: start, e: i + 1}) // currently i is ')'
+
+				state = _l2_unknow
+			}
+		}
+		pre = c
+	}
 	return nil
 }
 
-func (t *Token) Validate() error {
+func (t *Token) validate() error {
 	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.value) {
 		return errors.Errorf("not match: %s:%s", t.value, pattern)
 	}
@@ -84,15 +131,7 @@ type Statement struct {
 	tokens  []*Token
 }
 
-func newStatement(ss ...string) *Statement {
-	stm := &Statement{}
-	for _, s := range ss {
-		stm.tokens = append(stm.tokens, newTextToken(s))
-	}
-	return stm
-}
-
-func newStatementWithToken(ts ...*Token) *Statement {
+func newStatement(ts ...*Token) *Statement {
 	stm := &Statement{}
 	stm.tokens = append(stm.tokens, ts...)
 	return stm

@@ -51,9 +51,9 @@ func (m *FMap) Append(o interface{}) error {
 		if strings.HasPrefix(v, multiline) {
 			v = strings.TrimPrefix(v, multiline)
 			m.state = _l2_multilines_started
-			m.lines = append(m.lines, newStatement(k, v))
+			m.lines = append(m.lines, newStatement(newToken(k, _mapkey_t), newToken(v, _text_t)))
 		} else {
-			m.lines = append(m.lines, newStatement(k, v))
+			m.lines = append(m.lines, newStatement(newToken(k, _mapkey_t), newToken(v, _text_t)))
 		}
 	}
 	return nil
@@ -83,6 +83,6 @@ func (l *FList) Append(o interface{}) error {
 		value: s,
 		typ:   l.etype,
 	}
-	l.lines = append(l.lines, newStatementWithToken(t))
+	l.lines = append(l.lines, newStatement(t))
 	return nil
 }

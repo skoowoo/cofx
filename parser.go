@@ -29,16 +29,31 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
-		if err := b.kind.Validate(); err != nil {
+		if err := b.kind.extractVar(); err != nil {
 			return err
 		}
-		if err := b.target.Validate(); err != nil {
+		if err := b.kind.validate(); err != nil {
 			return err
 		}
-		if err := b.operator.Validate(); err != nil {
+
+		if err := b.target.extractVar(); err != nil {
 			return err
 		}
-		if err := b.typevalue.Validate(); err != nil {
+		if err := b.target.validate(); err != nil {
+			return err
+		}
+
+		if err := b.operator.extractVar(); err != nil {
+			return err
+		}
+		if err := b.operator.validate(); err != nil {
+			return err
+		}
+
+		if err := b.typevalue.extractVar(); err != nil {
+			return err
+		}
+		if err := b.typevalue.validate(); err != nil {
 			return err
 		}
 
@@ -46,7 +61,10 @@ func ParseAST(rd io.Reader) (*AST, error) {
 			lines := b.blockBody.GetStatements()
 			for _, ln := range lines {
 				for _, t := range ln.tokens {
-					if err := t.Validate(); err != nil {
+					if err := t.extractVar(); err != nil {
+						return err
+					}
+					if err := t.validate(); err != nil {
 						return err
 					}
 				}
@@ -126,7 +144,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					ast.transfer(_l1_fn_started)
 				case "run":
 					if is.LeftBracket(current) {
-						body = &FList{}
+						body = &FList{etype: _functionname_t}
 						ast.transfer(_l1_run_body_started)
 					} else {
 						ast.transfer(_l1_run_started)
@@ -137,6 +155,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				block = &Block{
 					kind: Token{
 						value: word,
+						typ:   _word_t,
 					},
 					state:     _l2_kind_done,
 					parent:    &ast.global,
@@ -171,6 +190,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if is.EOL(current) {
 					block.target = Token{
 						value: strings.TrimSpace(newline[start:last]),
+						typ:   _load_t,
 					}
 					block.state = _l2_target_done
 					ast.transfer(_l1_global)
@@ -328,9 +348,11 @@ func scanToken(ast *AST, line string, linenum int) error {
 					s := newline[start:last]
 					block.target = Token{
 						value: strings.TrimSpace(s),
+						typ:   _word_t,
 					}
 					block.operator = Token{
 						value: "=",
+						typ:   _operator_t,
 					}
 					block.state = _l2_operator_started
 					break
@@ -395,6 +417,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 						argsBlock := &Block{
 							kind: Token{
 								value: s,
+								typ:   _word_t,
 							},
 							state:     _l2_kind_done,
 							parent:    block,
@@ -435,6 +458,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if current == '{' || unicode.IsSpace(current) {
 					block.operator = Token{
 						value: "=",
+						typ:   _operator_t,
 					}
 					block.state = _l2_operator_done
 					if current == '{' {
