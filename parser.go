@@ -5,6 +5,7 @@ package cofunc
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"unicode"
@@ -147,7 +148,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 				return errors.New("contain invalid character: " + newline)
 			case _l2_target_started:
 				// transfer
-				if isEndofline(current) {
+				if isEOL(current) {
 					block.target = Token{
 						value: strings.TrimSpace(newline[start:last]),
 					}
@@ -169,34 +170,19 @@ func scanToken(ast *AST, line string, linenum int) error {
 				time: 1s
 			}
 			*/
-			if current == '\n' {
-				// run function
-				block.target = Token{
-					value: strings.TrimSpace(newline[start:last]),
-					typ:   _functionname_t,
+			switch block.state {
+			case _l2_kind_done:
+				// skip
+				if isSpace(current) {
+					break
 				}
-				block.state = _l2_target_done
-				ast.transfer(_l1_global)
-				break
-			}
-
-			if unicode.IsSpace(current) {
-				break
-			}
-
-			if current == '{' {
-				if block.state == _l2_target_started {
-					/*
-						run sleep {
-							time: 1s
-						}
-					*/
-					block.target = Token{
-						value: strings.TrimSpace(newline[start:last]),
-						typ:   _functionname_t,
-					}
-					block.blockBody = &FMap{}
-				} else {
+				// transfer 1
+				if isWord(current) {
+					start = last
+					block.state = _l2_target_started
+					break
+				}
+				if isLeftBracket(current) {
 					/*
 						run {
 							f1
@@ -204,30 +190,74 @@ func scanToken(ast *AST, line string, linenum int) error {
 						}
 					*/
 					block.blockBody = &FList{etype: _functionname_t}
+					ast.transfer(_l1_run_body_started)
+					break
 				}
-
-				block.state = _l2_target_done
-				ast.transfer(_l1_run_body_started)
-				break
+				return errors.New("contain invalid character: " + newline)
+			case _l2_target_started:
+				// keep
+				if isWord(current) {
+					break
+				}
+				// 1. transfer - run sleep{
+				if isLeftBracket(current) {
+					block.target = Token{
+						value: strings.TrimSpace(newline[start:last]),
+						typ:   _functionname_t,
+					}
+					block.blockBody = &FMap{}
+					block.state = _l2_unknow
+					ast.transfer(_l1_run_body_started)
+					break
+				}
+				// 2. transfer - run sleep {  or run sleep
+				if isSpace(current) {
+					block.target = Token{
+						value: strings.TrimSpace(newline[start:last]),
+						typ:   _functionname_t,
+					}
+					block.state = _l2_target_done
+					if isEOL(current) {
+						ast.transfer(_l1_global)
+					}
+					break
+				}
+				return errors.New("contain invalid character: " + newline)
+			case _l2_target_done:
+				// transfer
+				if isEOL(current) {
+					ast.transfer(_l1_global)
+					break
+				}
+				if isLeftBracket(current) {
+					block.blockBody = &FMap{}
+					ast.transfer(_l1_run_body_started)
+					break
+				}
+				// skip
+				if isSpace(current) {
+					break
+				}
+				// error
+				return errors.New("contain invalid character: " + newline)
 			}
 
-			if block.state != _l2_target_started {
-				block.state = _l2_target_started
-				start = last
-			}
 		case _l1_run_body_started:
-			if current == '\n' {
+			// transfer
+			if isEOL(current) {
 				ast.transfer(_l1_run_body_inside)
 				break
 			}
-			if !unicode.IsSpace(current) {
-				return errors.New("invalid run block: " + newline)
+			// skip
+			if isSpace(current) {
+				break
 			}
+			return errors.New("invalid run block: " + newline + fmt.Sprintf(" (%c)", current))
 		case _l1_run_body_inside:
 			// 1. k: v
 			// 2. f
 			// 3. }
-			if current == '\n' {
+			if isEOL(current) {
 				if newline == "}" {
 					ast.transfer(_l1_global)
 				} else if newline != "" {
@@ -236,6 +266,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					}
 				}
 			}
+
 		case _l1_fn_block_started:
 			/*
 				fn f1 = f {
@@ -423,7 +454,7 @@ func isSpace(x rune) bool {
 	return unicode.IsSpace(x)
 }
 
-func isEndofline(x rune) bool {
+func isEOL(x rune) bool {
 	return x == '\n'
 }
 
