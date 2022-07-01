@@ -18,7 +18,7 @@ type FMap struct {
 func (m *FMap) ToMap() map[string]string {
 	ret := make(map[string]string)
 	for _, line := range m.lines {
-		k, v := line.tokens[0].value, line.tokens[1].value
+		k, v := line.tokens[0].Value(), line.tokens[1].Value()
 		ret[k] = v
 	}
 	return ret
@@ -37,7 +37,7 @@ func (m *FMap) Append(o interface{}) error {
 			m.state = _l2_unknow
 		}
 		t := m.LastStatement().LastToken()
-		t.value = t.value + "\n" + s
+		t.str = t.str + "\n" + s
 	} else {
 		if s == "" {
 			return nil
@@ -67,7 +67,7 @@ type FList struct {
 func (l *FList) ToSlice() []string {
 	var ret []string
 	for _, line := range l.lines {
-		v := line.tokens[0].value
+		v := line.tokens[0].Value()
 		ret = append(ret, v)
 	}
 	return ret
@@ -80,8 +80,8 @@ func (l *FList) Type() string {
 func (l *FList) Append(o interface{}) error {
 	s := o.(string)
 	t := &Token{
-		value: s,
-		typ:   l.etype,
+		str: s,
+		typ: l.etype,
 	}
 	l.lines = append(l.lines, newStatement(t))
 	return nil

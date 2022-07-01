@@ -64,8 +64,8 @@ load cmd:function3
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, path string) {
-		assert.Equal(t, "load", b.kind.value)
-		assert.Equal(t, path, b.target.value)
+		assert.Equal(t, "load", b.kind.Value())
+		assert.Equal(t, path, b.target.Value())
 	}
 	check(blocks[0], "cmd:function1")
 	check(blocks[1], "go:function2")
@@ -165,8 +165,8 @@ run function3 {
 	check := func(b *Block, obj string) {
 		assert.Nil(t, b.child)
 		assert.NotNil(t, b.parent)
-		assert.Equal(t, "run", b.kind.value)
-		assert.Equal(t, obj, b.target.value)
+		assert.Equal(t, "run", b.kind.Value())
+		assert.Equal(t, obj, b.target.Value())
 
 		if obj == "function2" {
 			kvs := b.blockBody.(*FMap).ToMap()
@@ -205,7 +205,7 @@ run    {
 		}
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
-		assert.Equal(t, "run", b.kind.value)
+		assert.Equal(t, "run", b.kind.Value())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
@@ -234,7 +234,7 @@ run    {
 		}
 		assert.Len(t, blocks, 1)
 		b := blocks[0]
-		assert.Equal(t, "run", b.kind.value)
+		assert.Equal(t, "run", b.kind.Value())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())

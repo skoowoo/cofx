@@ -95,10 +95,10 @@ func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
 
 func (rq *RunQ) processLoad(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.value != "load" {
+		if b.kind.Value() != "load" {
 			return nil
 		}
-		s := b.target.value
+		s := b.target.Value()
 		fields := strings.Split(s, ":")
 		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
 		if _, ok := rq.locations[fname]; ok {
@@ -115,10 +115,10 @@ func (rq *RunQ) processLoad(ast *AST) error {
 
 func (rq *RunQ) processFn(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.value != "fn" {
+		if b.kind.Value() != "fn" {
 			return nil
 		}
-		nodename, fname := b.target.value, b.typevalue.value
+		nodename, fname := b.target.Value(), b.typevalue.Value()
 		if nodename == fname {
 			return errors.New("node and function name are the same: " + nodename)
 		}
@@ -131,7 +131,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 		}
 		rq.configuredNodes[node.name] = node
 		for _, child := range b.child {
-			if child.kind.value == "args" {
+			if child.kind.Value() == "args" {
 				node.args = child.blockBody.(*FMap).ToMap()
 			}
 		}
@@ -141,10 +141,10 @@ func (rq *RunQ) processFn(ast *AST) error {
 
 func (rq *RunQ) processRun(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.value != "run" {
+		if b.kind.Value() != "run" {
 			return nil
 		}
-		if name := b.target.value; name != "" {
+		if name := b.target.Value(); name != "" {
 			// here is the serial run function
 			//
 			node, ok := rq.configuredNodes[name]

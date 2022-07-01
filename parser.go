@@ -154,8 +154,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				}
 				block = &Block{
 					kind: Token{
-						value: word,
-						typ:   _word_t,
+						str: word,
+						typ: _word_t,
 					},
 					state:     _l2_kind_done,
 					parent:    &ast.global,
@@ -189,8 +189,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// transfer
 				if is.EOL(current) {
 					block.target = Token{
-						value: strings.TrimSpace(newline[start:last]),
-						typ:   _load_t,
+						str: strings.TrimSpace(newline[start:last]),
+						typ: _load_t,
 					}
 					block.state = _l2_target_done
 					ast.transfer(_l1_global)
@@ -243,8 +243,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// 1. transfer - run sleep{
 				if is.LeftBracket(current) {
 					block.target = Token{
-						value: strings.TrimSpace(newline[start:last]),
-						typ:   _functionname_t,
+						str: strings.TrimSpace(newline[start:last]),
+						typ: _functionname_t,
 					}
 					block.blockBody = &FMap{}
 					block.state = _l2_unknow
@@ -254,8 +254,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// 2. transfer - run sleep {  or run sleep
 				if is.Space(current) {
 					block.target = Token{
-						value: strings.TrimSpace(newline[start:last]),
-						typ:   _functionname_t,
+						str: strings.TrimSpace(newline[start:last]),
+						typ: _functionname_t,
 					}
 					block.state = _l2_target_done
 					break
@@ -263,8 +263,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// 3. transfer run sleep
 				if is.EOL(current) {
 					block.target = Token{
-						value: strings.TrimSpace(newline[start:last]),
-						typ:   _functionname_t,
+						str: strings.TrimSpace(newline[start:last]),
+						typ: _functionname_t,
 					}
 					block.state = _l2_unknow
 					ast.transfer(_l1_global)
@@ -347,12 +347,12 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if is.Eq(current) {
 					s := newline[start:last]
 					block.target = Token{
-						value: strings.TrimSpace(s),
-						typ:   _word_t,
+						str: strings.TrimSpace(s),
+						typ: _word_t,
 					}
 					block.operator = Token{
-						value: "=",
-						typ:   _operator_t,
+						str: "=",
+						typ: _operator_t,
 					}
 					block.state = _l2_operator_started
 					break
@@ -384,8 +384,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 				if is.LeftBracket(current) {
 					s := newline[start:last]
 					block.typevalue = Token{
-						value: strings.TrimSpace(s),
-						typ:   _functionname_t,
+						str: strings.TrimSpace(s),
+						typ: _functionname_t,
 					}
 					block.state = _l2_unknow
 					ast.transfer(_l1_fn_body_started)
@@ -416,8 +416,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 					case "args":
 						argsBlock := &Block{
 							kind: Token{
-								value: s,
-								typ:   _word_t,
+								str: s,
+								typ: _word_t,
 							},
 							state:     _l2_kind_done,
 							parent:    block,
@@ -457,8 +457,8 @@ func scanToken(ast *AST, line string, linenum int) error {
 			case _l2_operator_started:
 				if current == '{' || unicode.IsSpace(current) {
 					block.operator = Token{
-						value: "=",
-						typ:   _operator_t,
+						str: "=",
+						typ: _operator_t,
 					}
 					block.state = _l2_operator_done
 					if current == '{' {

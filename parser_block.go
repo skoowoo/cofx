@@ -3,7 +3,9 @@ package cofunc
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/is"
 	"github.com/pkg/errors"
@@ -36,28 +38,83 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 }
 
 type Token struct {
-	value string
-	typ   TokenType
-	vars  []*struct {
+	str        string
+	persistent string
+	typ        TokenType
+	b          *Block
+	vars       []*struct {
 		n    string // var's name
 		v    string // var's value, need to read from others
 		s, e int    // S is var start position in 'Token.Value', E is end position
 	}
+	get func(*Block, string) (string, bool)
 }
 
 func newToken(s string, typ TokenType) *Token {
 	return &Token{
-		value: s,
-		typ:   typ,
+		str: s,
+		typ: typ,
 	}
 }
 
+func getVarFromEnv(name string) (string, bool) {
+	return os.Getenv(name), true
+}
+
 func (t *Token) String() string {
-	return t.value
+	return t.str
+}
+
+func (t *Token) Value() string {
+	if !t.HasVar() {
+		return t.str
+	}
+	if len(t.persistent) != 0 {
+		return t.persistent
+	}
+	var builder strings.Builder
+	pe := 0
+	cacheable := true
+	for _, v := range t.vars {
+		var (
+			val string
+			ok  bool
+		)
+		if len(v.v) == 0 {
+			//var is not cached
+			if t.get != nil && v.n != `\` {
+				val, ok = t.get(t.b, v.n)
+			} else if v.n != `\` {
+				val, ok = getVarFromEnv(v.n)
+			} else {
+				val, ok = "", true
+			}
+			if ok {
+				v.v = val
+			} else {
+				cacheable = false
+			}
+		} else {
+			// var is cached
+			val = v.v
+		}
+		builder.WriteString(t.str[pe:v.s])
+		builder.WriteString(val)
+		pe = v.e
+	}
+	if l := len(t.str); pe < l {
+		builder.WriteString(t.str[pe:l])
+	}
+	s := builder.String()
+	if cacheable {
+		// cache the token
+		t.persistent = s
+	}
+	return s
 }
 
 func (t *Token) IsEmpty() bool {
-	return len(t.value) == 0
+	return len(t.str) == 0
 }
 
 func (t *Token) HasVar() bool {
@@ -70,24 +127,23 @@ func (t *Token) extractVar() error {
 		return nil
 	}
 	var (
-		pre   rune
 		start int
 		state stateL2
 	)
-	l := len(t.value)
+	l := len(t.str)
 	next := func(i int) byte {
 		i += 1
 		if i >= l {
 			return 'x'
 		}
-		return t.value[i]
+		return t.str[i]
 	}
-	for i, c := range t.value {
+	for i, c := range t.str {
 		switch state {
 		case _l2_unknow:
 			// skip
 			// transfer
-			if pre != '\\' && c == '$' && next(i) == '(' {
+			if c == '$' && next(i) == '(' {
 				start = i
 				state = _l2_word_started
 			}
@@ -98,9 +154,22 @@ func (t *Token) extractVar() error {
 			}
 			// transfer
 			if c == ')' {
-				name := t.value[start+2 : i] // start +2: skip "$("
+				if j := start - 1; j >= 0 {
+					if slash := t.str[j]; slash == '\\' {
+						// TODO: drop '\'
+						state = _l2_unknow
+						t.vars = append(t.vars, &struct {
+							n string
+							v string
+							s int
+							e int
+						}{n: `\`, v: "", s: j, e: j + 1})
+						break
+					}
+				}
+				name := t.str[start+2 : i] // start +2: skip "$("
 				if name == "" {
-					return errors.New("contain invalid var: " + t.value)
+					return errors.New("contain invalid var: " + t.str)
 				}
 				t.vars = append(t.vars, &struct {
 					n string
@@ -112,14 +181,13 @@ func (t *Token) extractVar() error {
 				state = _l2_unknow
 			}
 		}
-		pre = c
 	}
 	return nil
 }
 
 func (t *Token) validate() error {
-	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.value) {
-		return errors.Errorf("not match: %s:%s", t.value, pattern)
+	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
+		return errors.Errorf("not match: %s:%s", t.str, pattern)
 	}
 	return nil
 }
@@ -192,7 +260,15 @@ type Block struct {
 	state     stateL2
 	child     []*Block
 	parent    *Block
+	vars      map[string]*_Var
 	blockBody
+}
+
+// TODO:
+// calcVar be called at running, not parsing
+func (b *Block) calcVar(name string) (string, bool) {
+	_ = b.vars
+	return "", true
 }
 
 func (b *Block) String() string {
@@ -201,9 +277,4 @@ func (b *Block) String() string {
 	} else {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.kind, &b.target, &b.operator, &b.typevalue)
 	}
-}
-
-// TODO: Call InputVar at running, not parsing
-func (b *Block) InputVar() error {
-	return nil
 }
