@@ -28,6 +28,11 @@ func TestParseBlocksFull(t *testing.T) {
 	load cmd:path/function3
 	load go:function4
 	 
+	var a = 1
+	var b = $(a)00
+	var c
+	var d=hello word
+
 	run f1
 	run	f2
 	run	function3
@@ -47,6 +52,28 @@ func TestParseBlocksFull(t *testing.T) {
 		assert.FailNow(t, err.Error())
 	}
 	_ = blocks
+	for _, b := range blocks {
+		{
+			val, cached := b.CalcVar("a")
+			assert.True(t, cached)
+			assert.Equal(t, "1", val)
+		}
+		{
+			val, cached := b.CalcVar("b")
+			assert.True(t, cached)
+			assert.Equal(t, "100", val)
+		}
+		{
+			val, cached := b.CalcVar("c")
+			assert.False(t, cached)
+			assert.Equal(t, "", val)
+		}
+		{
+			val, cached := b.CalcVar("d")
+			assert.True(t, cached)
+			assert.Equal(t, "hello word", val)
+		}
+	}
 }
 
 // Only load part
@@ -64,13 +91,14 @@ load cmd:function3
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, path string) {
-		assert.Equal(t, "load", b.kind.Value())
-		assert.Equal(t, path, b.target.Value())
+		assert.Equal(t, "load", b.kind.String())
+		assert.Equal(t, path, b.target.String())
 	}
-	check(blocks[0], "cmd:function1")
-	check(blocks[1], "go:function2")
-	check(blocks[2], "cmd:function3")
-	check(blocks[3], "go:function4")
+	// 0 is global block
+	check(blocks[1], "cmd:function1")
+	check(blocks[2], "go:function2")
+	check(blocks[3], "cmd:function3")
+	check(blocks[4], "go:function4")
 }
 
 func TestParseBlocksOnlyfn(t *testing.T) {
@@ -163,17 +191,17 @@ run function3 {
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, obj string) {
-		assert.Nil(t, b.child)
+		assert.Len(t, b.child, 0)
 		assert.NotNil(t, b.parent)
-		assert.Equal(t, "run", b.kind.Value())
-		assert.Equal(t, obj, b.target.Value())
+		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, obj, b.target.String())
 
 		if obj == "function2" {
-			kvs := b.blockBody.(*FMap).ToMap()
+			kvs := b.bbody.(*FMap).ToMap()
 			assert.Len(t, kvs, 2)
 		}
 		if obj == "function3" {
-			kvs := b.blockBody.(*FMap).ToMap()
+			kvs := b.bbody.(*FMap).ToMap()
 			assert.Len(t, kvs, 4)
 			assert.Equal(t, "{(1+2+3)}", kvs["k"])
 			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
@@ -181,9 +209,10 @@ run function3 {
 			assert.Equal(t, "\nhello1\nhello2", kvs["multi3"])
 		}
 	}
-	check(blocks[0], "function1")
-	check(blocks[1], "function2")
-	check(blocks[2], "function3")
+	// 0 is global block
+	check(blocks[1], "function1")
+	check(blocks[2], "function2")
+	check(blocks[3], "function3")
 }
 
 // Parallel run testing
@@ -203,14 +232,15 @@ run    {
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
-		assert.Len(t, blocks, 1)
-		b := blocks[0]
-		assert.Equal(t, "run", b.kind.Value())
+		assert.Len(t, blocks, 2)
+		// 0 is global block
+		b := blocks[1]
+		assert.Equal(t, "run", b.kind.String())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
 
-		slice := b.blockBody.(*FList).ToSlice()
+		slice := b.bbody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -232,14 +262,15 @@ run    {
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
-		assert.Len(t, blocks, 1)
-		b := blocks[0]
-		assert.Equal(t, "run", b.kind.Value())
+		assert.Len(t, blocks, 2)
+		// 0 is global block
+		b := blocks[1]
+		assert.Equal(t, "run", b.kind.String())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
 
-		slice := b.blockBody.(*FList).ToSlice()
+		slice := b.bbody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)

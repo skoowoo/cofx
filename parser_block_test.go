@@ -19,14 +19,13 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 0)
+		assert.Len(t, tk.segments, 1)
 
 		vl := tk.Value()
 		assert.Equal(t, text, vl)
 	}
 	{
 		vs := "$(co)"
-		name := "co"
 		text := vs + `hello word\n`
 		tk := Token{
 			str: text,
@@ -35,19 +34,13 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 1)
-
-		v := tk.vars[0]
-		assert.Equal(t, name, v.n)
-		assert.Equal(t, 0, v.s)
-		assert.Equal(t, v.s+len(vs), v.e)
+		assert.Len(t, tk.segments, 2)
 
 		vl := tk.Value()
 		assert.Equal(t, `cohello word\n`, vl)
 	}
 	{
 		vs := "$(co)"
-		name := "co"
 		text := `123456789\n` + vs
 		tk := Token{
 			str: text,
@@ -56,19 +49,13 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 1)
-
-		v := tk.vars[0]
-		assert.Equal(t, name, v.n)
-		assert.Equal(t, len(text)-len(vs), v.s)
-		assert.Equal(t, len(text), v.e)
+		assert.Len(t, tk.segments, 2)
 
 		vl := tk.Value()
 		assert.Equal(t, `123456789\nco`, vl)
 	}
 	{
 		vs := "$(co)"
-		name := "co"
 		text := "123456" + vs + "word\n"
 		tk := Token{
 			str: text,
@@ -77,12 +64,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 1)
-
-		v := tk.vars[0]
-		assert.Equal(t, name, v.n)
-		assert.Equal(t, 6, v.s)
-		assert.Equal(t, 6+len(vs), v.e)
+		assert.Len(t, tk.segments, 3)
 
 		vl := tk.Value()
 		assert.Equal(t, "123456coword\n", vl)
@@ -98,12 +80,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 2)
-
-		v1 := tk.vars[0]
-		v2 := tk.vars[1]
-		assert.Equal(t, "co1", v1.n)
-		assert.Equal(t, "co2", v2.n)
+		assert.Len(t, tk.segments, 4)
 
 		vl := tk.Value()
 		assert.Equal(t, "123456co1co2word\n", vl)
@@ -119,10 +96,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		}
 		err := tk.extractVar()
 		assert.NoError(t, err)
-		assert.Len(t, tk.vars, 2)
-
-		v1 := tk.vars[0]
-		assert.Equal(t, "co1", v1.n)
+		assert.Len(t, tk.segments, 3)
 
 		vl := tk.Value()
 		assert.Equal(t, "123456co1$(co2)word\n", vl)

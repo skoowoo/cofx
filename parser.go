@@ -29,54 +29,111 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
-		if err := b.kind.extractVar(); err != nil {
-			return err
-		}
-		if err := b.kind.validate(); err != nil {
+		if err := doBlockHeader(b); err != nil {
 			return err
 		}
 
-		if err := b.target.extractVar(); err != nil {
+		if err := doBlockBody(b); err != nil {
 			return err
-		}
-		if err := b.target.validate(); err != nil {
-			return err
-		}
-
-		if err := b.operator.extractVar(); err != nil {
-			return err
-		}
-		if err := b.operator.validate(); err != nil {
-			return err
-		}
-
-		if err := b.typevalue.extractVar(); err != nil {
-			return err
-		}
-		if err := b.typevalue.validate(); err != nil {
-			return err
-		}
-
-		if b.blockBody != nil {
-			lines := b.blockBody.GetStatements()
-			for _, ln := range lines {
-				for _, t := range ln.tokens {
-					if err := t.extractVar(); err != nil {
-						return err
-					}
-					if err := t.validate(); err != nil {
-						return err
-					}
-				}
-			}
 		}
 		return nil
 	})
 }
 
+func doBlockBody(b *Block) error {
+	if b.bbody == nil {
+		return nil
+	}
+	lines := b.bbody.List()
+	for _, l := range lines {
+		// handle tokens
+		for _, t := range l.tokens {
+			if err := t.extractVar(); err != nil {
+				return err
+			}
+			if err := t.validate(); err != nil {
+				return err
+			}
+		}
+
+		if err := buildVarGraph(b, l); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildVarGraph(b *Block, stm *Statement) error {
+	if stm.desc != "var" {
+		return nil
+	}
+	name := stm.tokens[0].String()
+	v := &_var{
+		segments: []struct {
+			str   string
+			isvar bool
+		}{},
+		child: []*_var{},
+	}
+	if len(stm.tokens) == 2 {
+		vt := stm.tokens[1]
+		if !vt.HasVar() {
+			v.v = vt.String()
+			v.cached = true
+		} else {
+			v.segments = vt.Segments()
+			for _, seg := range v.segments {
+				if !seg.isvar {
+					continue
+				}
+				vname := seg.str
+				chld, ok := b.GetVar(vname)
+				if ok {
+					v.child = append(v.child, chld)
+				}
+			}
+		}
+	}
+	if err := b.PutVar(name, v); err != nil {
+		return err
+	}
+	return nil
+}
+
+func doBlockHeader(b *Block) error {
+	if err := b.kind.extractVar(); err != nil {
+		return err
+	}
+	if err := b.kind.validate(); err != nil {
+		return err
+	}
+
+	if err := b.target.extractVar(); err != nil {
+		return err
+	}
+	if err := b.target.validate(); err != nil {
+		return err
+	}
+
+	if err := b.operator.extractVar(); err != nil {
+		return err
+	}
+	if err := b.operator.validate(); err != nil {
+		return err
+	}
+
+	if err := b.typevalue.extractVar(); err != nil {
+		return err
+	}
+	if err := b.typevalue.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 const (
 	_l1_global stateL1 = iota
-	_l1_block_kind
+	_l1_keyword
 	_l1_load_started
 	_l1_run_started
 	_l1_run_body_started
@@ -87,6 +144,7 @@ const (
 	_l1_args_started
 	_l1_args_body_started
 	_l1_args_body_inside
+	_l1_var_started
 )
 
 const (
@@ -117,19 +175,19 @@ func scanToken(ast *AST, line string, linenum int) error {
 			// transfer
 			if is.Word(current) {
 				start = last
-				ast.transfer(_l1_block_kind)
+				ast.transfer(_l1_keyword)
 				break
 			}
 			// error
 			return errors.New("contain invalid character: " + newline)
-		case _l1_block_kind:
+		case _l1_keyword:
 			// keep
 			if is.Word(current) {
 				break
 			}
 			// transfer
 			if is.Space(current) || is.LeftBracket(current) {
-				var body blockBody = nil
+				var body bbody = nil
 				word := newline[start:last]
 				switch word {
 				case "load":
@@ -149,20 +207,31 @@ func scanToken(ast *AST, line string, linenum int) error {
 					} else {
 						ast.transfer(_l1_run_started)
 					}
+				case "var":
+					if is.LeftBracket(current) {
+						return errors.New("contain invalid character: " + newline)
+					}
+					ast.transfer(_l1_var_started)
+					block.state = _l2_kind_done
+					block.bbody.Append(newstm("var"))
+					// var is not a block, so return
+					return nil
 				default:
 					return errors.New("invalid block define: " + word)
 				}
-				block = &Block{
-					kind: Token{
-						str: word,
-						typ: _word_t,
-					},
+				newb := &Block{
+					kind:      Token{str: word, typ: _keyword_t},
+					target:    Token{},
+					operator:  Token{},
+					typevalue: Token{},
 					state:     _l2_kind_done,
-					parent:    &ast.global,
-					blockBody: body,
+					child:     []*Block{},
+					parent:    block,
+					variable:  vsys{vars: make(map[string]*_var)},
+					bbody:     body,
 				}
-				ast.global.child = append(ast.global.child, block)
-				ast.parsing = block
+				block.child = append(block.child, newb)
+				block = newb
 				break
 			}
 			// error
@@ -194,6 +263,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					}
 					block.state = _l2_target_done
 					ast.transfer(_l1_global)
+					block = block.parent
 					break
 				}
 			case _l2_target_done:
@@ -229,7 +299,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 							f2
 						}
 					*/
-					block.blockBody = &FList{etype: _functionname_t}
+					block.bbody = &FList{etype: _functionname_t}
 					ast.transfer(_l1_run_body_started)
 					break
 				}
@@ -246,7 +316,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 						str: strings.TrimSpace(newline[start:last]),
 						typ: _functionname_t,
 					}
-					block.blockBody = &FMap{}
+					block.bbody = &FMap{}
 					block.state = _l2_unknow
 					ast.transfer(_l1_run_body_started)
 					break
@@ -268,6 +338,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					}
 					block.state = _l2_unknow
 					ast.transfer(_l1_global)
+					block = block.parent
 					break
 				}
 				return errors.New("contain invalid character: " + newline)
@@ -275,10 +346,11 @@ func scanToken(ast *AST, line string, linenum int) error {
 				// transfer
 				if is.EOL(current) {
 					ast.transfer(_l1_global)
+					block = block.parent
 					break
 				}
 				if is.LeftBracket(current) {
-					block.blockBody = &FMap{}
+					block.bbody = &FMap{}
 					ast.transfer(_l1_run_body_started)
 					break
 				}
@@ -308,8 +380,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 			if is.EOL(current) {
 				if newline == "}" {
 					ast.transfer(_l1_global)
+					block = block.parent
 				} else if newline != "" {
-					if err := block.blockBody.Append(newline); err != nil {
+					if err := block.bbody.Append(newline); err != nil {
 						return err
 					}
 				}
@@ -414,17 +487,19 @@ func scanToken(ast *AST, line string, linenum int) error {
 					s := newline[start:last]
 					switch s {
 					case "args":
-						argsBlock := &Block{
-							kind: Token{
-								str: s,
-								typ: _word_t,
-							},
+						newb := &Block{
+							kind:      Token{str: s, typ: _word_t},
+							target:    Token{},
+							operator:  Token{},
+							typevalue: Token{},
 							state:     _l2_kind_done,
+							child:     []*Block{},
 							parent:    block,
-							blockBody: &FMap{},
+							variable:  vsys{},
+							bbody:     &FMap{},
 						}
-						block.child = append(block.child, argsBlock)
-						block = argsBlock
+						block.child = append(block.child, newb)
+						block = newb
 						ast.transfer(_l1_args_started)
 					default:
 						return errors.New("invalid statement in fn block: " + newline)
@@ -433,8 +508,9 @@ func scanToken(ast *AST, line string, linenum int) error {
 			} else {
 				// the right bracket of fn block body is appeared, so fn block should be closed
 				if current == '\n' && newline == "}" {
-					ast.transfer(_l1_global)
 					block.state = _l2_unknow
+					ast.transfer(_l1_global)
+					block = block.parent
 					break
 				}
 				if unicode.IsSpace(current) || current == '}' {
@@ -492,11 +568,92 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.state = _l2_unknow
 					ast.transfer(_l1_fn_body_inside)
 				} else {
-					if err := block.blockBody.Append(newline); err != nil {
+					if err := block.bbody.Append(newline); err != nil {
 						return err
 					}
 				}
 			}
+		case _l1_var_started:
+			// var a = 1
+			// var a = $(b)
+			switch block.state {
+			case _l2_kind_done:
+				// skip
+				if is.Space(current) {
+					break
+				}
+				// transfer
+				if is.Word(current) {
+					start = last
+					block.state = _l2_target_started
+					break
+				}
+				// error
+				return errInvalidChar(byte(current), newline)
+			case _l2_target_started: // from '{word}'
+				// keep
+				if is.Word(current) {
+					break
+				}
+				if is.Space(current) {
+					break
+				}
+				// transfer
+				// 1. var a
+				if is.EOL(current) {
+					s := newline[start:last]
+					stm := block.bbody.(*plainbody).Laststm()
+					stm.Append(&Token{
+						str: strings.TrimSpace(s),
+						typ: _varname_t,
+						b:   block,
+					})
+					block.state = _l2_unknow
+					ast.transfer(_l1_global)
+					break
+				}
+
+				// 2. var a = 1
+				if is.Eq(current) {
+					s := newline[start:last]
+					stm := block.bbody.(*plainbody).Laststm()
+					stm.Append(&Token{
+						str: strings.TrimSpace(s),
+						typ: _varname_t,
+						b:   block,
+					})
+					block.state = _l2_operator_started
+					break
+				}
+				// error
+				return errInvalidChar(byte(current), newline)
+			case _l2_operator_started: // from '='
+				// skip
+				if is.Space(current) {
+					break
+				}
+				// not space, transfer
+				start = last
+				block.state = _l2_typevalue_started
+			case _l2_typevalue_started: // from '{word}'
+				// keep
+
+				// transfer
+				if is.EOL(current) {
+					s := newline[start:last]
+					stm := block.bbody.(*plainbody).Laststm()
+					stm.Append(&Token{
+						str: strings.TrimSpace(s),
+						typ: _text_t,
+						b:   block,
+					})
+					block.state = _l2_unknow
+					ast.transfer(_l1_global)
+					break
+				}
+				// error
+			}
+
 		default:
 		}
 		return nil
@@ -526,23 +683,29 @@ type AST struct {
 }
 
 func newAST() *AST {
-	return &AST{
+	ast := &AST{
 		global: Block{
-			child: make([]*Block, 0),
+			kind:      Token{},
+			target:    Token{},
+			operator:  Token{},
+			typevalue: Token{},
+			state:     _l2_unknow,
+			child:     make([]*Block, 0),
+			parent:    nil,
+			variable:  vsys{vars: make(map[string]*_var)},
+			bbody:     &plainbody{},
 		},
 		_FA: _FA{
-			parsing: nil,
-			state:   _l1_global,
+			state: _l1_global,
 		},
 	}
+	ast._FA.parsing = &ast.global
+	return ast
 }
 
 func deepwalk(b *Block, do func(*Block) error) error {
-	// skip the global block
-	if b.parent != nil {
-		if err := do(b); err != nil {
-			return err
-		}
+	if err := do(b); err != nil {
+		return err
 	}
 	for _, c := range b.child {
 		if err := deepwalk(c, do); err != nil {
@@ -568,6 +731,9 @@ type _FA struct {
 func (f *_FA) transfer(s stateL1) {
 	f.prestate = f.state
 	f.state = s
+}
+
+func (f *_FA) Back() {
 }
 
 func (f *_FA) phase() stateL1 {

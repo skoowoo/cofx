@@ -21,7 +21,7 @@ run print {
 
 fn gobuild = command {
 	args = {
-		script: GOOS=$(os) go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
+		script: go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl
 	}
 }
 

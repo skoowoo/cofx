@@ -34,7 +34,8 @@ type Node struct {
 	name     string
 	driver   functiondriver.Driver
 	parallel *Node
-	args     map[string]string
+	// TODO:
+	args map[string]string
 	// TODO:
 	runb *Block
 	fnb  *Block
@@ -95,10 +96,10 @@ func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
 
 func (rq *RunQ) processLoad(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.Value() != "load" {
+		if b.kind.String() != "load" {
 			return nil
 		}
-		s := b.target.Value()
+		s := b.target.String()
 		fields := strings.Split(s, ":")
 		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
 		if _, ok := rq.locations[fname]; ok {
@@ -115,10 +116,10 @@ func (rq *RunQ) processLoad(ast *AST) error {
 
 func (rq *RunQ) processFn(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.Value() != "fn" {
+		if b.kind.String() != "fn" {
 			return nil
 		}
-		nodename, fname := b.target.Value(), b.typevalue.Value()
+		nodename, fname := b.target.String(), b.typevalue.String()
 		if nodename == fname {
 			return errors.New("node and function name are the same: " + nodename)
 		}
@@ -130,9 +131,10 @@ func (rq *RunQ) processFn(ast *AST) error {
 			return errors.New("repeat to configure function:" + node.name)
 		}
 		rq.configuredNodes[node.name] = node
-		for _, child := range b.child {
-			if child.kind.Value() == "args" {
-				node.args = child.blockBody.(*FMap).ToMap()
+		for _, chd := range b.child {
+			if chd.kind.String() == "args" {
+				// TODO:
+				node.args = chd.bbody.(*FMap).ToMap()
 			}
 		}
 		return nil
@@ -141,10 +143,10 @@ func (rq *RunQ) processFn(ast *AST) error {
 
 func (rq *RunQ) processRun(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.Value() != "run" {
+		if b.kind.String() != "run" {
 			return nil
 		}
-		if name := b.target.Value(); name != "" {
+		if name := b.target.String(); name != "" {
 			// here is the serial run function
 			//
 			node, ok := rq.configuredNodes[name]
@@ -154,13 +156,15 @@ func (rq *RunQ) processRun(ast *AST) error {
 				if node, err = rq.createNode(name, name); err != nil {
 					return err
 				}
-				if b.blockBody != nil {
-					node.args = b.blockBody.(*FMap).ToMap()
+				if b.bbody != nil {
+					// TODO:
+					node.args = b.bbody.(*FMap).ToMap()
 				}
 			} else {
 				// the function is configured
-				if b.blockBody != nil {
-					node.args = b.blockBody.(*FMap).ToMap()
+				if b.bbody != nil {
+					// TODO:
+					node.args = b.bbody.(*FMap).ToMap()
 				}
 			}
 			rq.stage = append(rq.stage, node)
@@ -170,7 +174,7 @@ func (rq *RunQ) processRun(ast *AST) error {
 		// Here is the parallel run function
 		//
 		var last *Node
-		names := b.blockBody.(*FList).ToSlice()
+		names := b.bbody.(*FList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.configuredNodes[name]
 			if !ok {

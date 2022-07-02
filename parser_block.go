@@ -3,7 +3,6 @@ package cofunc
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -24,6 +23,8 @@ const (
 	_functionname_t
 	_load_t
 	_word_t
+	_keyword_t
+	_varname_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
@@ -35,17 +36,18 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
 	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
 	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
 }
 
 type Token struct {
 	str        string
-	persistent string
 	typ        TokenType
 	b          *Block
-	vars       []*struct {
-		n    string // var's name
-		v    string // var's value, need to read from others
-		s, e int    // S is var start position in 'Token.Value', E is end position
+	persistent string
+	segments   []struct {
+		str   string
+		isvar bool
 	}
 	get func(*Block, string) (string, bool)
 }
@@ -54,17 +56,31 @@ func newToken(s string, typ TokenType) *Token {
 	return &Token{
 		str: s,
 		typ: typ,
+		get: _lookupVar,
 	}
 }
 
-func getVarFromEnv(name string) (string, bool) {
-	return os.Getenv(name), true
+// _lookupVar be called at running, not parsing
+func _lookupVar(b *Block, name string) (string, bool) {
+	return b.CalcVar(name)
+}
+
+func (t *Token) Segments() []struct {
+	str   string
+	isvar bool
+} {
+	return t.segments
+}
+
+func (t *Token) IsEmpty() bool {
+	return len(t.str) == 0
 }
 
 func (t *Token) String() string {
 	return t.str
 }
 
+// Value will calcuate the variable's value, if the token contain some variables
 func (t *Token) Value() string {
 	if !t.HasVar() {
 		return t.str
@@ -72,40 +88,23 @@ func (t *Token) Value() string {
 	if len(t.persistent) != 0 {
 		return t.persistent
 	}
-	var builder strings.Builder
-	pe := 0
+	if t.get == nil {
+		t.get = _lookupVar
+	}
+	var bd strings.Builder
 	cacheable := true
-	for _, v := range t.vars {
-		var (
-			val string
-			ok  bool
-		)
-		if len(v.v) == 0 {
-			//var is not cached
-			if t.get != nil && v.n != `\` {
-				val, ok = t.get(t.b, v.n)
-			} else if v.n != `\` {
-				val, ok = getVarFromEnv(v.n)
-			} else {
-				val, ok = "", true
-			}
-			if ok {
-				v.v = val
-			} else {
+	for _, seg := range t.segments {
+		if seg.isvar {
+			val, cached := t.get(t.b, seg.str)
+			if !cached {
 				cacheable = false
 			}
+			bd.WriteString(val)
 		} else {
-			// var is cached
-			val = v.v
+			bd.WriteString(seg.str)
 		}
-		builder.WriteString(t.str[pe:v.s])
-		builder.WriteString(val)
-		pe = v.e
 	}
-	if l := len(t.str); pe < l {
-		builder.WriteString(t.str[pe:l])
-	}
-	s := builder.String()
+	s := bd.String()
 	if cacheable {
 		// cache the token
 		t.persistent = s
@@ -113,12 +112,13 @@ func (t *Token) Value() string {
 	return s
 }
 
-func (t *Token) IsEmpty() bool {
-	return len(t.str) == 0
-}
-
 func (t *Token) HasVar() bool {
-	return len(t.vars) != 0
+	for _, seg := range t.segments {
+		if seg.isvar {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Token) extractVar() error {
@@ -127,8 +127,9 @@ func (t *Token) extractVar() error {
 		return nil
 	}
 	var (
-		start int
-		state stateL2
+		start  int
+		vstart int
+		state  stateL2
 	)
 	l := len(t.str)
 	next := func(i int) byte {
@@ -144,7 +145,7 @@ func (t *Token) extractVar() error {
 			// skip
 			// transfer
 			if c == '$' && next(i) == '(' {
-				start = i
+				vstart = i
 				state = _l2_word_started
 			}
 		case _l2_word_started: // from '$'
@@ -154,33 +155,47 @@ func (t *Token) extractVar() error {
 			}
 			// transfer
 			if c == ')' {
-				if j := start - 1; j >= 0 {
+				if j := vstart - 1; j >= 0 {
 					if slash := t.str[j]; slash == '\\' {
-						// TODO: drop '\'
+						// drop '\'
 						state = _l2_unknow
-						t.vars = append(t.vars, &struct {
-							n string
-							v string
-							s int
-							e int
-						}{n: `\`, v: "", s: j, e: j + 1})
+						if start < j {
+							t.segments = append(t.segments, struct {
+								str   string
+								isvar bool
+							}{t.str[start:j], false})
+						}
+						start = j + 1 //  j+1 = vstart
 						break
 					}
 				}
-				name := t.str[start+2 : i] // start +2: skip "$("
+				name := t.str[vstart+2 : i] // start +2: skip "$("
 				if name == "" {
 					return errors.New("contain invalid var: " + t.str)
 				}
-				t.vars = append(t.vars, &struct {
-					n string
-					v string
-					s int
-					e int
-				}{n: name, s: start, e: i + 1}) // currently i is ')'
 
+				if start < vstart {
+					t.segments = append(t.segments, struct {
+						str   string
+						isvar bool
+					}{t.str[start:vstart], false})
+				}
+
+				t.segments = append(t.segments, struct {
+					str   string
+					isvar bool
+				}{name, true})
+
+				start = i + 1 // currently i is ')'
 				state = _l2_unknow
 			}
 		}
+	}
+	if start < len(t.str) {
+		t.segments = append(t.segments, struct {
+			str   string
+			isvar bool
+		}{t.str[start:], false})
 	}
 	return nil
 }
@@ -195,13 +210,12 @@ func (t *Token) validate() error {
 // Statement
 //
 type Statement struct {
-	lineNum int
-	tokens  []*Token
+	desc   string
+	tokens []*Token
 }
 
-func newStatement(ts ...*Token) *Statement {
-	stm := &Statement{}
-	stm.tokens = append(stm.tokens, ts...)
+func newstm(desc string) *Statement {
+	stm := &Statement{desc: desc}
 	return stm
 }
 
@@ -213,38 +227,43 @@ func (s *Statement) LastToken() *Token {
 	return s.tokens[l-1]
 }
 
+func (s *Statement) Append(t *Token) *Statement {
+	s.tokens = append(s.tokens, t)
+	return s
+}
+
 // Block
 //
-type blockBody interface {
+type bbody interface {
 	Type() string
 	Append(o interface{}) error
-	GetStatements() []*Statement
+	List() []*Statement
 	Len() int
 }
 
-type rawbody struct {
+type plainbody struct {
 	lines []*Statement
 }
 
-func (r *rawbody) Len() int {
+func (r *plainbody) Len() int {
 	return len(r.lines)
 }
 
-func (r *rawbody) GetStatements() []*Statement {
+func (r *plainbody) List() []*Statement {
 	return r.lines
 }
 
-func (r *rawbody) Type() string {
+func (r *plainbody) Type() string {
 	return "raw"
 }
 
-func (r *rawbody) append(o interface{}) error {
+func (r *plainbody) Append(o interface{}) error {
 	stm := o.(*Statement)
 	r.lines = append(r.lines, stm)
 	return nil
 }
 
-func (r *rawbody) LastStatement() *Statement {
+func (r *plainbody) Laststm() *Statement {
 	l := len(r.lines)
 	if l == 0 {
 		panic("not found statement")
@@ -260,20 +279,42 @@ type Block struct {
 	state     stateL2
 	child     []*Block
 	parent    *Block
-	vars      map[string]*_Var
-	blockBody
+	variable  vsys
+	bbody
 }
 
-// TODO:
-// calcVar be called at running, not parsing
-func (b *Block) calcVar(name string) (string, bool) {
-	_ = b.vars
-	return "", true
+// Getvar lookup variable by name in map
+func (b *Block) GetVar(name string) (*_var, bool) {
+	for p := b; p != nil; p = p.parent {
+		v, ok := p.variable.get(name)
+		if !ok {
+			continue
+		}
+		return v, true
+	}
+	return nil, false
+}
+
+// PutVar insert a variable into map
+func (b *Block) PutVar(name string, v *_var) error {
+	return b.variable.put(name, v)
+}
+
+// CalcVar calcuate the variable's value
+func (b *Block) CalcVar(name string) (string, bool) {
+	for p := b; p != nil; p = p.parent {
+		v, cached := p.variable.calc(name)
+		if v == nil {
+			continue
+		}
+		return v.(string), cached
+	}
+	panic("not found variable: " + name)
 }
 
 func (b *Block) String() string {
-	if b.blockBody != nil {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.blockBody.Len())
+	if b.bbody != nil {
+		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.bbody.Len())
 	} else {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.kind, &b.target, &b.operator, &b.typevalue)
 	}

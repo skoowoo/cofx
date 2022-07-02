@@ -11,14 +11,14 @@ const (
 )
 
 type FMap struct {
-	rawbody
+	plainbody
 	state stateL2
 }
 
 func (m *FMap) ToMap() map[string]string {
 	ret := make(map[string]string)
-	for _, line := range m.lines {
-		k, v := line.tokens[0].Value(), line.tokens[1].Value()
+	for _, ln := range m.lines {
+		k, v := ln.tokens[0].Value(), ln.tokens[1].Value()
 		ret[k] = v
 	}
 	return ret
@@ -36,7 +36,7 @@ func (m *FMap) Append(o interface{}) error {
 			s = strings.TrimSuffix(s, multiline)
 			m.state = _l2_unknow
 		}
-		t := m.LastStatement().LastToken()
+		t := m.Laststm().LastToken()
 		t.str = t.str + "\n" + s
 	} else {
 		if s == "" {
@@ -51,23 +51,23 @@ func (m *FMap) Append(o interface{}) error {
 		if strings.HasPrefix(v, multiline) {
 			v = strings.TrimPrefix(v, multiline)
 			m.state = _l2_multilines_started
-			m.lines = append(m.lines, newStatement(newToken(k, _mapkey_t), newToken(v, _text_t)))
+			m.lines = append(m.lines, newstm("kv").Append(newToken(k, _mapkey_t)).Append(newToken(v, _text_t)))
 		} else {
-			m.lines = append(m.lines, newStatement(newToken(k, _mapkey_t), newToken(v, _text_t)))
+			m.lines = append(m.lines, newstm("kv").Append(newToken(k, _mapkey_t)).Append(newToken(v, _text_t)))
 		}
 	}
 	return nil
 }
 
 type FList struct {
-	rawbody
+	plainbody
 	etype TokenType
 }
 
 func (l *FList) ToSlice() []string {
 	var ret []string
-	for _, line := range l.lines {
-		v := line.tokens[0].Value()
+	for _, ln := range l.lines {
+		v := ln.tokens[0].Value()
 		ret = append(ret, v)
 	}
 	return ret
@@ -83,6 +83,6 @@ func (l *FList) Append(o interface{}) error {
 		str: s,
 		typ: l.etype,
 	}
-	l.lines = append(l.lines, newStatement(t))
+	l.lines = append(l.lines, newstm("element").Append(t))
 	return nil
 }
