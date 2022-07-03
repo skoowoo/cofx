@@ -64,17 +64,17 @@ func TestParseFullWithRunq(t *testing.T) {
 		rq.Forstage(func(stage int, node *Node) error {
 			if stage == 1 {
 				assert.Equal(t, "f1", node.name)
-				assert.Len(t, node.args, 2)
-				assert.Equal(t, "v1", node.args["k"])
+				assert.Len(t, node.Args(), 2)
+				assert.Equal(t, "v1", node.Args()["k"])
 			}
 			if stage == 2 {
 				assert.Equal(t, "function2", node.name)
-				assert.Len(t, node.args, 1)
-				assert.Equal(t, "v2", node.args["k"])
+				assert.Len(t, node.Args(), 1)
+				assert.Equal(t, "v2", node.Args()["k"])
 			}
 			if stage == 3 {
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node.args, 0)
+				assert.Len(t, node.Args(), 0)
 			}
 			if stage == 4 {
 				assert.Equal(t, "function4", node.name)
@@ -83,8 +83,8 @@ func TestParseFullWithRunq(t *testing.T) {
 			}
 			if stage == 5 {
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node.args, 1)
-				assert.Equal(t, "v3", node.args["k"])
+				assert.Len(t, node.Args(), 1)
+				assert.Equal(t, "v3", node.Args()["k"])
 			}
 			return nil
 		})

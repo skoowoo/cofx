@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/manifest"
 	"github.com/sirupsen/logrus"
@@ -32,7 +33,11 @@ func (p *printer) Entrypoint(ctx context.Context, args map[string]string) (map[s
 	logrus.Debugf("function print: args=%v\n", args)
 	var slice []string
 	for k, v := range args {
-		slice = append(slice, k+": "+v)
+		if strings.HasPrefix(k, "_") {
+			slice = append(slice, v)
+		} else {
+			slice = append(slice, k+": "+v)
+		}
 	}
 	sort.Strings(slice)
 	for _, s := range slice {

@@ -41,22 +41,22 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 }
 
 type Token struct {
-	str        string
-	typ        TokenType
-	b          *Block
-	persistent string
-	segments   []struct {
+	str         string
+	typ         TokenType
+	_b          *Block
+	_persistent string
+	_segments   []struct {
 		str   string
 		isvar bool
 	}
-	get func(*Block, string) (string, bool)
+	_get func(*Block, string) (string, bool)
 }
 
 func newToken(s string, typ TokenType) *Token {
 	return &Token{
-		str: s,
-		typ: typ,
-		get: _lookupVar,
+		str:  s,
+		typ:  typ,
+		_get: _lookupVar,
 	}
 }
 
@@ -69,7 +69,7 @@ func (t *Token) Segments() []struct {
 	str   string
 	isvar bool
 } {
-	return t.segments
+	return t._segments
 }
 
 func (t *Token) IsEmpty() bool {
@@ -80,22 +80,34 @@ func (t *Token) String() string {
 	return t.str
 }
 
+func (t *Token) validate() error {
+	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
+		return errors.Errorf("not match: %s:%s", t.str, pattern)
+	}
+	return nil
+}
+
+func (t *Token) setblock(b *Block) {
+	t._b = b
+}
+
+// @running
 // Value will calcuate the variable's value, if the token contain some variables
 func (t *Token) Value() string {
 	if !t.HasVar() {
 		return t.str
 	}
-	if len(t.persistent) != 0 {
-		return t.persistent
+	if len(t._persistent) != 0 {
+		return t._persistent
 	}
-	if t.get == nil {
-		t.get = _lookupVar
+	if t._get == nil {
+		t._get = _lookupVar
 	}
 	var bd strings.Builder
 	cacheable := true
-	for _, seg := range t.segments {
+	for _, seg := range t._segments {
 		if seg.isvar {
-			val, cached := t.get(t.b, seg.str)
+			val, cached := t._get(t._b, seg.str)
 			if !cached {
 				cacheable = false
 			}
@@ -107,13 +119,13 @@ func (t *Token) Value() string {
 	s := bd.String()
 	if cacheable {
 		// cache the token
-		t.persistent = s
+		t._persistent = s
 	}
 	return s
 }
 
 func (t *Token) HasVar() bool {
-	for _, seg := range t.segments {
+	for _, seg := range t._segments {
 		if seg.isvar {
 			return true
 		}
@@ -160,7 +172,7 @@ func (t *Token) extractVar() error {
 						// drop '\'
 						state = _l2_unknow
 						if start < j {
-							t.segments = append(t.segments, struct {
+							t._segments = append(t._segments, struct {
 								str   string
 								isvar bool
 							}{t.str[start:j], false})
@@ -175,13 +187,13 @@ func (t *Token) extractVar() error {
 				}
 
 				if start < vstart {
-					t.segments = append(t.segments, struct {
+					t._segments = append(t._segments, struct {
 						str   string
 						isvar bool
 					}{t.str[start:vstart], false})
 				}
 
-				t.segments = append(t.segments, struct {
+				t._segments = append(t._segments, struct {
 					str   string
 					isvar bool
 				}{name, true})
@@ -192,17 +204,10 @@ func (t *Token) extractVar() error {
 		}
 	}
 	if start < len(t.str) {
-		t.segments = append(t.segments, struct {
+		t._segments = append(t._segments, struct {
 			str   string
 			isvar bool
 		}{t.str[start:], false})
-	}
-	return nil
-}
-
-func (t *Token) validate() error {
-	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
-		return errors.Errorf("not match: %s:%s", t.str, pattern)
 	}
 	return nil
 }
@@ -310,6 +315,10 @@ func (b *Block) CalcVar(name string) (string, bool) {
 		return v.(string), cached
 	}
 	panic("not found variable: " + name)
+}
+
+func (b *Block) Iskind(s string) bool {
+	return b.kind.String() == s
 }
 
 func (b *Block) String() string {

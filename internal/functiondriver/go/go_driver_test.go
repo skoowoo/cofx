@@ -14,7 +14,8 @@ func TestLoad(t *testing.T) {
 	}
 	assert.Equal(t, "print", dr.fname)
 	assert.Equal(t, "print", dr.path)
-	err := dr.Load(context.Background(), map[string]string{
+	err := dr.Load(context.Background())
+	dr.MergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
 		"k3": "v3",
@@ -29,7 +30,8 @@ func TestRun(t *testing.T) {
 	if dr == nil {
 		t.FailNow()
 	}
-	err := dr.Load(context.Background(), map[string]string{
+	err := dr.Load(context.Background())
+	dr.MergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
 		"k3": "v3",

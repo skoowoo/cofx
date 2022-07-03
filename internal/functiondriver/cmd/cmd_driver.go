@@ -24,8 +24,12 @@ func New(loc string) *CmdDriver {
 	}
 }
 
-func (d *CmdDriver) Load(ctx context.Context, args map[string]string) error {
+func (d *CmdDriver) Load(ctx context.Context) error {
 	// todo
+	return nil
+}
+
+func (d *CmdDriver) MergeArgs(args map[string]string) error {
 	return nil
 }
 

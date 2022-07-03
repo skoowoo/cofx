@@ -34,11 +34,8 @@ type Node struct {
 	name     string
 	driver   functiondriver.Driver
 	parallel *Node
-	// TODO:
-	args map[string]string
-	// TODO:
-	runb *Block
-	fnb  *Block
+	rb       *Block
+	fb       *Block
 }
 
 func (n *Node) String() string {
@@ -47,6 +44,32 @@ func (n *Node) String() string {
 
 func (n *Node) Parallel() *Node {
 	return n.parallel
+}
+
+func (n *Node) setrb(b *Block) {
+	n.rb = b
+}
+
+func (n *Node) setfb(b *Block) {
+	n.fb = b
+}
+
+// Args need to be called at running, because it will calcuate variable's value if has variable
+func (n *Node) Args() map[string]string {
+	var args map[string]string
+	if n.rb.bbody != nil {
+		args = n.rb.bbody.(*FMap).ToMap()
+		return args
+	}
+	if n.fb != nil {
+		for _, b := range n.fb.child {
+			if b.Iskind("args") {
+				args = b.bbody.(*FMap).ToMap()
+				return args
+			}
+		}
+	}
+	return nil
 }
 
 // RunQ
@@ -87,11 +110,11 @@ func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
 	if driver == nil {
 		return nil, errors.New("not found driver: " + l)
 	}
-	return &Node{
+	node := &Node{
 		name:   nodename,
 		driver: driver,
-		args:   make(map[string]string),
-	}, nil
+	}
+	return node, nil
 }
 
 func (rq *RunQ) processLoad(ast *AST) error {
@@ -127,16 +150,11 @@ func (rq *RunQ) processFn(ast *AST) error {
 		if err != nil {
 			return err
 		}
+		node.setfb(b)
 		if _, ok := rq.configuredNodes[node.name]; ok {
 			return errors.New("repeat to configure function:" + node.name)
 		}
 		rq.configuredNodes[node.name] = node
-		for _, chd := range b.child {
-			if chd.kind.String() == "args" {
-				// TODO:
-				node.args = chd.bbody.(*FMap).ToMap()
-			}
-		}
 		return nil
 	})
 }
@@ -156,17 +174,8 @@ func (rq *RunQ) processRun(ast *AST) error {
 				if node, err = rq.createNode(name, name); err != nil {
 					return err
 				}
-				if b.bbody != nil {
-					// TODO:
-					node.args = b.bbody.(*FMap).ToMap()
-				}
-			} else {
-				// the function is configured
-				if b.bbody != nil {
-					// TODO:
-					node.args = b.bbody.(*FMap).ToMap()
-				}
 			}
+			node.setrb(b)
 			rq.stage = append(rq.stage, node)
 			return nil
 		}
@@ -184,6 +193,7 @@ func (rq *RunQ) processRun(ast *AST) error {
 					return err
 				}
 			}
+			node.setrb(b)
 			if last == nil {
 				rq.stage = append(rq.stage, node)
 			} else {

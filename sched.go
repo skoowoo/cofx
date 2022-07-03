@@ -53,7 +53,7 @@ func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.results = make(map[string]*FunctionResult)
 
 		body.GetRunQ().Foreach(func(stage int, n *Node) error {
-			if err := n.driver.Load(ctx, n.args); err != nil {
+			if err := n.driver.Load(ctx); err != nil {
 				return err
 			}
 			body.ready += 1
@@ -95,6 +95,7 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		for p := node; p != nil; p = p.parallel {
 			go func(n *Node, fr *FunctionResult) {
 				fr.begin = time.Now()
+				_ = n.driver.MergeArgs(n.Args())
 				fr.returns, fr.err = n.driver.Run(ctx)
 				fr.end = time.Now()
 				select {

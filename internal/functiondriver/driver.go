@@ -9,7 +9,8 @@ import (
 
 type Driver interface {
 	FunctionName() string
-	Load(ctx context.Context, args map[string]string) error
+	Load(ctx context.Context) error
+	MergeArgs(args map[string]string) error
 	Run(ctx context.Context) (map[string]string, error)
 }
 

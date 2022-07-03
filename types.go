@@ -79,10 +79,6 @@ func (l *FList) Type() string {
 
 func (l *FList) Append(o interface{}) error {
 	s := o.(string)
-	t := &Token{
-		str: s,
-		typ: l.etype,
-	}
-	l.lines = append(l.lines, newstm("element").Append(t))
+	l.lines = append(l.lines, newstm("element").Append(newToken(s, l.etype)))
 	return nil
 }

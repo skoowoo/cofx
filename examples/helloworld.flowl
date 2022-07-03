@@ -1,0 +1,8 @@
+load go:print
+
+var a = hello
+var b = $(a) world!
+
+run print {
+    _: $(b)
+}

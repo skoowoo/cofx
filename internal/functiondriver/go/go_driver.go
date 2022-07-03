@@ -29,14 +29,18 @@ func New(loc string) *GoDriver {
 }
 
 // load go://function
-func (d *GoDriver) Load(ctx context.Context, args map[string]string) error {
+func (d *GoDriver) Load(ctx context.Context) error {
 	fn := builtins.Lookup(d.fname)
 	if fn == nil {
 		return errors.New("in builtins package, not found function: " + d.path)
 	}
 	mf := fn.Manifest()
-	d.mergedArgs = mergeArgs(mf.Args, args)
 	d.manifest = &mf
+	return nil
+}
+
+func (d *GoDriver) MergeArgs(args map[string]string) error {
+	d.mergedArgs = mergeArgs(d.manifest.Args, args)
 	return nil
 }
 

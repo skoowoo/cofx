@@ -48,6 +48,7 @@ func doBlockBody(b *Block) error {
 	for _, l := range lines {
 		// handle tokens
 		for _, t := range l.tokens {
+			t.setblock(b)
 			if err := t.extractVar(); err != nil {
 				return err
 			}
@@ -101,32 +102,20 @@ func buildVarGraph(b *Block, stm *Statement) error {
 }
 
 func doBlockHeader(b *Block) error {
-	if err := b.kind.extractVar(); err != nil {
-		return err
+	ts := []*Token{
+		&b.kind,
+		&b.target,
+		&b.operator,
+		&b.typevalue,
 	}
-	if err := b.kind.validate(); err != nil {
-		return err
-	}
-
-	if err := b.target.extractVar(); err != nil {
-		return err
-	}
-	if err := b.target.validate(); err != nil {
-		return err
-	}
-
-	if err := b.operator.extractVar(); err != nil {
-		return err
-	}
-	if err := b.operator.validate(); err != nil {
-		return err
-	}
-
-	if err := b.typevalue.extractVar(); err != nil {
-		return err
-	}
-	if err := b.typevalue.validate(); err != nil {
-		return err
+	for _, t := range ts {
+		t.setblock(b)
+		if err := t.extractVar(); err != nil {
+			return err
+		}
+		if err := t.validate(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -606,7 +595,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					stm.Append(&Token{
 						str: strings.TrimSpace(s),
 						typ: _varname_t,
-						b:   block,
+						_b:  block,
 					})
 					block.state = _l2_unknow
 					ast.transfer(_l1_global)
@@ -620,7 +609,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					stm.Append(&Token{
 						str: strings.TrimSpace(s),
 						typ: _varname_t,
-						b:   block,
+						_b:  block,
 					})
 					block.state = _l2_operator_started
 					break
@@ -645,7 +634,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					stm.Append(&Token{
 						str: strings.TrimSpace(s),
 						typ: _text_t,
-						b:   block,
+						_b:  block,
 					})
 					block.state = _l2_unknow
 					ast.transfer(_l1_global)
