@@ -15,15 +15,22 @@ import (
 
 func ParseAST(rd io.Reader) (*AST, error) {
 	ast := newAST()
-	num := 0
-	scanner := bufio.NewScanner(rd)
-	for {
-		if !scanner.Scan() {
+	// scanner := bufio.NewScanner(rd)
+	buff := bufio.NewReader(rd)
+	for n := 1; ; n += 1 {
+		line, err := buff.ReadString('\n')
+		if err == io.EOF {
+			if len(line) != 0 {
+				if err := scanToken(ast, line, n); err != nil {
+					return nil, err
+				}
+			}
 			break
 		}
-		num += 1
-		err := scanToken(ast, scanner.Text(), num)
 		if err != nil {
+			return nil, err
+		}
+		if err := scanToken(ast, line, n); err != nil {
 			return nil, err
 		}
 	}
