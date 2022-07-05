@@ -14,11 +14,11 @@ func EOL(x rune) bool {
 	return x == '\n'
 }
 
-func LeftBracket(x rune) bool {
+func LB(x rune) bool {
 	return x == '{'
 }
 
-func RightBracket(x rune) bool {
+func RB(x rune) bool {
 	return x == '}'
 }
 

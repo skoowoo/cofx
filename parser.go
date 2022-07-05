@@ -15,7 +15,6 @@ import (
 
 func ParseAST(rd io.Reader) (*AST, error) {
 	ast := newAST()
-	// scanner := bufio.NewScanner(rd)
 	buff := bufio.NewReader(rd)
 	for n := 1; ; n += 1 {
 		line, err := buff.ReadString('\n')
@@ -161,11 +160,47 @@ func scanToken(ast *AST, line string, linenum int) error {
 
 	var start int
 
-	finiteAutomata := func(last int, current rune, newline string) error {
+	/*
+		var wb strings.Builder
+		store := func(r rune) {
+			wb.WriteRune(r)
+		}
+		export := func() string {
+			s := wb.String()
+			wb.Reset()
+			return s
+		}
+
+			peek := func(rd *bufio.Reader, is func(x rune) bool) (bool, error) {
+				bs, err := rd.Peek(1)
+				if err != nil {
+					return false, err
+				}
+				return is(rune(bs[0])), nil
+			}
+
+			discard := func(rd *bufio.Reader, is func(x rune) bool) (rune, error) {
+				n := 0
+				for {
+					ok, err := peek(rd, is)
+					if err != nil {
+						return n, err
+					}
+					if ok {
+						rd.Discard(1)
+						n += 1
+					} else {
+						return n, nil
+					}
+				}
+			}
+	*/
+
+	finiteAutomata := func(last int, current rune, newline string, rd *bufio.Reader) error {
 		switch ast.phase() {
 		case _l1_global:
 			// skip
-			if is.SpaceOrEOL(current) {
+			if is.Space(current) || is.EOL(current) {
 				break
 			}
 			// transfer
@@ -182,29 +217,29 @@ func scanToken(ast *AST, line string, linenum int) error {
 				break
 			}
 			// transfer
-			if is.Space(current) || is.LeftBracket(current) {
+			if is.Space(current) || is.LB(current) {
 				var body bbody = nil
 				word := newline[start:last]
 				switch word {
 				case "load":
-					if is.LeftBracket(current) {
+					if is.LB(current) {
 						return errors.New("contain invalid character: " + newline)
 					}
 					ast.transfer(_l1_load_started)
 				case "fn":
-					if is.LeftBracket(current) {
+					if is.LB(current) {
 						return errors.New("contain invalid character: " + newline)
 					}
 					ast.transfer(_l1_fn_started)
 				case "run":
-					if is.LeftBracket(current) {
+					if is.LB(current) {
 						body = &FList{etype: _functionname_t}
 						ast.transfer(_l1_run_body_started)
 					} else {
 						ast.transfer(_l1_run_started)
 					}
 				case "var":
-					if is.LeftBracket(current) {
+					if is.LB(current) {
 						return errors.New("contain invalid character: " + newline)
 					}
 					ast.transfer(_l1_var_started)
@@ -288,7 +323,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block.state = _l2_target_started
 					break
 				}
-				if is.LeftBracket(current) {
+				if is.LB(current) {
 					/*
 						run {
 							f1
@@ -307,7 +342,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					break
 				}
 				// 1. transfer - run sleep{
-				if is.LeftBracket(current) {
+				if is.LB(current) {
 					block.target = Token{
 						str: strings.TrimSpace(newline[start:last]),
 						typ: _functionname_t,
@@ -345,7 +380,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					block = block.parent
 					break
 				}
-				if is.LeftBracket(current) {
+				if is.LB(current) {
 					block.bbody = &FMap{}
 					ast.transfer(_l1_run_body_started)
 					break
@@ -450,7 +485,7 @@ func scanToken(ast *AST, line string, linenum int) error {
 					break
 				}
 				// transfer
-				if is.LeftBracket(current) {
+				if is.LB(current) {
 					s := newline[start:last]
 					block.typevalue = Token{
 						str: strings.TrimSpace(s),
@@ -656,14 +691,18 @@ func scanToken(ast *AST, line string, linenum int) error {
 	}
 
 	line = strings.TrimSpace(line)
-	for i, c := range line {
-		if err := finiteAutomata(i, c, line); err != nil {
+	buff := bufio.NewReader(strings.NewReader(line + "\n"))
+	for i := 0; ; i += 1 {
+		r, _, err := buff.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			return err
 		}
-	}
-	// todo, comment
-	if err := finiteAutomata(len(line), '\n', line); err != nil {
-		return err
+		if err := finiteAutomata(i, r, line, buff); err != nil {
+			return err
+		}
 	}
 	ast.parsing = block
 	return nil
