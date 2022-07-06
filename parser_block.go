@@ -25,6 +25,10 @@ const (
 	_word_t
 	_keyword_t
 	_varname_t
+	_symbol_t
+	_identifier_t
+	_string_t
+	_number_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
