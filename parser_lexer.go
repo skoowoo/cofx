@@ -19,10 +19,11 @@ const (
 )
 
 type lexer struct {
-	tt    map[int][]*Token
-	nums  []int
-	state ststate
-	buf   strings.Builder
+	tt        map[int][]*Token
+	nums      []int
+	state     ststate
+	buf       strings.Builder
+	stringNum int
 }
 
 func newLexer() *lexer {
@@ -75,11 +76,11 @@ func (l *lexer) split(line string, num int) error {
 					str: l.exportString(),
 					typ: _symbol_t,
 				})
-				l._goto(_lx_unknow)
 				break
 			}
 			// string
 			if is.Quotation(c) {
+				l.stringNum = num
 				l._goto(_lx_string)
 				break
 			}
@@ -100,7 +101,7 @@ func (l *lexer) split(line string, num int) error {
 				typ: _word_t,
 			})
 
-			if is.Space(c) {
+			if is.Space(c) || is.EOL(c) {
 				l._goto(_lx_unknow)
 				break
 			}
@@ -121,7 +122,8 @@ func (l *lexer) split(line string, num int) error {
 				break
 			}
 			if is.Quotation(c) {
-				l.insert(num, &Token{
+				// use l.stringNum to replace num, aim to support multi line string
+				l.insert(l.stringNum, &Token{
 					str: l.exportString(),
 					typ: _string_t,
 				})

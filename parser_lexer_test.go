@@ -9,16 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLexer(t *testing.T) {
-	testingdata := `load "go:print"
-
-run print {
-	"STARTING": "build \"cofunc\""
-}
-fn gobuild = command {
-	"hello
-world"`
-
+func loadTestingdataForLexer(testingdata string) (*lexer, error) {
 	lx := &lexer{
 		tt:    make(map[int][]*Token),
 		state: _lx_unknow,
@@ -30,19 +21,49 @@ world"`
 		if err != nil {
 			if err == io.EOF {
 				err = lx.split(line, i)
-				assert.NoError(t, err)
-				break
+				return lx, err
 			}
-			t.FailNow()
+			return nil, err
 		}
-		err = lx.split(line, i)
-		assert.NoError(t, err)
+		if err := lx.split(line, i); err != nil {
+			return nil, err
+		}
 	}
+}
+
+func TestLexerLoad(t *testing.T) {
+	testingdata := `
+	load "cmd:root/function1"
+	`
+	_, err := loadTestingdataForLexer(testingdata)
+	assert.NoError(t, err)
+}
+
+func TestLexerVar(t *testing.T) {
+	testingdata := `
+	var a
+	`
+	_, err := loadTestingdataForLexer(testingdata)
+	assert.NoError(t, err)
+}
+
+func TestLexer(t *testing.T) {
+	testingdata := `load "go:print"
+
+run print {
+	"STARTING": "build \"cofunc\""
+}
+fn gobuild = command {
+	"hello
+world"`
+
+	lx, err := loadTestingdataForLexer(testingdata)
+	assert.NoError(t, err)
 
 	assert.Len(t, lx.nums, 8)
 	assert.Len(t, lx.tt, 6)
 
-	err := lx.foreachLine(func(n int, line []*Token) error {
+	err = lx.foreachLine(func(n int, line []*Token) error {
 		// load "go:print"
 		if n == 1 {
 			assert.Len(t, line, 2)
