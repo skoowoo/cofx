@@ -2,7 +2,6 @@ package cofunc
 
 import (
 	"errors"
-	"strings"
 )
 
 const (
@@ -12,7 +11,6 @@ const (
 
 type FMap struct {
 	plainbody
-	state stateL2
 }
 
 func (m *FMap) ToMap() map[string]string {
@@ -29,33 +27,16 @@ func (m *FMap) Type() string {
 }
 
 func (m *FMap) Append(o interface{}) error {
-	const multiline = "***"
-	s := o.(string)
-	if m.state == _l2_multilines_started {
-		if strings.HasSuffix(s, multiline) {
-			s = strings.TrimSuffix(s, multiline)
-			m.state = _l2_unknow
-		}
-		t := m.Laststm().LastToken()
-		t.str = t.str + "\n" + s
-	} else {
-		if s == "" {
-			return nil
-		}
-		idx := strings.Index(s, ":")
-		if idx == -1 {
-			return errors.New("invalid kv in map: " + s)
-		}
-		k := strings.TrimSpace(s[0:idx])
-		v := strings.TrimSpace(s[idx+1:])
-		if strings.HasPrefix(v, multiline) {
-			v = strings.TrimPrefix(v, multiline)
-			m.state = _l2_multilines_started
-			m.lines = append(m.lines, newstm("kv").Append(newToken(k, _mapkey_t)).Append(newToken(v, _text_t)))
-		} else {
-			m.lines = append(m.lines, newstm("kv").Append(newToken(k, _mapkey_t)).Append(newToken(v, _text_t)))
-		}
+	ts := o.([]*Token)
+	if len(ts) != 3 {
+		return errors.New("invalid kv in map")
 	}
+	k, delim, v := ts[0], ts[1], ts[2]
+	if k.typ != _string_t || delim.typ != _symbol_t || delim.String() != ":" || v.typ != _string_t {
+		return errors.New("invalid kv in map")
+	}
+	m.lines = append(m.lines, newstm("kv").Append(k).Append(v))
+
 	return nil
 }
 
@@ -78,7 +59,12 @@ func (l *FList) Type() string {
 }
 
 func (l *FList) Append(o interface{}) error {
-	s := o.(string)
-	l.lines = append(l.lines, newstm("element").Append(newToken(s, l.etype)))
+	ts := o.([]*Token)
+	if len(ts) != 1 {
+		return errors.New("invalid list element")
+	}
+	t := ts[0]
+	t.typ = l.etype
+	l.lines = append(l.lines, newstm("element").Append(t))
 	return nil
 }

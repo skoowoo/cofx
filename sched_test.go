@@ -12,13 +12,13 @@ import (
 
 func TestAddReadyStartFlow(t *testing.T) {
 	const testingdata string = `
-	load go:print
-	load go:sleep
+	load "go:print"
+	load "go:sleep"
 
 	fn p = print {
 		args = {
-			k1: v1
-			k2: v2
+			"k1": "v1"
+			"k2": "v2"
 		}
 	}
 

@@ -22,6 +22,22 @@ func RB(x rune) bool {
 	return x == '}'
 }
 
+func Colon(x rune) bool {
+	return x == ':'
+}
+
+func Quotation(x rune) bool {
+	return x == '"'
+}
+
+func Dollar(x rune) bool {
+	return x == '$'
+}
+
+func BackSlash(x rune) bool {
+	return x == '\\'
+}
+
 func Eq(x rune) bool {
 	return x == '='
 }
