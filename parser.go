@@ -5,22 +5,18 @@ package cofunc
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
-	"strings"
-	"unicode"
-
-	"github.com/cofunclabs/cofunc/pkg/is"
+	"math"
 )
 
 func ParseAST(rd io.Reader) (*AST, error) {
-	ast := newAST()
+	lx := newLexer()
 	buff := bufio.NewReader(rd)
 	for n := 1; ; n += 1 {
 		line, err := buff.ReadString('\n')
 		if err == io.EOF {
 			if len(line) != 0 {
-				if err := scanToken(ast, line, n); err != nil {
+				if err := lx.split(line, n); err != nil {
 					return nil, err
 				}
 			}
@@ -29,9 +25,14 @@ func ParseAST(rd io.Reader) (*AST, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := scanToken(ast, line, n); err != nil {
+		if err := lx.split(line, n); err != nil {
 			return nil, err
 		}
+	}
+
+	ast := newAST()
+	if err := ast.scan(lx); err != nil {
+		return nil, err
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
@@ -54,7 +55,6 @@ func doBlockBody(b *Block) error {
 	for _, l := range lines {
 		// handle tokens
 		for _, t := range l.tokens {
-			t.setblock(b)
 			if err := t.extractVar(); err != nil {
 				return err
 			}
@@ -115,7 +115,6 @@ func doBlockHeader(b *Block) error {
 		&b.typevalue,
 	}
 	for _, t := range ts {
-		t.setblock(b)
 		if err := t.extractVar(); err != nil {
 			return err
 		}
@@ -123,588 +122,6 @@ func doBlockHeader(b *Block) error {
 			return err
 		}
 	}
-	return nil
-}
-
-const (
-	_l1_global stateL1 = iota
-	_l1_keyword
-	_l1_load_started
-	_l1_run_started
-	_l1_run_body_started
-	_l1_run_body_inside
-	_l1_fn_started
-	_l1_fn_body_started
-	_l1_fn_body_inside
-	_l1_args_started
-	_l1_args_body_started
-	_l1_args_body_inside
-	_l1_var_started
-)
-
-const (
-	_l2_unknow stateL2 = iota
-	_l2_multilines_started
-	_l2_word_started
-	_l2_kind_started
-	_l2_kind_done
-	_l2_target_started
-	_l2_target_done
-	_l2_operator_started
-	_l2_operator_done
-	_l2_typevalue_started
-)
-
-func scanToken(ast *AST, line string, linenum int) error {
-	block := ast.parsing
-
-	var start int
-
-	/*
-		var wb strings.Builder
-		store := func(r rune) {
-			wb.WriteRune(r)
-		}
-		export := func() string {
-			s := wb.String()
-			wb.Reset()
-			return s
-		}
-
-			peek := func(rd *bufio.Reader, is func(x rune) bool) (bool, error) {
-				bs, err := rd.Peek(1)
-				if err != nil {
-					return false, err
-				}
-				return is(rune(bs[0])), nil
-			}
-
-			discard := func(rd *bufio.Reader, is func(x rune) bool) (rune, error) {
-				n := 0
-				for {
-					ok, err := peek(rd, is)
-					if err != nil {
-						return n, err
-					}
-					if ok {
-						rd.Discard(1)
-						n += 1
-					} else {
-						return n, nil
-					}
-				}
-			}
-	*/
-
-	finiteAutomata := func(last int, current rune, newline string, rd *bufio.Reader) error {
-		switch ast.phase() {
-		case _l1_global:
-			// skip
-			if is.Space(current) || is.EOL(current) {
-				break
-			}
-			// transfer
-			if is.Word(current) {
-				start = last
-				ast.transfer(_l1_keyword)
-				break
-			}
-			// error
-			return errors.New("contain invalid character: " + newline)
-		case _l1_keyword:
-			// keep
-			if is.Word(current) {
-				break
-			}
-			// transfer
-			if is.Space(current) || is.LB(current) {
-				var body bbody = nil
-				word := newline[start:last]
-				switch word {
-				case "load":
-					if is.LB(current) {
-						return errors.New("contain invalid character: " + newline)
-					}
-					ast.transfer(_l1_load_started)
-				case "fn":
-					if is.LB(current) {
-						return errors.New("contain invalid character: " + newline)
-					}
-					ast.transfer(_l1_fn_started)
-				case "run":
-					if is.LB(current) {
-						body = &FList{etype: _functionname_t}
-						ast.transfer(_l1_run_body_started)
-					} else {
-						ast.transfer(_l1_run_started)
-					}
-				case "var":
-					if is.LB(current) {
-						return errors.New("contain invalid character: " + newline)
-					}
-					ast.transfer(_l1_var_started)
-					block.state = _l2_kind_done
-					block.bbody.Append(newstm("var"))
-					// var is not a block, so return
-					return nil
-				default:
-					return errors.New("invalid block define: " + word)
-				}
-				newb := &Block{
-					kind:      Token{str: word, typ: _keyword_t},
-					target:    Token{},
-					operator:  Token{},
-					typevalue: Token{},
-					state:     _l2_kind_done,
-					child:     []*Block{},
-					parent:    block,
-					variable:  vsys{vars: make(map[string]*_var)},
-					bbody:     body,
-				}
-				block.child = append(block.child, newb)
-				block = newb
-				break
-			}
-			// error
-			return errors.New("contain invalid character: " + newline)
-		case _l1_load_started:
-			///
-			// load go:sleep
-			//
-			switch block.state {
-			case _l2_kind_done:
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.Word(current) {
-					start = last
-					block.state = _l2_target_started
-					break
-				}
-				// error
-				return errors.New("contain invalid character: " + newline)
-			case _l2_target_started:
-				// transfer
-				if is.EOL(current) {
-					block.target = Token{
-						str: strings.TrimSpace(newline[start:last]),
-						typ: _load_t,
-					}
-					block.state = _l2_target_done
-					ast.transfer(_l1_global)
-					block = block.parent
-					break
-				}
-			case _l2_target_done:
-
-			}
-		case _l1_run_started:
-			/**
-			 1. run sleep
-			 2. run {
-			 		f1
-					f2
-			 	}
-			3. run sleep {
-				time: 1s
-			}
-			*/
-			switch block.state {
-			case _l2_kind_done:
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// transfer 1
-				if is.Word(current) {
-					start = last
-					block.state = _l2_target_started
-					break
-				}
-				if is.LB(current) {
-					/*
-						run {
-							f1
-							f2
-						}
-					*/
-					block.bbody = &FList{etype: _functionname_t}
-					ast.transfer(_l1_run_body_started)
-					break
-				}
-				// error
-				return errors.New("contain invalid character: " + newline)
-			case _l2_target_started:
-				// keep
-				if is.Word(current) {
-					break
-				}
-				// 1. transfer - run sleep{
-				if is.LB(current) {
-					block.target = Token{
-						str: strings.TrimSpace(newline[start:last]),
-						typ: _functionname_t,
-					}
-					block.bbody = &FMap{}
-					block.state = _l2_unknow
-					ast.transfer(_l1_run_body_started)
-					break
-				}
-				// 2. transfer - run sleep {  or run sleep
-				if is.Space(current) {
-					block.target = Token{
-						str: strings.TrimSpace(newline[start:last]),
-						typ: _functionname_t,
-					}
-					block.state = _l2_target_done
-					break
-				}
-				// 3. transfer run sleep
-				if is.EOL(current) {
-					block.target = Token{
-						str: strings.TrimSpace(newline[start:last]),
-						typ: _functionname_t,
-					}
-					block.state = _l2_unknow
-					ast.transfer(_l1_global)
-					block = block.parent
-					break
-				}
-				return errors.New("contain invalid character: " + newline)
-			case _l2_target_done:
-				// transfer
-				if is.EOL(current) {
-					ast.transfer(_l1_global)
-					block = block.parent
-					break
-				}
-				if is.LB(current) {
-					block.bbody = &FMap{}
-					ast.transfer(_l1_run_body_started)
-					break
-				}
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// error
-				return errors.New("contain invalid character: " + newline)
-			}
-
-		case _l1_run_body_started:
-			// transfer
-			if is.EOL(current) {
-				ast.transfer(_l1_run_body_inside)
-				break
-			}
-			// skip
-			if is.Space(current) {
-				break
-			}
-			return errors.New("invalid run block: " + newline + fmt.Sprintf(" (%c)", current))
-		case _l1_run_body_inside:
-			// 1. k: v
-			// 2. f
-			// 3. }
-			if is.EOL(current) {
-				if newline == "}" {
-					ast.transfer(_l1_global)
-					block = block.parent
-				} else if newline != "" {
-					if err := block.bbody.Append(newline); err != nil {
-						return err
-					}
-				}
-			}
-
-		case _l1_fn_started:
-			/*
-				fn f1 = f {
-
-				}
-			*/
-			switch block.state {
-			case _l2_kind_done:
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.Word(current) {
-					start = last
-					block.state = _l2_target_started
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			case _l2_target_started: // from '{word}'
-				// keep
-				if is.Word(current) {
-					break
-				}
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.Eq(current) {
-					s := newline[start:last]
-					block.target = Token{
-						str: strings.TrimSpace(s),
-						typ: _word_t,
-					}
-					block.operator = Token{
-						str: "=",
-						typ: _operator_t,
-					}
-					block.state = _l2_operator_started
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			case _l2_operator_started: // from '='
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.Word(current) {
-					start = last
-					block.state = _l2_typevalue_started
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			case _l2_typevalue_started: // from '{word}'
-				// keep
-				if is.Word(current) {
-					break
-				}
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.LB(current) {
-					s := newline[start:last]
-					block.typevalue = Token{
-						str: strings.TrimSpace(s),
-						typ: _functionname_t,
-					}
-					block.state = _l2_unknow
-					ast.transfer(_l1_fn_body_started)
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			}
-		case _l1_fn_body_started: // from '{'
-			// skip
-			if is.Space(current) {
-				break
-			}
-			// transfer
-			if is.EOL(current) {
-				block.state = _l2_unknow
-				ast.transfer(_l1_fn_body_inside)
-				break
-			}
-			// error
-			return errInvalidChar(byte(current), newline)
-		case _l1_fn_body_inside: // from '\n'
-			if block.state == _l2_word_started {
-				if unicode.IsSpace(current) || current == '=' {
-					block.state = _l2_unknow
-					s := newline[start:last]
-					switch s {
-					case "args":
-						newb := &Block{
-							kind:      Token{str: s, typ: _word_t},
-							target:    Token{},
-							operator:  Token{},
-							typevalue: Token{},
-							state:     _l2_kind_done,
-							child:     []*Block{},
-							parent:    block,
-							variable:  vsys{},
-							bbody:     &FMap{},
-						}
-						block.child = append(block.child, newb)
-						block = newb
-						ast.transfer(_l1_args_started)
-					default:
-						return errors.New("invalid statement in fn block: " + newline)
-					}
-				}
-			} else {
-				// the right bracket of fn block body is appeared, so fn block should be closed
-				if current == '\n' && newline == "}" {
-					block.state = _l2_unknow
-					ast.transfer(_l1_global)
-					block = block.parent
-					break
-				}
-				if unicode.IsSpace(current) || current == '}' {
-					break
-				}
-				start = last
-				block.state = _l2_word_started
-			}
-		case _l1_args_started:
-			switch block.state {
-			case _l2_kind_done:
-				if unicode.IsSpace(current) {
-					break
-				}
-				if current == '=' {
-					block.state = _l2_operator_started
-				} else {
-					return errors.New("invliad args block: " + newline)
-				}
-			case _l2_operator_started:
-				if current == '{' || unicode.IsSpace(current) {
-					block.operator = Token{
-						str: "=",
-						typ: _operator_t,
-					}
-					block.state = _l2_operator_done
-					if current == '{' {
-						ast.transfer(_l1_args_body_started)
-					}
-				} else {
-					return errors.New("invalid args block: " + newline)
-				}
-			case _l2_operator_done:
-				if unicode.IsSpace(current) {
-					break
-				}
-				if current == '{' {
-					ast.transfer(_l1_args_body_started)
-				} else {
-					return errors.New("invalid args block: " + newline)
-				}
-			}
-		case _l1_args_body_started:
-			if current == '\n' {
-				ast.transfer(_l1_args_body_inside)
-				break
-			}
-			if !unicode.IsSpace(current) {
-				return errors.New("invalid args block: " + newline)
-			}
-		case _l1_args_body_inside:
-			if current == '\n' {
-				if newline == "}" {
-					block = block.parent
-					block.state = _l2_unknow
-					ast.transfer(_l1_fn_body_inside)
-				} else {
-					if err := block.bbody.Append(newline); err != nil {
-						return err
-					}
-				}
-			}
-		case _l1_var_started:
-			// var a = 1
-			// var a = $(b)
-			switch block.state {
-			case _l2_kind_done:
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				if is.Word(current) {
-					start = last
-					block.state = _l2_target_started
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			case _l2_target_started: // from '{word}'
-				// keep
-				if is.Word(current) {
-					break
-				}
-				if is.Space(current) {
-					break
-				}
-				// transfer
-				// 1. var a
-				if is.EOL(current) {
-					s := newline[start:last]
-					stm := block.bbody.(*plainbody).Laststm()
-					stm.Append(&Token{
-						str: strings.TrimSpace(s),
-						typ: _varname_t,
-						_b:  block,
-					})
-					block.state = _l2_unknow
-					ast.transfer(_l1_global)
-					break
-				}
-
-				// 2. var a = 1
-				if is.Eq(current) {
-					s := newline[start:last]
-					stm := block.bbody.(*plainbody).Laststm()
-					stm.Append(&Token{
-						str: strings.TrimSpace(s),
-						typ: _varname_t,
-						_b:  block,
-					})
-					block.state = _l2_operator_started
-					break
-				}
-				// error
-				return errInvalidChar(byte(current), newline)
-			case _l2_operator_started: // from '='
-				// skip
-				if is.Space(current) {
-					break
-				}
-				// not space, transfer
-				start = last
-				block.state = _l2_typevalue_started
-			case _l2_typevalue_started: // from '{word}'
-				// keep
-
-				// transfer
-				if is.EOL(current) {
-					s := newline[start:last]
-					stm := block.bbody.(*plainbody).Laststm()
-					stm.Append(&Token{
-						str: strings.TrimSpace(s),
-						typ: _text_t,
-						_b:  block,
-					})
-					block.state = _l2_unknow
-					ast.transfer(_l1_global)
-					break
-				}
-				// error
-			}
-
-		default:
-		}
-		return nil
-	}
-
-	line = strings.TrimSpace(line)
-	buff := bufio.NewReader(strings.NewReader(line + "\n"))
-	for i := 0; ; i += 1 {
-		r, _, err := buff.ReadRune()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		if err := finiteAutomata(i, r, line, buff); err != nil {
-			return err
-		}
-	}
-	ast.parsing = block
 	return nil
 }
 
@@ -734,8 +151,11 @@ func newAST() *AST {
 			state: _l1_global,
 		},
 	}
-	ast._FA.parsing = &ast.global
 	return ast
+}
+
+func (a *AST) Foreach(do func(*Block) error) error {
+	return deepwalk(&a.global, do)
 }
 
 func deepwalk(b *Block, do func(*Block) error) error {
@@ -750,27 +170,317 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	return nil
 }
 
-func (a *AST) Foreach(do func(*Block) error) error {
-	return deepwalk(&a.global, do)
-}
-
 type stateL1 int
 type stateL2 int
 
 type _FA struct {
-	parsing  *Block
 	state    stateL1
 	prestate stateL1
 }
 
-func (f *_FA) transfer(s stateL1) {
+func (f *_FA) _goto(s stateL1) {
 	f.prestate = f.state
 	f.state = s
 }
 
-func (f *_FA) Back() {
-}
-
 func (f *_FA) phase() stateL1 {
 	return f.state
+}
+
+const (
+	_l1_global stateL1 = iota
+	_l1_run_body
+	_l1_fn_body
+	_l1_args_body
+)
+
+const (
+	_l2_unknow stateL2 = iota
+	_l2_multilines
+	_l2_word
+)
+
+var statementPatterns = map[string]struct {
+	min     int
+	max     int
+	types   []TokenType
+	values  []string
+	uptypes []TokenType
+	newbody func() bbody
+}{
+	"load": {
+		2, 2,
+		[]TokenType{_word_t, _string_t},
+		[]string{"", ""},
+		[]TokenType{_keyword_t, _load_t},
+		nil,
+	},
+	"fn": {
+		5, 5,
+		[]TokenType{_word_t, _word_t, _symbol_t, _word_t, _symbol_t},
+		[]string{"", "", "=", "", "{"},
+		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
+		func() bbody { return &plainbody{} },
+	},
+	"run1": {
+		2, 2,
+		[]TokenType{_word_t, _word_t},
+		[]string{"", ""},
+		[]TokenType{_keyword_t, _functionname_t},
+		nil,
+	},
+	"run1+": {
+		3, 3,
+		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]string{"", "", "{"},
+		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
+		func() bbody { return &FMap{} },
+	},
+	"run2": {
+		2, 2,
+		[]TokenType{_word_t, _symbol_t},
+		[]string{"", "{"},
+		[]TokenType{_keyword_t, _symbol_t},
+		func() bbody { return &FList{etype: _functionname_t} },
+	},
+	"var": {
+		2, math.MaxInt,
+		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]string{"", "", "="},
+		[]TokenType{_keyword_t, _varname_t, _operator_t},
+		nil,
+	},
+	"args": {
+		3, 3,
+		[]TokenType{_word_t, _symbol_t, _symbol_t},
+		[]string{"", "=", "{"},
+		[]TokenType{_keyword_t, _operator_t, _symbol_t},
+		func() bbody { return &FMap{} },
+	},
+	"kv": {
+		3, 3,
+		[]TokenType{_string_t, _symbol_t, _string_t},
+		[]string{"", ":", ""},
+		[]TokenType{_mapkey_t, _symbol_t, _string_t},
+		nil,
+	},
+	"element": {
+		1, 1,
+		[]TokenType{_string_t},
+		[]string{""},
+		[]TokenType{_string_t},
+		nil,
+	},
+	"closed": {
+		1, 1,
+		[]TokenType{_symbol_t},
+		[]string{"}"},
+		[]TokenType{_symbol_t},
+		nil,
+	},
+}
+
+func (ast *AST) preparse(k string, tokens []*Token, b *Block) (bbody, error) {
+	pattern := statementPatterns[k]
+
+	if l := len(tokens); l < pattern.min || l > pattern.max {
+		return nil, errors.New("invalid statement(token number): " + k)
+	}
+
+	min := len(tokens)
+	if l := len(pattern.types); min > l {
+		min = l
+	}
+
+	for i := 0; i < min; i++ {
+		t := tokens[i]
+		pt := pattern.types[i]
+		pv := pattern.values[i]
+
+		if pt != t.typ {
+			return nil, errors.New("invalid statement(token type): " + k)
+		}
+		if pv != "" && pv != t.String() {
+			return nil, errors.New("invalid statement(token value): " + k)
+		}
+	}
+
+	for i := 0; i < min; i++ {
+		t := tokens[i]
+		up := pattern.uptypes[i]
+		t.typ = up
+	}
+
+	for _, t := range tokens {
+		t._b = b
+	}
+
+	var body bbody
+	if pattern.newbody != nil {
+		body = pattern.newbody()
+	}
+
+	return body, nil
+}
+
+func (ast *AST) scan(lx *lexer) error {
+	parsingblock := &ast.global
+
+	return lx.foreachLine(func(num int, line []*Token) error {
+		if len(line) == 0 {
+			return nil
+		}
+		switch ast.phase() {
+		case _l1_global:
+			kind := line[0]
+			switch kind.String() {
+			case "load":
+				nb := &Block{
+					child:    []*Block{},
+					parent:   parsingblock,
+					variable: vsys{vars: make(map[string]*_var)},
+				}
+				body, err := ast.preparse("load", line, nb)
+				if err != nil {
+					return err
+				}
+				nb.bbody = body
+				nb.kind = *kind
+				nb.target = *line[1]
+
+				parsingblock.child = append(parsingblock.child, nb)
+			case "fn":
+				nb := &Block{
+					child:    []*Block{},
+					parent:   parsingblock,
+					variable: vsys{vars: make(map[string]*_var)},
+					bbody:    &plainbody{},
+				}
+				body, err := ast.preparse("fn", line, nb)
+				if err != nil {
+					return err
+				}
+				nb.bbody = body
+
+				target, op, tv := line[1], line[2], line[3]
+
+				nb.kind = *kind
+				nb.target = *target
+				nb.operator = *op
+				nb.typevalue = *tv
+
+				parsingblock.child = append(parsingblock.child, nb)
+
+				parsingblock = nb
+				ast._goto(_l1_fn_body)
+			case "run":
+				nb := &Block{
+					child:    []*Block{},
+					parent:   parsingblock,
+					variable: vsys{vars: make(map[string]*_var)},
+					bbody:    nil,
+				}
+
+				var (
+					body bbody
+					err  error
+				)
+				keys := []string{"run1", "run1+", "run2"}
+				for _, k := range keys {
+					body, err = ast.preparse(k, line, nb)
+					if err == nil {
+						nb.kind = *kind
+						if k == "run1" || k == "run1+" {
+							nb.target = *line[1]
+						}
+						nb.bbody = body
+						break
+					}
+				}
+				if err != nil {
+					return err
+				}
+
+				parsingblock.child = append(parsingblock.child, nb)
+				if nb.bbody != nil {
+					parsingblock = nb
+					ast._goto(_l1_run_body)
+				}
+			case "var":
+				if _, err := ast.preparse("var", line, parsingblock); err != nil {
+					return err
+				}
+				name := line[1]
+				var val *Token
+				if len(line) == 4 {
+					val = line[3]
+				}
+
+				parsingblock.bbody.Append(newstm("var"))
+				body := parsingblock.bbody.(*plainbody)
+				body.Laststm().Append(name)
+				if val != nil {
+					body.Laststm().Append(val)
+				}
+			default:
+				return errors.New("invalid block define: " + kind.String())
+			}
+		case _l1_fn_body:
+			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_l1_global)
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case "args":
+				nb := &Block{
+					child:    []*Block{},
+					parent:   parsingblock,
+					variable: vsys{vars: make(map[string]*_var)},
+				}
+				body, err := ast.preparse("args", line, nb)
+				if err != nil {
+					return err
+				}
+				nb.bbody = body
+				nb.kind = *kind
+
+				parsingblock.child = append(parsingblock.child, nb)
+				parsingblock = nb
+				ast._goto(_l1_args_body)
+			default:
+				return errors.New("invalid statement: " + kind.String())
+			}
+
+		case _l1_args_body:
+			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_l1_fn_body)
+				break
+			}
+			for _, t := range line {
+				t._b = parsingblock
+			}
+			if err := parsingblock.bbody.Append(line); err != nil {
+				return err
+			}
+		case _l1_run_body:
+			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_l1_global)
+				break
+			}
+
+			for _, t := range line {
+				t._b = parsingblock
+			}
+			if err := parsingblock.bbody.Append(line); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }

@@ -24,22 +24,22 @@ func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
 func TestParseFullWithRunq(t *testing.T) {
 	{
 		const testingdata string = `
-	load go:function1
-	load go:function2
-	load cmd:/tmp/function3
-	load cmd:/tmp/function4
-	load cmd:/tmp/function5
+	load "go:function1"
+	load "go:function2"
+	load "cmd:/tmp/function3"
+	load "cmd:/tmp/function4"
+	load "cmd:/tmp/function5"
 
 	fn f1 = function1 {
 		args = {
-			k: v1
+			"k": "v1"
 			"hello": "world"
 		}
 	}
 
 	run f1
 	run	function2 {
-		k : v2
+		"k" : "v2"
 	}
 	run	function3
 	run {
@@ -47,7 +47,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		function5
 	}
 	run	function3 {
-		k: v3
+		"k": "v3"
 	}
 	`
 
@@ -94,8 +94,8 @@ func TestParseFullWithRunq(t *testing.T) {
 func TestParseFullWithRunqWithErr(t *testing.T) {
 	{
 		const testingdata string = `
-	load go:function1
-	load go:function2
+	load "go:function1"
+	load "go:function2"
 
 	fn function1 = function1 {
 		args = {

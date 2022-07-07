@@ -25,12 +25,17 @@ const (
 	_word_t
 	_keyword_t
 	_varname_t
+	_symbol_t
+	_identifier_t
+	_string_t
+	_number_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
 	_int_t:          regexp.MustCompile(`^[1-9][0-9]*$`),
 	_text_t:         regexp.MustCompile(`^*$`),
+	_string_t:       regexp.MustCompile(`^*$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
 	_operator_t:     regexp.MustCompile(`^=$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
@@ -135,7 +140,7 @@ func (t *Token) HasVar() bool {
 
 func (t *Token) extractVar() error {
 	// $(var)
-	if t.typ != _text_t {
+	if t.typ != _text_t && t.typ != _string_t {
 		return nil
 	}
 	var (
@@ -158,9 +163,9 @@ func (t *Token) extractVar() error {
 			// transfer
 			if c == '$' && next(i) == '(' {
 				vstart = i
-				state = _l2_word_started
+				state = _l2_word
 			}
-		case _l2_word_started: // from '$'
+		case _l2_word: // from '$'
 			// keep
 			if is.Word(c) || c == '(' {
 				break
