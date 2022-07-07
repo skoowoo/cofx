@@ -460,7 +460,9 @@ func (ast *AST) scan(lx *lexer) error {
 				ast._goto(_l1_fn_body)
 				break
 			}
-
+			for _, t := range line {
+				t._b = parsingblock
+			}
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}
@@ -471,6 +473,9 @@ func (ast *AST) scan(lx *lexer) error {
 				break
 			}
 
+			for _, t := range line {
+				t._b = parsingblock
+			}
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}
