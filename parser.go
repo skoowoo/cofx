@@ -186,7 +186,7 @@ func (f *_FA) phase() aststate {
 
 const (
 	_ast_unknow aststate = iota
-	_ast_word
+	_ast_identifier
 	_ast_global
 	_ast_run_body
 	_ast_fn_body
@@ -203,63 +203,63 @@ var statementPatterns = map[string]struct {
 }{
 	"load": {
 		2, 2,
-		[]TokenType{_word_t, _string_t},
+		[]TokenType{_identifier_t, _string_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _load_t},
 		nil,
 	},
 	"fn": {
 		5, 5,
-		[]TokenType{_word_t, _word_t, _symbol_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
 		[]string{"", "", "=", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"run1": {
 		2, 2,
-		[]TokenType{_word_t, _word_t},
+		[]TokenType{_identifier_t, _identifier_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _functionname_t},
 		nil,
 	},
 	"run1->": {
 		4, 4,
-		[]TokenType{_word_t, _word_t, _symbol_t, _word_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t},
 		[]string{"", "", "->", ""},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t},
 		nil,
 	},
 	"run1+": {
 		3, 3,
-		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
 		[]string{"", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"run1+->": {
 		5, 5,
-		[]TokenType{_word_t, _word_t, _symbol_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
 		[]string{"", "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"run2": {
 		2, 2,
-		[]TokenType{_word_t, _symbol_t},
+		[]TokenType{_identifier_t, _symbol_t},
 		[]string{"", "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &FList{etype: _functionname_t} },
 	},
 	"var": {
 		2, math.MaxInt,
-		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
 		[]string{"", "", "="},
 		[]TokenType{_keyword_t, _varname_t, _operator_t},
 		nil,
 	},
 	"args": {
 		3, 3,
-		[]TokenType{_word_t, _symbol_t, _symbol_t},
+		[]TokenType{_identifier_t, _symbol_t, _symbol_t},
 		[]string{"", "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
 		func() bbody { return &FMap{} },

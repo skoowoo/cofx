@@ -16,31 +16,27 @@ type TokenType int
 
 const (
 	_unknow_t TokenType = iota
-	_int_t
-	_text_t
+	_identifier_t
+	_symbol_t
+	_number_t
+	_string_t
 	_mapkey_t
 	_operator_t
 	_functionname_t
 	_load_t
-	_word_t
 	_keyword_t
 	_varname_t
-	_symbol_t
-	_identifier_t
-	_string_t
-	_number_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
-	_int_t:          regexp.MustCompile(`^[1-9][0-9]*$`),
-	_text_t:         regexp.MustCompile(`^*$`),
 	_string_t:       regexp.MustCompile(`^*$`),
+	_identifier_t:   regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
+	_number_t:       regexp.MustCompile(`^[1-9][0-9]*$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
 	_operator_t:     regexp.MustCompile(`^(=|->)$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
 	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
-	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 }
@@ -128,7 +124,7 @@ func (t *Token) HasVar() bool {
 
 func (t *Token) extractVar() error {
 	// $(var)
-	if t.typ != _text_t && t.typ != _string_t {
+	if t.typ != _string_t {
 		return nil
 	}
 	var (
@@ -151,11 +147,11 @@ func (t *Token) extractVar() error {
 			// transfer
 			if c == '$' && next(i) == '(' {
 				vstart = i
-				state = _ast_word
+				state = _ast_identifier
 			}
-		case _ast_word: // from '$'
+		case _ast_identifier: // from '$'
 			// keep
-			if is.Word(c) || c == '(' {
+			if is.Identifier(c) || c == '(' {
 				break
 			}
 			// transfer
@@ -315,6 +311,9 @@ func (b *Block) CalcVar(name string) (string, bool) {
 			continue
 		}
 		return v.(string), cached
+	}
+	if strings.Contains(name, ".") {
+		return "", false
 	}
 	panic("not found variable: " + name)
 }

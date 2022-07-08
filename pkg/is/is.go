@@ -46,7 +46,7 @@ func Symbol(x rune) bool {
 	return LB(x) || RB(x) || x == '>' || x == ':' || EQ(x) || x == '+' || x == '-' || x == '*' || x == '/'
 }
 
-func Word(x rune) bool {
+func Identifier(x rune) bool {
 	if x >= 'a' && x <= 'z' {
 		return true
 	}
@@ -56,7 +56,7 @@ func Word(x rune) bool {
 	if x >= '0' && x <= '9' {
 		return true
 	}
-	if x == '_' {
+	if x == '_' || x == '.' {
 		return true
 	}
 	return false

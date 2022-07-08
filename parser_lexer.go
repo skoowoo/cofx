@@ -10,7 +10,7 @@ type ststate int
 
 const (
 	_lx_unknow ststate = iota
-	_lx_word
+	_lx_identifier
 	_lx_symbol
 	_lx_string
 	_lx_string_backslash
@@ -72,9 +72,9 @@ func (l *lexer) split(line string, ln int) error {
 			if is.Space(c) || is.EOL(c) {
 				break
 			}
-			if is.Word(c) {
+			if is.Identifier(c) {
 				l.saveRune(c)
-				l._goto(_lx_word)
+				l._goto(_lx_identifier)
 				break
 			}
 			if is.Symbol(c) {
@@ -118,9 +118,9 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_unknow)
 				break
 			}
-			if is.Word(c) {
+			if is.Identifier(c) {
 				l.saveRune(c)
-				l._goto(_lx_word)
+				l._goto(_lx_identifier)
 				break
 			}
 			if is.Quotation(c) {
@@ -129,14 +129,14 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			return lexerErr().New(line, ln, c, l.state)
-		case _lx_word:
-			if is.Word(c) {
+		case _lx_identifier:
+			if is.Identifier(c) {
 				l.saveRune(c)
 				break
 			}
 			l.insert(ln, &Token{
 				str: l.exportString(),
-				typ: _word_t,
+				typ: _identifier_t,
 			})
 
 			if is.Space(c) || is.EOL(c) {
@@ -178,7 +178,7 @@ func (l *lexer) split(line string, ln int) error {
 			}
 			return lexerErr().New(line, ln, c, l.state)
 		case _lx_var_directuse2:
-			if is.Word(c) {
+			if is.Identifier(c) {
 				l.saveRune(c)
 				break
 			}

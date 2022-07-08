@@ -14,7 +14,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := `hello word\n`
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -29,7 +29,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := vs + `hello word\n`
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -44,7 +44,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := `123456789\n` + vs
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -59,7 +59,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := "123456" + vs + "word\n"
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -75,7 +75,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := "123456" + vs1 + vs2 + "word\n"
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -91,7 +91,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := "123456" + vs1 + fake + "word\n"
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -106,7 +106,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := "123456" + vs1 + "word\n"
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -120,7 +120,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		text := "123456" + vs1 + "word"
 		tk := Token{
 			str:  text,
-			typ:  _text_t,
+			typ:  _string_t,
 			_get: get,
 		}
 		err := tk.extractVar()
@@ -129,6 +129,20 @@ func TestExtractAndCalcVar(t *testing.T) {
 		vl := tk.Value()
 		assert.Equal(t, "123456$(co1word", vl)
 	}
+	{
+		vs1 := "$(c.o)"
+		text := "123456" + vs1 + "word"
+		tk := Token{
+			str:  text,
+			typ:  _string_t,
+			_get: get,
+		}
+		err := tk.extractVar()
+		assert.NoError(t, err)
+
+		vl := tk.Value()
+		assert.Equal(t, "123456c.oword", vl)
+	}
 }
 
 func TestValidateToken(t *testing.T) {
@@ -136,7 +150,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			str: "100",
-			typ: _int_t,
+			typ: _number_t,
 		}
 		err := tk.validate()
 		assert.NoError(t, err)
@@ -144,7 +158,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			str: "0100",
-			typ: _int_t,
+			typ: _number_t,
 		}
 		err := tk.validate()
 		assert.Error(t, err)
@@ -152,7 +166,7 @@ func TestValidateToken(t *testing.T) {
 	{
 		tk := &Token{
 			str: "100.0",
-			typ: _int_t,
+			typ: _number_t,
 		}
 		err := tk.validate()
 		assert.Error(t, err)
