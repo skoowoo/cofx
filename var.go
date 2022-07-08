@@ -19,10 +19,14 @@ type _var struct {
 
 // vsys defined var table for each block
 type vsys struct {
+	sync.Mutex
 	vars map[string]*_var
 }
 
 func (vs *vsys) put(name string, v *_var) error {
+	vs.Lock()
+	defer vs.Unlock()
+
 	_, ok := vs.vars[name]
 	if ok {
 		return errors.New("variable name is same: " + name)
@@ -32,19 +36,22 @@ func (vs *vsys) put(name string, v *_var) error {
 }
 
 func (vs *vsys) get(name string) (*_var, bool) {
+	vs.Lock()
+	defer vs.Unlock()
+
 	v, ok := vs.vars[name]
 	return v, ok
 }
 
 func (vs *vsys) calc(name string) (_v interface{}, cached bool) {
-	v, ok := vs.vars[name]
+	v, ok := vs.get(name)
 	if !ok {
 		return nil, false
 	}
-	return calcvar(v)
+	return calcvarval(v)
 }
 
-func calcvar(v *_var) (string, bool) {
+func calcvarval(v *_var) (string, bool) {
 	v.Lock()
 	defer v.Unlock()
 
@@ -57,7 +64,7 @@ func calcvar(v *_var) (string, bool) {
 		vb        strings.Builder
 	)
 	for _, c := range v.child {
-		val, cached := calcvar(c)
+		val, cached := calcvarval(c)
 		vals = append(vals, val)
 		if !cached {
 			cacheable = false

@@ -1,5 +1,4 @@
-//go:generate stringer -type stateL1
-//go:generate stringer -type stateL2
+//go:generate stringer -type aststate
 package cofunc
 
 import (
@@ -94,8 +93,8 @@ func buildVarGraph(b *Block, stm *Statement) error {
 					continue
 				}
 				vname := seg.str
-				chld, ok := b.GetVar(vname)
-				if ok {
+				chld, _ := b.GetVar(vname)
+				if chld != nil {
 					v.child = append(v.child, chld)
 				}
 			}
@@ -141,14 +140,13 @@ func newAST() *AST {
 			target:    Token{},
 			operator:  Token{},
 			typevalue: Token{},
-			state:     _l2_unknow,
 			child:     make([]*Block, 0),
 			parent:    nil,
 			variable:  vsys{vars: make(map[string]*_var)},
 			bbody:     &plainbody{},
 		},
 		_FA: _FA{
-			state: _l1_global,
+			state: _ast_global,
 		},
 	}
 	return ast
@@ -170,34 +168,29 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	return nil
 }
 
-type stateL1 int
-type stateL2 int
+type aststate int
 
 type _FA struct {
-	state    stateL1
-	prestate stateL1
+	state    aststate
+	prestate aststate
 }
 
-func (f *_FA) _goto(s stateL1) {
+func (f *_FA) _goto(s aststate) {
 	f.prestate = f.state
 	f.state = s
 }
 
-func (f *_FA) phase() stateL1 {
+func (f *_FA) phase() aststate {
 	return f.state
 }
 
 const (
-	_l1_global stateL1 = iota
-	_l1_run_body
-	_l1_fn_body
-	_l1_args_body
-)
-
-const (
-	_l2_unknow stateL2 = iota
-	_l2_multilines
-	_l2_word
+	_ast_unknow aststate = iota
+	_ast_word
+	_ast_global
+	_ast_run_body
+	_ast_fn_body
+	_ast_args_body
 )
 
 var statementPatterns = map[string]struct {
@@ -331,7 +324,7 @@ func (ast *AST) scan(lx *lexer) error {
 			return nil
 		}
 		switch ast.phase() {
-		case _l1_global:
+		case _ast_global:
 			kind := line[0]
 			switch kind.String() {
 			case "//":
@@ -374,7 +367,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock.child = append(parsingblock.child, nb)
 
 				parsingblock = nb
-				ast._goto(_l1_fn_body)
+				ast._goto(_ast_fn_body)
 			case "run":
 				nb := &Block{
 					child:    []*Block{},
@@ -406,7 +399,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock.child = append(parsingblock.child, nb)
 				if nb.bbody != nil {
 					parsingblock = nb
-					ast._goto(_l1_run_body)
+					ast._goto(_ast_run_body)
 				}
 			case "var":
 				if _, err := ast.preparse("var", line, parsingblock); err != nil {
@@ -427,10 +420,10 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				return errors.New("invalid block define: " + kind.String())
 			}
-		case _l1_fn_body:
+		case _ast_fn_body:
 			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_global)
+				ast._goto(_ast_global)
 				break
 			}
 
@@ -451,15 +444,15 @@ func (ast *AST) scan(lx *lexer) error {
 
 				parsingblock.child = append(parsingblock.child, nb)
 				parsingblock = nb
-				ast._goto(_l1_args_body)
+				ast._goto(_ast_args_body)
 			default:
 				return errors.New("invalid statement: " + kind.String())
 			}
 
-		case _l1_args_body:
+		case _ast_args_body:
 			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_fn_body)
+				ast._goto(_ast_fn_body)
 				break
 			}
 			for _, t := range line {
@@ -468,10 +461,10 @@ func (ast *AST) scan(lx *lexer) error {
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}
-		case _l1_run_body:
+		case _ast_run_body:
 			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_global)
+				ast._goto(_ast_global)
 				break
 			}
 

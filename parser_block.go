@@ -57,14 +57,6 @@ type Token struct {
 	_get func(*Block, string) (string, bool)
 }
 
-func newToken(s string, typ TokenType) *Token {
-	return &Token{
-		str:  s,
-		typ:  typ,
-		_get: _lookupVar,
-	}
-}
-
 // _lookupVar be called at running, not parsing
 func _lookupVar(b *Block, name string) (string, bool) {
 	return b.CalcVar(name)
@@ -90,10 +82,6 @@ func (t *Token) validate() error {
 		return errors.Errorf("not match: %s:%s", t.str, pattern)
 	}
 	return nil
-}
-
-func (t *Token) setblock(b *Block) {
-	t._b = b
 }
 
 // @running
@@ -146,7 +134,7 @@ func (t *Token) extractVar() error {
 	var (
 		start  int
 		vstart int
-		state  stateL2
+		state  aststate
 	)
 	l := len(t.str)
 	next := func(i int) byte {
@@ -158,14 +146,14 @@ func (t *Token) extractVar() error {
 	}
 	for i, c := range t.str {
 		switch state {
-		case _l2_unknow:
+		case _ast_unknow:
 			// skip
 			// transfer
 			if c == '$' && next(i) == '(' {
 				vstart = i
-				state = _l2_word
+				state = _ast_word
 			}
-		case _l2_word: // from '$'
+		case _ast_word: // from '$'
 			// keep
 			if is.Word(c) || c == '(' {
 				break
@@ -175,7 +163,7 @@ func (t *Token) extractVar() error {
 				if j := vstart - 1; j >= 0 {
 					if slash := t.str[j]; slash == '\\' {
 						// drop '\'
-						state = _l2_unknow
+						state = _ast_unknow
 						if start < j {
 							t._segments = append(t._segments, struct {
 								str   string
@@ -204,7 +192,7 @@ func (t *Token) extractVar() error {
 				}{name, true})
 
 				start = i + 1 // currently i is ')'
-				state = _l2_unknow
+				state = _ast_unknow
 			}
 		}
 	}
@@ -286,7 +274,6 @@ type Block struct {
 	target    Token
 	operator  Token
 	typevalue Token
-	state     stateL2
 	child     []*Block
 	parent    *Block
 	variable  vsys
@@ -294,20 +281,30 @@ type Block struct {
 }
 
 // Getvar lookup variable by name in map
-func (b *Block) GetVar(name string) (*_var, bool) {
+func (b *Block) GetVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
 		v, ok := p.variable.get(name)
 		if !ok {
 			continue
 		}
-		return v, true
+		return v, p
 	}
-	return nil, false
+	return nil, nil
 }
 
 // PutVar insert a variable into map
 func (b *Block) PutVar(name string, v *_var) error {
 	return b.variable.put(name, v)
+}
+
+// CreateFieldVar TODO:
+func (b *Block) CreateFieldVar(name, field, val string) error {
+	s := name + "." + field
+	v := &_var{
+		v:      val,
+		cached: true,
+	}
+	return b.PutVar(s, v)
 }
 
 // CalcVar calcuate the variable's value
