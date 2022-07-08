@@ -1,5 +1,4 @@
-//go:generate stringer -type stateL1
-//go:generate stringer -type stateL2
+//go:generate stringer -type aststate
 package cofunc
 
 import (
@@ -94,8 +93,8 @@ func buildVarGraph(b *Block, stm *Statement) error {
 					continue
 				}
 				vname := seg.str
-				chld, ok := b.GetVar(vname)
-				if ok {
+				chld, _ := b.GetVar(vname)
+				if chld != nil {
 					v.child = append(v.child, chld)
 				}
 			}
@@ -141,14 +140,13 @@ func newAST() *AST {
 			target:    Token{},
 			operator:  Token{},
 			typevalue: Token{},
-			state:     _l2_unknow,
 			child:     make([]*Block, 0),
 			parent:    nil,
 			variable:  vsys{vars: make(map[string]*_var)},
 			bbody:     &plainbody{},
 		},
 		_FA: _FA{
-			state: _l1_global,
+			state: _ast_global,
 		},
 	}
 	return ast
@@ -170,34 +168,29 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	return nil
 }
 
-type stateL1 int
-type stateL2 int
+type aststate int
 
 type _FA struct {
-	state    stateL1
-	prestate stateL1
+	state    aststate
+	prestate aststate
 }
 
-func (f *_FA) _goto(s stateL1) {
+func (f *_FA) _goto(s aststate) {
 	f.prestate = f.state
 	f.state = s
 }
 
-func (f *_FA) phase() stateL1 {
+func (f *_FA) phase() aststate {
 	return f.state
 }
 
 const (
-	_l1_global stateL1 = iota
-	_l1_run_body
-	_l1_fn_body
-	_l1_args_body
-)
-
-const (
-	_l2_unknow stateL2 = iota
-	_l2_multilines
-	_l2_word
+	_ast_unknow aststate = iota
+	_ast_identifier
+	_ast_global
+	_ast_run_body
+	_ast_fn_body
+	_ast_args_body
 )
 
 var statementPatterns = map[string]struct {
@@ -210,49 +203,63 @@ var statementPatterns = map[string]struct {
 }{
 	"load": {
 		2, 2,
-		[]TokenType{_word_t, _string_t},
+		[]TokenType{_identifier_t, _string_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _load_t},
 		nil,
 	},
 	"fn": {
 		5, 5,
-		[]TokenType{_word_t, _word_t, _symbol_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
 		[]string{"", "", "=", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"run1": {
 		2, 2,
-		[]TokenType{_word_t, _word_t},
+		[]TokenType{_identifier_t, _identifier_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _functionname_t},
 		nil,
 	},
+	"run1->": {
+		4, 4,
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t},
+		[]string{"", "", "->", ""},
+		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t},
+		nil,
+	},
 	"run1+": {
 		3, 3,
-		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
 		[]string{"", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
+	"run1+->": {
+		5, 5,
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
+		[]string{"", "", "->", "", "{"},
+		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
+		func() bbody { return &FMap{} },
+	},
 	"run2": {
 		2, 2,
-		[]TokenType{_word_t, _symbol_t},
+		[]TokenType{_identifier_t, _symbol_t},
 		[]string{"", "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &FList{etype: _functionname_t} },
 	},
 	"var": {
 		2, math.MaxInt,
-		[]TokenType{_word_t, _word_t, _symbol_t},
+		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
 		[]string{"", "", "="},
 		[]TokenType{_keyword_t, _varname_t, _operator_t},
 		nil,
 	},
 	"args": {
 		3, 3,
-		[]TokenType{_word_t, _symbol_t, _symbol_t},
+		[]TokenType{_identifier_t, _symbol_t, _symbol_t},
 		[]string{"", "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
 		func() bbody { return &FMap{} },
@@ -280,38 +287,38 @@ var statementPatterns = map[string]struct {
 	},
 }
 
-func (ast *AST) preparse(k string, tokens []*Token, b *Block) (bbody, error) {
+func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, error) {
 	pattern := statementPatterns[k]
 
-	if l := len(tokens); l < pattern.min || l > pattern.max {
+	if l := len(line); l < pattern.min || l > pattern.max {
 		return nil, errors.New("invalid statement(token number): " + k)
 	}
 
-	min := len(tokens)
+	min := len(line)
 	if l := len(pattern.types); min > l {
 		min = l
 	}
 
 	for i := 0; i < min; i++ {
-		t := tokens[i]
-		pt := pattern.types[i]
-		pv := pattern.values[i]
+		t := line[i]
+		expectTyp := pattern.types[i]
+		expectVal := pattern.values[i]
 
-		if pt != t.typ {
-			return nil, errors.New("invalid statement(token type): " + k)
+		if expectTyp != t.typ {
+			return nil, parseTokenTypeErr().New(line, ln, t, expectTyp)
 		}
-		if pv != "" && pv != t.String() {
-			return nil, errors.New("invalid statement(token value): " + k)
+		if expectVal != "" && expectVal != t.String() {
+			return nil, parseTokenValErr().New(line, ln, t, expectVal)
 		}
 	}
 
 	for i := 0; i < min; i++ {
-		t := tokens[i]
+		t := line[i]
 		up := pattern.uptypes[i]
 		t.typ = up
 	}
 
-	for _, t := range tokens {
+	for _, t := range line {
 		t._b = b
 	}
 
@@ -326,21 +333,23 @@ func (ast *AST) preparse(k string, tokens []*Token, b *Block) (bbody, error) {
 func (ast *AST) scan(lx *lexer) error {
 	parsingblock := &ast.global
 
-	return lx.foreachLine(func(num int, line []*Token) error {
+	return lx.foreachLine(func(ln int, line []*Token) error {
 		if len(line) == 0 {
 			return nil
 		}
 		switch ast.phase() {
-		case _l1_global:
+		case _ast_global:
 			kind := line[0]
 			switch kind.String() {
+			case "//":
+				return nil
 			case "load":
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,
 					variable: vsys{vars: make(map[string]*_var)},
 				}
-				body, err := ast.preparse("load", line, nb)
+				body, err := ast.preparse("load", line, ln, nb)
 				if err != nil {
 					return err
 				}
@@ -356,7 +365,7 @@ func (ast *AST) scan(lx *lexer) error {
 					variable: vsys{vars: make(map[string]*_var)},
 					bbody:    &plainbody{},
 				}
-				body, err := ast.preparse("fn", line, nb)
+				body, err := ast.preparse("fn", line, ln, nb)
 				if err != nil {
 					return err
 				}
@@ -372,7 +381,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock.child = append(parsingblock.child, nb)
 
 				parsingblock = nb
-				ast._goto(_l1_fn_body)
+				ast._goto(_ast_fn_body)
 			case "run":
 				nb := &Block{
 					child:    []*Block{},
@@ -385,15 +394,27 @@ func (ast *AST) scan(lx *lexer) error {
 					body bbody
 					err  error
 				)
-				keys := []string{"run1", "run1+", "run2"}
+				keys := []string{"run1", "run1+", "run2", "run1->", "run1+->"}
 				for _, k := range keys {
-					body, err = ast.preparse(k, line, nb)
+					body, err = ast.preparse(k, line, ln, nb)
 					if err == nil {
 						nb.kind = *kind
-						if k == "run1" || k == "run1+" {
-							nb.target = *line[1]
-						}
 						nb.bbody = body
+						switch k {
+						case "run1": // run sleep
+							nb.target = *line[1]
+						case "run1+": // run sleep {
+							nb.target = *line[1]
+						case "run1->": // run sleep -> out
+							nb.target = *line[1]
+							nb.operator = *line[2]
+							nb.typevalue = *line[3]
+						case "run1+->": // run sleep -> out {
+							nb.target = *line[1]
+							nb.operator = *line[2]
+							nb.typevalue = *line[3]
+						case "run2": // run {
+						}
 						break
 					}
 				}
@@ -404,10 +425,10 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock.child = append(parsingblock.child, nb)
 				if nb.bbody != nil {
 					parsingblock = nb
-					ast._goto(_l1_run_body)
+					ast._goto(_ast_run_body)
 				}
 			case "var":
-				if _, err := ast.preparse("var", line, parsingblock); err != nil {
+				if _, err := ast.preparse("var", line, ln, parsingblock); err != nil {
 					return err
 				}
 				name := line[1]
@@ -425,10 +446,10 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				return errors.New("invalid block define: " + kind.String())
 			}
-		case _l1_fn_body:
-			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+		case _ast_fn_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_global)
+				ast._goto(_ast_global)
 				break
 			}
 
@@ -440,7 +461,7 @@ func (ast *AST) scan(lx *lexer) error {
 					parent:   parsingblock,
 					variable: vsys{vars: make(map[string]*_var)},
 				}
-				body, err := ast.preparse("args", line, nb)
+				body, err := ast.preparse("args", line, ln, nb)
 				if err != nil {
 					return err
 				}
@@ -449,15 +470,15 @@ func (ast *AST) scan(lx *lexer) error {
 
 				parsingblock.child = append(parsingblock.child, nb)
 				parsingblock = nb
-				ast._goto(_l1_args_body)
+				ast._goto(_ast_args_body)
 			default:
 				return errors.New("invalid statement: " + kind.String())
 			}
 
-		case _l1_args_body:
-			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+		case _ast_args_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_fn_body)
+				ast._goto(_ast_fn_body)
 				break
 			}
 			for _, t := range line {
@@ -466,10 +487,10 @@ func (ast *AST) scan(lx *lexer) error {
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}
-		case _l1_run_body:
-			if _, err := ast.preparse("closed", line, parsingblock); err == nil {
+		case _ast_run_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
-				ast._goto(_l1_global)
+				ast._goto(_ast_global)
 				break
 			}
 

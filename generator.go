@@ -72,6 +72,23 @@ func (n *Node) Args() map[string]string {
 	return nil
 }
 
+// SaveReturns need to be called at running, it will create some field var
+// Field Var are dynamic var
+func (n *Node) SaveReturns(returns map[string]string, filter func(string) bool) bool {
+	if n.rb.typevalue.IsEmpty() {
+		return false
+	}
+	name := n.rb.typevalue.String()
+	_, b := n.rb.GetVar(name)
+	for field, val := range returns {
+		if filter != nil && !filter(field) {
+			continue
+		}
+		b.CreateFieldVar(name, field, val)
+	}
+	return true
+}
+
 // RunQ
 //
 type RunQ struct {

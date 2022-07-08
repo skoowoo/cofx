@@ -23,11 +23,13 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
+	// Here is a comment
 	load "cmd:root/function1"
 	load "cmd:url/function2"
 	load "cmd:path/function3"
 	load "go:function4"
 	 
+	// 这里是一个注释
 	var a = "1"
 	var b = "$(a)00"
 	var c
@@ -344,4 +346,25 @@ run 3 {
 		assert.Error(t, err)
 	}
 
+}
+
+func TestParseBlocksOnlyRun3(t *testing.T) {
+	{
+		const testingdata string = `
+		var out
+run function1 -> out
+run function2
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 3)
+		// 0 is global block
+		b := blocks[1]
+		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "function1", b.target.String())
+		assert.Equal(t, "->", b.operator.String())
+		assert.Equal(t, "out", b.typevalue.String())
+	}
 }

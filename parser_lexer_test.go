@@ -68,7 +68,7 @@ world"`
 		if n == 1 {
 			assert.Len(t, line, 2)
 			assert.Equal(t, "load", line[0].String())
-			assert.Equal(t, _word_t, line[0].typ)
+			assert.Equal(t, _identifier_t, line[0].typ)
 
 			assert.Equal(t, "go:print", line[1].String())
 			assert.Equal(t, _string_t, line[1].typ)
@@ -78,10 +78,10 @@ world"`
 		if n == 3 {
 			assert.Len(t, line, 3)
 			assert.Equal(t, "run", line[0].String())
-			assert.Equal(t, _word_t, line[0].typ)
+			assert.Equal(t, _identifier_t, line[0].typ)
 
 			assert.Equal(t, "print", line[1].String())
-			assert.Equal(t, _word_t, line[1].typ)
+			assert.Equal(t, _identifier_t, line[1].typ)
 
 			assert.Equal(t, "{", line[2].String())
 			assert.Equal(t, _symbol_t, line[2].typ)
@@ -108,16 +108,16 @@ world"`
 		if n == 6 {
 			assert.Len(t, line, 5)
 			assert.Equal(t, "fn", line[0].String())
-			assert.Equal(t, _word_t, line[0].typ)
+			assert.Equal(t, _identifier_t, line[0].typ)
 
 			assert.Equal(t, "gobuild", line[1].String())
-			assert.Equal(t, _word_t, line[1].typ)
+			assert.Equal(t, _identifier_t, line[1].typ)
 
 			assert.Equal(t, "=", line[2].String())
 			assert.Equal(t, _symbol_t, line[2].typ)
 
 			assert.Equal(t, "command", line[3].String())
-			assert.Equal(t, _word_t, line[3].typ)
+			assert.Equal(t, _identifier_t, line[3].typ)
 
 			assert.Equal(t, "{", line[4].String())
 			assert.Equal(t, _symbol_t, line[4].typ)

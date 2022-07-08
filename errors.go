@@ -1,10 +1,44 @@
 package cofunc
 
 import (
-	"errors"
 	"fmt"
 )
 
-func errInvalidChar(c byte, line string) error {
-	return errors.New("contain invalid character: " + fmt.Sprintf("%c, %s", c, line))
+type lexerError struct{}
+
+func lexerErr() lexerError {
+	return lexerError{}
+}
+func (e lexerError) New(line string, ln int, current rune, state ststate) error {
+	return fmt.Errorf("%d: %s, parsing '%c' in %d: illegal character", ln, line, current, state)
+}
+
+type parseTokenTypeError struct{}
+
+func parseTokenTypeErr() parseTokenTypeError {
+	return parseTokenTypeError{}
+}
+
+func (e parseTokenTypeError) New(line []*Token, ln int, t *Token, expect TokenType) error {
+	return fmt.Errorf("%d: '%s', actual type '%d', expect type '%d': token type not match", ln, t.String(), t.typ, expect)
+}
+
+type parseTokenValError struct{}
+
+func parseTokenValErr() parseTokenValError {
+	return parseTokenValError{}
+}
+
+func (e parseTokenValError) New(line []*Token, ln int, t *Token, expect string) error {
+	return fmt.Errorf("%d: '%s', actual value '%s', expect value '%s': token value not match", ln, t.String(), t.String(), expect)
+}
+
+type generatorError struct{}
+
+func generatorErr() generatorError {
+	return generatorError{}
+}
+
+func (e generatorError) New() error {
+	return nil
 }
