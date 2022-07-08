@@ -23,15 +23,17 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
-	load cmd:root/function1
-	load cmd:url/function2
-	load cmd:path/function3
-	load go:function4
+	// Here is a comment
+	load "cmd:root/function1"
+	load "cmd:url/function2"
+	load "cmd:path/function3"
+	load "go:function4"
 	 
-	var a = 1
-	var b = $(a)00
+	// 这里是一个注释
+	var a = "1"
+	var b = "$(a)00"
 	var c
-	var d=hello word
+	var d="hello word"
 
 	run f1
 	run	f2
@@ -40,7 +42,7 @@ func TestParseBlocksFull(t *testing.T) {
 
 	fn f1 = function1 {
 		args = {
-			k1: v1
+			"k1": "v1"
 		}
 	}
 	
@@ -79,12 +81,12 @@ func TestParseBlocksFull(t *testing.T) {
 // Only load part
 func TestParseBlocksOnlyLoad(t *testing.T) {
 	const testingdata string = `
-load cmd:function1
-  load 			 go:function2
+load "cmd:function1"
+  load 			 "go:function2"
 
-load cmd:function3
+load "cmd:function3"
 
-	load 	go:function4
+	load 	"go:function4"
 	`
 	blocks, err := loadTestingdata(testingdata)
 	if err != nil {
@@ -105,8 +107,8 @@ func TestParseBlocksOnlyfn(t *testing.T) {
 	const testingdata string = `
 	fn f1 = function1 {
 		args = {
-			k1:v1
-			k3:v3
+			"k1":"v1"
+			"k3":"v3"
 		}
 	}
 
@@ -133,7 +135,7 @@ func TestParseBlocksFnWithError(t *testing.T) {
 		const testingdata1 string = `
 fn f1= function1 {
 	args = {
-		k: v
+		"k": "v"
 	}
 
 
@@ -148,9 +150,9 @@ fn f2= function2 {
 		const testingdata2 string = `
 	fn f1 = function1 {
 		args = {
-			k1:v1
-			k2: v2
-			k3:v3
+			"k1":"v1"
+			"k2": "v2"
+			"k3":"v3"
 		}
 	}
 	}
@@ -164,25 +166,25 @@ func TestParseBlocksOnlyRun(t *testing.T) {
 	const testingdata string = `
 	run function1
 	run 	function2{
-		k1:v1
-		k2:v2
+		"k1":"v1"
+		"k2":"v2"
 	}
 
 run function3 {
-	k : {(1+2+3)}
+	"k" : "{(1+2+3)}"
 
-	multi1: ***hello1
-	hello2
-	***
+	"multi1": "hello1
+hello2
+"
 
-	multi2: *** 
-	hello1
-	hello2
-	***
+	"multi2": "
+hello1
+hello2
+"
 
-	multi3:*** 
-	hello1
-	hello2***
+	"multi3":"
+hello1
+hello2"
 }
 
 	`
@@ -219,7 +221,7 @@ run function3 {
 func TestParseBlocksOnlyRun2(t *testing.T) {
 	{
 		const testingdata string = `
-run    {
+run {
 
 	function1
 	function2
@@ -285,7 +287,7 @@ func TestParseBlocksOnlyRun2WithError(t *testing.T) {
 run {
 	function1
 
-	load xxxx
+	load "xxxx"
 	function2
 
 	function3
@@ -344,4 +346,25 @@ run 3 {
 		assert.Error(t, err)
 	}
 
+}
+
+func TestParseBlocksOnlyRun3(t *testing.T) {
+	{
+		const testingdata string = `
+		var out
+run function1 -> out
+run function2
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 3)
+		// 0 is global block
+		b := blocks[1]
+		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "function1", b.target.String())
+		assert.Equal(t, "->", b.operator.String())
+		assert.Equal(t, "out", b.typevalue.String())
+	}
 }

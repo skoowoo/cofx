@@ -16,32 +16,29 @@ type TokenType int
 
 const (
 	_unknow_t TokenType = iota
-	_int_t
-	_text_t
+	_identifier_t
+	_symbol_t
+	_number_t
+	_string_t
 	_mapkey_t
 	_operator_t
 	_functionname_t
 	_load_t
-	_word_t
 	_keyword_t
 	_varname_t
-	_symbol_t
-	_identifier_t
-	_string_t
-	_number_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
-	_int_t:          regexp.MustCompile(`^[1-9][0-9]*$`),
-	_text_t:         regexp.MustCompile(`^*$`),
+	_string_t:       regexp.MustCompile(`^*$`),
+	_identifier_t:   regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
+	_number_t:       regexp.MustCompile(`^[1-9][0-9]*$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
-	_operator_t:     regexp.MustCompile(`^=$`),
+	_operator_t:     regexp.MustCompile(`^(=|->)$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
-	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 }
 
 type Token struct {
@@ -54,14 +51,6 @@ type Token struct {
 		isvar bool
 	}
 	_get func(*Block, string) (string, bool)
-}
-
-func newToken(s string, typ TokenType) *Token {
-	return &Token{
-		str:  s,
-		typ:  typ,
-		_get: _lookupVar,
-	}
 }
 
 // _lookupVar be called at running, not parsing
@@ -86,13 +75,9 @@ func (t *Token) String() string {
 
 func (t *Token) validate() error {
 	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
-		return errors.Errorf("not match: %s:%s", t.str, pattern)
+		return errors.Errorf("actual '%s', expect '%s': regex not match", t.str, pattern)
 	}
 	return nil
-}
-
-func (t *Token) setblock(b *Block) {
-	t._b = b
 }
 
 // @running
@@ -139,13 +124,13 @@ func (t *Token) HasVar() bool {
 
 func (t *Token) extractVar() error {
 	// $(var)
-	if t.typ != _text_t {
+	if t.typ != _string_t {
 		return nil
 	}
 	var (
 		start  int
 		vstart int
-		state  stateL2
+		state  aststate
 	)
 	l := len(t.str)
 	next := func(i int) byte {
@@ -157,16 +142,16 @@ func (t *Token) extractVar() error {
 	}
 	for i, c := range t.str {
 		switch state {
-		case _l2_unknow:
+		case _ast_unknow:
 			// skip
 			// transfer
 			if c == '$' && next(i) == '(' {
 				vstart = i
-				state = _l2_word_started
+				state = _ast_identifier
 			}
-		case _l2_word_started: // from '$'
+		case _ast_identifier: // from '$'
 			// keep
-			if is.Word(c) || c == '(' {
+			if is.Identifier(c) || c == '(' {
 				break
 			}
 			// transfer
@@ -174,7 +159,7 @@ func (t *Token) extractVar() error {
 				if j := vstart - 1; j >= 0 {
 					if slash := t.str[j]; slash == '\\' {
 						// drop '\'
-						state = _l2_unknow
+						state = _ast_unknow
 						if start < j {
 							t._segments = append(t._segments, struct {
 								str   string
@@ -203,7 +188,7 @@ func (t *Token) extractVar() error {
 				}{name, true})
 
 				start = i + 1 // currently i is ')'
-				state = _l2_unknow
+				state = _ast_unknow
 			}
 		}
 	}
@@ -285,7 +270,6 @@ type Block struct {
 	target    Token
 	operator  Token
 	typevalue Token
-	state     stateL2
 	child     []*Block
 	parent    *Block
 	variable  vsys
@@ -293,20 +277,30 @@ type Block struct {
 }
 
 // Getvar lookup variable by name in map
-func (b *Block) GetVar(name string) (*_var, bool) {
+func (b *Block) GetVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
 		v, ok := p.variable.get(name)
 		if !ok {
 			continue
 		}
-		return v, true
+		return v, p
 	}
-	return nil, false
+	return nil, nil
 }
 
 // PutVar insert a variable into map
 func (b *Block) PutVar(name string, v *_var) error {
 	return b.variable.put(name, v)
+}
+
+// CreateFieldVar TODO:
+func (b *Block) CreateFieldVar(name, field, val string) error {
+	s := name + "." + field
+	v := &_var{
+		v:      val,
+		cached: true,
+	}
+	return b.PutVar(s, v)
 }
 
 // CalcVar calcuate the variable's value
@@ -317,6 +311,9 @@ func (b *Block) CalcVar(name string) (string, bool) {
 			continue
 		}
 		return v.(string), cached
+	}
+	if strings.Contains(name, ".") {
+		return "", false
 	}
 	panic("not found variable: " + name)
 }

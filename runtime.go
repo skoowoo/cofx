@@ -112,6 +112,8 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 				if r.err != nil {
 					fw.updateField(toError)
 					errResults = append(errResults, r)
+				} else {
+					r.node.SaveReturns(r.returns, nil)
 				}
 			case <-ctx.Done():
 				// canced
