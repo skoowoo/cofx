@@ -247,7 +247,7 @@ func TestValidateToken(t *testing.T) {
 	// functionname
 	{
 		tk := &Token{
-			str: "printPrint123-a_",
+			str: "printPrint123a_",
 			typ: _functionname_t,
 		}
 		err := tk.validate()

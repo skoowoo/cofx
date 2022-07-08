@@ -1,8 +1,6 @@
 package cofunc
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/is"
@@ -65,8 +63,8 @@ func (l *lexer) _goto(s ststate) {
 	l.state = s
 }
 
-func (l *lexer) split(line string, num int) error {
-	l.nums = append(l.nums, num)
+func (l *lexer) split(line string, ln int) error {
+	l.nums = append(l.nums, ln)
 
 	for _, c := range line {
 		switch l.state {
@@ -86,7 +84,7 @@ func (l *lexer) split(line string, num int) error {
 			}
 			// string
 			if is.Quotation(c) {
-				l.stringNum = num
+				l.stringNum = ln
 				l._goto(_lx_string)
 				break
 			}
@@ -96,18 +94,18 @@ func (l *lexer) split(line string, num int) error {
 				l._goto(_lx_var_directuse1)
 				break
 			}
-			return errors.New("contain invalid character(in unknow): " + line + fmt.Sprintf(" %c", c))
+			return lexerErr().New(line, ln, c, l.state)
 		case _lx_symbol:
 			if is.Symbol(c) {
 				l.saveRune(c)
 				break
 			}
-			l.insert(num, &Token{
+			l.insert(ln, &Token{
 				str: l.exportString(),
 				typ: _symbol_t,
 			})
 			// Here is special handling of comments, because one comment can contain unicode character
-			if ts := l.get(num); ts != nil {
+			if ts := l.get(ln); ts != nil {
 				if len(ts) == 1 && ts[0].String() == "//" {
 					// skip the remaining characters on the current line
 					// We don't save them into a token, Maybe someday We will save them.
@@ -126,17 +124,17 @@ func (l *lexer) split(line string, num int) error {
 				break
 			}
 			if is.Quotation(c) {
-				l.stringNum = num
+				l.stringNum = ln
 				l._goto(_lx_string)
 				break
 			}
-			return errors.New("contain invalid character(in symbol): " + line)
+			return lexerErr().New(line, ln, c, l.state)
 		case _lx_word:
 			if is.Word(c) {
 				l.saveRune(c)
 				break
 			}
-			l.insert(num, &Token{
+			l.insert(ln, &Token{
 				str: l.exportString(),
 				typ: _word_t,
 			})
@@ -150,7 +148,7 @@ func (l *lexer) split(line string, num int) error {
 				l._goto(_lx_symbol)
 				break
 			}
-			return errors.New("contain invalid character(in word): " + line)
+			return lexerErr().New(line, ln, c, l.state)
 		case _lx_string:
 			if is.BackSlash(c) {
 				l._goto(_lx_string_backslash)
@@ -178,7 +176,7 @@ func (l *lexer) split(line string, num int) error {
 				l._goto(_lx_var_directuse2)
 				break
 			}
-			return errors.New("contain invalid character(in var1): " + line)
+			return lexerErr().New(line, ln, c, l.state)
 		case _lx_var_directuse2:
 			if is.Word(c) {
 				l.saveRune(c)
@@ -186,14 +184,14 @@ func (l *lexer) split(line string, num int) error {
 			}
 			if c == ')' {
 				l.saveRune(c)
-				l.insert(num, &Token{
+				l.insert(ln, &Token{
 					str: l.exportString(),
 					typ: _string_t,
 				})
 				l._goto(_lx_unknow)
 				break
 			}
-			return errors.New("contain invalid character(in var2): " + line)
+			return lexerErr().New(line, ln, c, l.state)
 		}
 	}
 	return nil

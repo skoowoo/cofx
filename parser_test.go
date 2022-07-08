@@ -347,3 +347,24 @@ run 3 {
 	}
 
 }
+
+func TestParseBlocksOnlyRun3(t *testing.T) {
+	{
+		const testingdata string = `
+		var out
+run function1 -> out
+run function2
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 3)
+		// 0 is global block
+		b := blocks[1]
+		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "function1", b.target.String())
+		assert.Equal(t, "->", b.operator.String())
+		assert.Equal(t, "out", b.typevalue.String())
+	}
+}

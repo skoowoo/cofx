@@ -37,12 +37,12 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_text_t:         regexp.MustCompile(`^*$`),
 	_string_t:       regexp.MustCompile(`^*$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
-	_operator_t:     regexp.MustCompile(`^=$`),
+	_operator_t:     regexp.MustCompile(`^(=|->)$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
-	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
-	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`),
+	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_word_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 }
 
 type Token struct {
@@ -79,7 +79,7 @@ func (t *Token) String() string {
 
 func (t *Token) validate() error {
 	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
-		return errors.Errorf("not match: %s:%s", t.str, pattern)
+		return errors.Errorf("actual '%s', expect '%s': regex not match", t.str, pattern)
 	}
 	return nil
 }
