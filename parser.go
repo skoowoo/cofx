@@ -334,6 +334,8 @@ func (ast *AST) scan(lx *lexer) error {
 		case _l1_global:
 			kind := line[0]
 			switch kind.String() {
+			case "//":
+				return nil
 			case "load":
 				nb := &Block{
 					child:    []*Block{},

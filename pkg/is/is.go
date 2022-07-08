@@ -38,8 +38,12 @@ func BackSlash(x rune) bool {
 	return x == '\\'
 }
 
-func Eq(x rune) bool {
+func EQ(x rune) bool {
 	return x == '='
+}
+
+func Symbol(x rune) bool {
+	return LB(x) || RB(x) || x == ':' || EQ(x) || x == '+' || x == '-' || x == '*' || x == '/'
 }
 
 func Word(x rune) bool {

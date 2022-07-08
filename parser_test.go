@@ -23,11 +23,13 @@ func loadTestingdata(data string) ([]*Block, error) {
 
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
+	// Here is a comment
 	load "cmd:root/function1"
 	load "cmd:url/function2"
 	load "cmd:path/function3"
 	load "go:function4"
 	 
+	// 这里是一个注释
 	var a = "1"
 	var b = "$(a)00"
 	var c
