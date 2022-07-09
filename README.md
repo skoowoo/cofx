@@ -109,15 +109,15 @@ var b = $(a)
 注意： var 当前只支持在 global 作用域中定义，还不能用于 fn 作用域
 
 ## 标准函数库
-- [x] print
-- [ ] sleep
-- [x] command
-- [x] time
-- [ ] git
-- [ ] github
-- [ ] gobuild
-- [ ] HTTP Request
-- [ ] ...
+- :white_check_mark: print
+- :black_square_button: sleep
+- :white_check_mark: command
+- :white_check_mark: time
+- :black_square_button: git
+- :black_square_button: github
+- :black_square_button: gobuild
+- :black_square_button: HTTP Request
+- ...
 
 标准库的支持完全是根据我个人的日常使用工具来安排
 
