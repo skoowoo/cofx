@@ -1,21 +1,141 @@
-# CoFUNC 
+# CoFUNC
+CoFUNC 是一个基于 flowl 语言的强大自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流（flow）。flowl 语言不能用于 function 的开发，只负责 function 的运行以及管理。
 
-CoFUNC is a powerful automation engine based on flowl
+## FlowL
+Flowl 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义、字符串嵌入变量等。
 
-### 架构
+### Hello World
+helloworld.flowl 代码内容：
+```go
+// cat examples/helloworld.flowl
 
-### Examples
+load "go:print"
 
-### FlowL
+var a = "hello world!!!"
+
+co print {
+    "_" : "$(a)"
+}
+
+```
+
+运行代码：
+
+```
+➜ flowl run examples/helloworld.flowl
+hello world!!!
+```
+
+flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
+
+### 语法介绍
+#### 注释
+使用 // 添加代码注释。注意，只提供独占行的注释，不能行尾注释。
 
 #### load
+load 用于加载一个函数，例如：加载打印函数 print
+
+```go
+// go 是函数驱动，表示 print 这个函数是一段 Go 代码，需要用 go 驱动来运行
+// print 是函数名
+load go:print
+```
+
+所有函数在使用前，都需要先 load。
 
 #### fn
+fn 配置一个函数，配置函数运行时需要的参数等，比如：
+
+```go
+// t 是函数别名
+// time 是真实函数名
+fn t = time {
+    args = {
+        "format": "YYYY-MM-DD hh:mm:ss"
+    }
+}
+``` 
+
+args 是一个内置的函数配置项，代表函数运行时传给函数的参数，函数参数固定类型为 string-to-string KVs， 对应 Go 语言就是 map[string]string，其他语言同理。注意：每一个函数接收的参数 KV 都不一样，需要查看函数的具体用法。
+
 #### co
+co 取自于 coroutine 的前缀，也比较类似于 Go 语言的 go 关键字。co 关键是启动运行一个函数。比如：使用 co 运行 print 函数，输出 Hello World!
+
+```go
+fn p = print {
+    args = {
+         "_" : "Hello World!" 
+    }
+}
+
+co p
+```
+
+一个 flowl 源码文件中可以组合使用多个 function，因此 co 提供串行和并行执行多个 function 的能力。
+
+```go
+// 串行执行
+co funciton1
+co function2
+co function3
+```
+
+```go
+// 并行执行
+co {
+    function1
+    function2
+    function3
+}
+```
+
+```go
+// 串并行混合
+co function1
+co {
+    function2
+    function3
+}
+```
 
 #### var
+var 可以定义一个变量，注意：变量是没有类型的，所以变量都是字符串（后续会增加数字类型）
 
-#### if
-#### for
+```go
+var a = "Hello World!"
+var b = $(a)
+``` 
 
-### Todo list
+注意： var 当前只支持在 global 作用域中定义，还不能用于 fn 作用域
+
+## 标准函数库
+- [x] print
+- [ ] sleep
+- [x] command
+- [x] time
+- [ ] git
+- [ ] github
+- [ ] gobuild
+- [ ] HTTP Request
+- [ ] ...
+
+标准库的支持完全是根据我个人的日常使用工具来安排
+
+## TODOs
+语法
+* 支持条件选择语法
+* 支持循环语句
+* fn 作用域内支持 var 定义变量
+* ...
+
+Driver
+* 支持 shell driver
+* 支持 Javascript driver
+* 支持 Rust driver
+* 支持 Docker driver
+* 支持 Kubernetes driver
+* ...
+
+## 架构设计
+
+TODO:
