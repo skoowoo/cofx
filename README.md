@@ -30,9 +30,9 @@ flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
 
 ### 语法介绍
 #### 注释
-使用 `//` 添加代码注释。注意，只提供独占行的注释，不能行尾注释。
+使用 `//` 添加代码注释。:warning: 注意，只提供独占行的注释，不能行尾注释。
 
-#### load
+#### :balloon: load
 load 用于加载一个函数，例如：加载打印函数 print
 
 ```go
@@ -43,7 +43,7 @@ load go:print
 
 所有函数在使用前，都需要先 load。
 
-#### fn
+#### :balloon: fn
 fn 配置一个函数，配置函数运行时需要的参数等，比如：
 
 ```go
@@ -56,9 +56,9 @@ fn t = time {
 }
 ``` 
 
-args 是一个内置的函数配置项，代表函数运行时传给函数的参数，函数参数固定类型为 string-to-string KVs， 对应 Go 语言就是 map[string]string，其他语言同理。注意：每一个函数接收的参数 KV 都不一样，需要查看函数的具体用法。
+args 是一个内置的函数配置项，代表函数运行时传给函数的参数，函数参数固定类型为 string-to-string KVs， 对应 Go 语言就是 map[string]string，其他语言同理。:warning: 注意：每一个函数接收的参数 KV 都不一样，需要查看函数的具体用法。
 
-#### co
+#### :balloon: co
 co 取自于 coroutine 的前缀，也比较类似于 Go 语言的 go 关键字。co 关键是启动运行一个函数。比如：使用 co 运行 print 函数，输出 Hello World!
 
 ```go
@@ -98,17 +98,17 @@ co {
 }
 ```
 
-#### var
-var 可以定义一个变量，注意：变量是没有类型的，所以变量都是字符串（后续会增加数字类型）
+#### :balloon: var
+var 可以定义一个变量，:warning: 注意：变量是没有类型的，所以变量都是字符串（后续会增加数字类型）
 
 ```go
 var a = "Hello World!"
 var b = $(a)
 ``` 
 
-注意： var 当前只支持在 global 作用域中定义，还不能用于 fn 作用域
+:warning: 注意： var 当前只支持在 global 作用域中定义，还不能用于 fn 作用域
 
-## 标准函数库
+## :bullettrain_side: 标准函数库
 - :white_check_mark: print
 - :black_square_button: sleep
 - :white_check_mark: command
@@ -121,7 +121,7 @@ var b = $(a)
 
 标准库的支持完全是根据我个人的日常使用工具来安排
 
-## TODOs
+## :pushpin: TODOs
 语言
 * 支持条件选择语法
 * 支持循环语句
