@@ -8,12 +8,13 @@ co print {
 co print {
 	"go build" : "starting to co ..."
 }
+co gogenerate
 co gobuild
 
 co print {
 	"go test" : "starting to co ..."
 }
-co unittest
+co gotest
 
 co print {
 	"END" : "build \"cofunc\""
@@ -25,11 +26,14 @@ fn gobuild = command {
 	}
 }
 
-fn unittest = command {
+fn gotest = command {
 	args = {
-		"script" : "
-			go test -v -timeout 30s github.com/cofunclabs/cofunc
-			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/std/command
-			go test -v -timeout 30s github.com/cofunclabs/cofunc/internal/functiondriver/go"
+		"script" : "go test -v ./..."
+	}
+}
+
+fn gogenerate = command {
+	args = {
+		"script" : "go generate ./..."
 	}
 }
