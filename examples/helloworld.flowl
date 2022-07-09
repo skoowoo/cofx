@@ -1,8 +1,7 @@
 load "go:print"
 
-var a = "hello"
-var b = "$(a) world!"
+var a = "hello world!!!"
 
 run print {
-    "_" : "$(b)"
+    "_" : "$(a)"
 }

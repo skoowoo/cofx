@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/internal/builtins"
+	"github.com/cofunclabs/cofunc/internal/std"
 	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 
@@ -30,7 +30,7 @@ func New(loc string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context) error {
-	fn := builtins.Lookup(d.fname)
+	fn := std.Lookup(d.fname)
 	if fn == nil {
 		return errors.New("in builtins package, not found function: " + d.path)
 	}
