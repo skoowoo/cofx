@@ -1,21 +1,21 @@
 load "go:print"
 load "go:command"
 
-run print {
+co print {
 	"STARING" : "build \"cofunc\""
 }
 
-run print {
-	"go build" : "starting to run ..."
+co print {
+	"go build" : "starting to co ..."
 }
-run gobuild
+co gobuild
 
-run print {
-	"go test" : "starting to run ..."
+co print {
+	"go test" : "starting to co ..."
 }
-run unittest
+co unittest
 
-run print {
+co print {
 	"END" : "build \"cofunc\""
 }
 

@@ -50,7 +50,7 @@ func TestLexerVar(t *testing.T) {
 func TestLexer(t *testing.T) {
 	testingdata := `load "go:print"
 
-run print {
+co print {
 	"STARTING": "build \"cofunc\""
 }
 fn gobuild = command {
@@ -74,10 +74,10 @@ world"`
 			assert.Equal(t, _string_t, line[1].typ)
 		}
 
-		// run print {
+		// co print {
 		if n == 3 {
 			assert.Len(t, line, 3)
-			assert.Equal(t, "run", line[0].String())
+			assert.Equal(t, "co", line[0].String())
 			assert.Equal(t, _identifier_t, line[0].typ)
 
 			assert.Equal(t, "print", line[1].String())
