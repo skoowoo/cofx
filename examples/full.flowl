@@ -1,0 +1,17 @@
+load "go:print"
+load "go:time"
+
+// use variable to print 'hello world!'
+var a = "hello"
+var b = "$(a) world!"
+
+run print {
+    "_" : "$(b)"
+}
+
+// print current time
+var out
+run time -> out
+run print {
+    "_": "$(out.Now)"
+}
