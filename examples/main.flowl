@@ -1,14 +1,14 @@
 load go:print
 load go:command
 
-run print {
+co print {
 	STARING: build "cofunc"
 }
 
-run gobuild
-run unittest
+co gobuild
+co unittest
 
-run print {
+co print {
 	END: build "cofunc"
 }
 

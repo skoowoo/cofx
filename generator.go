@@ -34,8 +34,8 @@ type Node struct {
 	name     string
 	driver   functiondriver.Driver
 	parallel *Node
-	rb       *Block
-	fb       *Block
+	co       *Block
+	fn       *Block
 }
 
 func (n *Node) String() string {
@@ -47,22 +47,22 @@ func (n *Node) Parallel() *Node {
 }
 
 func (n *Node) setrb(b *Block) {
-	n.rb = b
+	n.co = b
 }
 
 func (n *Node) setfb(b *Block) {
-	n.fb = b
+	n.fn = b
 }
 
 // Args need to be called at running, because it will calcuate variable's value if has variable
 func (n *Node) Args() map[string]string {
 	var args map[string]string
-	if n.rb.bbody != nil {
-		args = n.rb.bbody.(*FMap).ToMap()
+	if n.co.bbody != nil {
+		args = n.co.bbody.(*FMap).ToMap()
 		return args
 	}
-	if n.fb != nil {
-		for _, b := range n.fb.child {
+	if n.fn != nil {
+		for _, b := range n.fn.child {
 			if b.Iskind("args") {
 				args = b.bbody.(*FMap).ToMap()
 				return args
@@ -75,11 +75,11 @@ func (n *Node) Args() map[string]string {
 // SaveReturns need to be called at running, it will create some field var
 // Field Var are dynamic var
 func (n *Node) SaveReturns(returns map[string]string, filter func(string) bool) bool {
-	if n.rb.typevalue.IsEmpty() {
+	if n.co.typevalue.IsEmpty() {
 		return false
 	}
-	name := n.rb.typevalue.String()
-	_, b := n.rb.GetVar(name)
+	name := n.co.typevalue.String()
+	_, b := n.co.GetVar(name)
 	for field, val := range returns {
 		if filter != nil && !filter(field) {
 			continue
@@ -178,7 +178,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 
 func (rq *RunQ) processRun(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.String() != "run" {
+		if b.kind.String() != "co" {
 			return nil
 		}
 		if name := b.target.String(); name != "" {

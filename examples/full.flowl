@@ -5,13 +5,13 @@ load "go:time"
 var a = "hello"
 var b = "$(a) world!"
 
-run print {
+co print {
     "_" : "$(b)"
 }
 
 // print current time
 var out
-run time -> out
-run print {
+co time -> out
+co print {
     "_": "$(out.Now)"
 }

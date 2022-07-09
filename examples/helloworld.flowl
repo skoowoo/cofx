@@ -2,6 +2,6 @@ load "go:print"
 
 var a = "hello world!!!"
 
-run print {
+co print {
     "_" : "$(a)"
 }

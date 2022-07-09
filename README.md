@@ -11,7 +11,7 @@ CoFUNC is a powerful automation engine based on flowl
 #### load
 
 #### fn
-#### run
+#### co
 
 #### var
 

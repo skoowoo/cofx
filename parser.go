@@ -188,7 +188,7 @@ const (
 	_ast_unknow aststate = iota
 	_ast_identifier
 	_ast_global
-	_ast_run_body
+	_ast_co_body
 	_ast_fn_body
 	_ast_args_body
 )
@@ -215,35 +215,35 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
-	"run1": {
+	"co1": {
 		2, 2,
 		[]TokenType{_identifier_t, _identifier_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _functionname_t},
 		nil,
 	},
-	"run1->": {
+	"co1->": {
 		4, 4,
 		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t},
 		[]string{"", "", "->", ""},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t},
 		nil,
 	},
-	"run1+": {
+	"co1+": {
 		3, 3,
 		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
 		[]string{"", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
-	"run1+->": {
+	"co1+->": {
 		5, 5,
 		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
 		[]string{"", "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
-	"run2": {
+	"co2": {
 		2, 2,
 		[]TokenType{_identifier_t, _symbol_t},
 		[]string{"", "{"},
@@ -382,7 +382,7 @@ func (ast *AST) scan(lx *lexer) error {
 
 				parsingblock = nb
 				ast._goto(_ast_fn_body)
-			case "run":
+			case "co":
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,
@@ -394,26 +394,26 @@ func (ast *AST) scan(lx *lexer) error {
 					body bbody
 					err  error
 				)
-				keys := []string{"run1", "run1+", "run2", "run1->", "run1+->"}
+				keys := []string{"co1", "co1+", "co2", "co1->", "co1+->"}
 				for _, k := range keys {
 					body, err = ast.preparse(k, line, ln, nb)
 					if err == nil {
 						nb.kind = *kind
 						nb.bbody = body
 						switch k {
-						case "run1": // run sleep
+						case "co1": // co sleep
 							nb.target = *line[1]
-						case "run1+": // run sleep {
+						case "co1+": // co sleep {
 							nb.target = *line[1]
-						case "run1->": // run sleep -> out
-							nb.target = *line[1]
-							nb.operator = *line[2]
-							nb.typevalue = *line[3]
-						case "run1+->": // run sleep -> out {
+						case "co1->": // co sleep -> out
 							nb.target = *line[1]
 							nb.operator = *line[2]
 							nb.typevalue = *line[3]
-						case "run2": // run {
+						case "co1+->": // co sleep -> out {
+							nb.target = *line[1]
+							nb.operator = *line[2]
+							nb.typevalue = *line[3]
+						case "co2": // co {
 						}
 						break
 					}
@@ -425,7 +425,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock.child = append(parsingblock.child, nb)
 				if nb.bbody != nil {
 					parsingblock = nb
-					ast._goto(_ast_run_body)
+					ast._goto(_ast_co_body)
 				}
 			case "var":
 				if _, err := ast.preparse("var", line, ln, parsingblock); err != nil {
@@ -487,7 +487,7 @@ func (ast *AST) scan(lx *lexer) error {
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}
-		case _ast_run_body:
+		case _ast_co_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
 				ast._goto(_ast_global)

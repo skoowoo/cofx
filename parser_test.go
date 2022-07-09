@@ -35,10 +35,10 @@ func TestParseBlocksFull(t *testing.T) {
 	var c
 	var d="hello word"
 
-	run f1
-	run	f2
-	run	function3
-	run function4
+	co f1
+	co	f2
+	co	function3
+	co function4
 
 	fn f1 = function1 {
 		args = {
@@ -162,15 +162,15 @@ fn f2= function2 {
 	}
 }
 
-func TestParseBlocksOnlyRun(t *testing.T) {
+func TestParseBlocksOnlyco(t *testing.T) {
 	const testingdata string = `
-	run function1
-	run 	function2{
+	co function1
+	co 	function2{
 		"k1":"v1"
 		"k2":"v2"
 	}
 
-run function3 {
+co function3 {
 	"k" : "{(1+2+3)}"
 
 	"multi1": "hello1
@@ -195,7 +195,7 @@ hello2"
 	check := func(b *Block, obj string) {
 		assert.Len(t, b.child, 0)
 		assert.NotNil(t, b.parent)
-		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "co", b.kind.String())
 		assert.Equal(t, obj, b.target.String())
 
 		if obj == "function2" {
@@ -217,11 +217,11 @@ hello2"
 	check(blocks[3], "function3")
 }
 
-// Parallel run testing
-func TestParseBlocksOnlyRun2(t *testing.T) {
+// Parallel co testing
+func TestParseBlocksOnlyco2(t *testing.T) {
 	{
 		const testingdata string = `
-run {
+co {
 
 	function1
 	function2
@@ -237,7 +237,7 @@ run {
 		assert.Len(t, blocks, 2)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "co", b.kind.String())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
@@ -252,7 +252,7 @@ run {
 
 	{
 		const testingdata string = `
-		run{
+		co{
 	function1
 	function2
 
@@ -267,7 +267,7 @@ run {
 		assert.Len(t, blocks, 2)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "co", b.kind.String())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
@@ -281,10 +281,10 @@ run {
 	}
 }
 
-func TestParseBlocksOnlyRun2WithError(t *testing.T) {
+func TestParseBlocksOnlyco2WithError(t *testing.T) {
 	{
 		const testingdata string = `
-run {
+co {
 	function1
 
 	load "xxxx"
@@ -299,9 +299,9 @@ run {
 
 	{
 		const testingdata string = `
-run {
+co {
 	function1
-	run function2
+	co function2
 
 	function3
 }
@@ -312,7 +312,7 @@ run {
 
 	{
 		const testingdata string = `
-run {
+co {
 	function1
 	input k v
 
@@ -325,7 +325,7 @@ run {
 
 	{
 		const testingdata string = `
-run xyz {
+co xyz {
 	function1
 
 	function3
@@ -337,7 +337,7 @@ run xyz {
 
 	{
 		const testingdata string = `
-run 3 {
+co 3 {
 	function1
 	function3
 }
@@ -348,12 +348,12 @@ run 3 {
 
 }
 
-func TestParseBlocksOnlyRun3(t *testing.T) {
+func TestParseBlocksOnlyco3(t *testing.T) {
 	{
 		const testingdata string = `
 		var out
-run function1 -> out
-run function2
+co function1 -> out
+co function2
 	`
 		blocks, err := loadTestingdata(testingdata)
 		if err != nil {
@@ -362,7 +362,7 @@ run function2
 		assert.Len(t, blocks, 3)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "run", b.kind.String())
+		assert.Equal(t, "co", b.kind.String())
 		assert.Equal(t, "function1", b.target.String())
 		assert.Equal(t, "->", b.operator.String())
 		assert.Equal(t, "out", b.typevalue.String())

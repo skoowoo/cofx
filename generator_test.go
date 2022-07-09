@@ -37,16 +37,16 @@ func TestParseFullWithRunq(t *testing.T) {
 		}
 	}
 
-	run f1
-	run	function2 {
+	co f1
+	co	function2 {
 		"k" : "v2"
 	}
-	run	function3
-	run {
+	co	function3
+	co {
 		function4
 		function5
 	}
-	run	function3 {
+	co	function3 {
 		"k": "v3"
 	}
 	`
@@ -103,7 +103,7 @@ func TestParseFullWithRunqWithErr(t *testing.T) {
 		}
 	}
 
-	run function1
+	co function1
 	`
 
 		blocks, bl, rq, err := loadTestingdata2(testingdata)

@@ -22,8 +22,8 @@ func TestAddReadyStartFlow(t *testing.T) {
 		}
 	}
 
-	run p
-	run	sleep
+	co p
+	co	sleep
 	`
 
 	sd := NewScheduler()
