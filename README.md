@@ -1,7 +1,7 @@
 # CoFUNC
-CoFUNC 是一个基于 flowl 语言的强大自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流（flow）。flowl 语言不能用于 function 的开发，只负责 function 的运行以及管理。
+CoFUNC 是一个基于 flowl 语言的强大的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流（flow）。flowl 语言的目标不是用于 function 的开发，而是负责 function 的运行以及管理。
 
-## FlowL
+## :rocket: FlowL
 Flowl 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义、字符串嵌入变量等。
 
 ### Hello World
@@ -30,7 +30,7 @@ flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
 
 ### 语法介绍
 #### 注释
-使用 // 添加代码注释。注意，只提供独占行的注释，不能行尾注释。
+使用 `//` 添加代码注释。注意，只提供独占行的注释，不能行尾注释。
 
 #### load
 load 用于加载一个函数，例如：加载打印函数 print
@@ -122,10 +122,11 @@ var b = $(a)
 标准库的支持完全是根据我个人的日常使用工具来安排
 
 ## TODOs
-语法
+语言
 * 支持条件选择语法
 * 支持循环语句
 * fn 作用域内支持 var 定义变量
+* 支持 number 变量类型以及算术表达式
 * ...
 
 Driver
@@ -136,6 +137,17 @@ Driver
 * 支持 Kubernetes driver
 * ...
 
-## 架构设计
+工具
+* 函数用法
+* 函数开发架手架
+* cofunc-server
+* repository
 
+## 安装及配置
+TODO:
+
+## 架构设计
+TODO:
+
+## 开发贡献
 TODO:
