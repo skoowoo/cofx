@@ -106,7 +106,7 @@ var a = "Hello World!"
 var b = $(a)
 ``` 
 
-:warning: 注意： var 当前只支持在 global 作用域中定义，还不能用于 fn 作用域
+:warning: 注意： var 可以在 global 和 fn 两个块作用域里使用，不能在 run 里使用。
 
 ## :bullettrain_side: 标准函数库
 - :white_check_mark: print
@@ -120,6 +120,9 @@ var b = $(a)
 - ...
 
 标准库的支持完全是根据我个人的日常使用工具来安排
+
+## :bangbang: 一些重要的设计规则
+TODO:
 
 ## :pushpin: TODOs
 语言
