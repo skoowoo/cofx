@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cofunclabs/cofunc/pkg/debug"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +45,8 @@ func TestParseBlocksFull(t *testing.T) {
 		args = {
 			"k1": "v1"
 		}
+		var fa = "f1"
+		var fb = $(fa)
 	}
 	
 	fn f2=function2 {
@@ -53,7 +56,7 @@ func TestParseBlocksFull(t *testing.T) {
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	_ = blocks
+	debug.Open()
 	for _, b := range blocks {
 		{
 			val, cached := b.CalcVar("a")
@@ -74,6 +77,19 @@ func TestParseBlocksFull(t *testing.T) {
 			val, cached := b.CalcVar("d")
 			assert.True(t, cached)
 			assert.Equal(t, "hello word", val)
+		}
+
+		if b.IsFn() && b.target.String() == "f1" {
+			{
+				val, cached := b.CalcVar("fa")
+				assert.True(t, cached)
+				assert.Equal(t, "f1", val)
+			}
+			{
+				val, cached := b.CalcVar("fb")
+				assert.True(t, cached)
+				assert.Equal(t, "f1", val)
+			}
 		}
 	}
 }

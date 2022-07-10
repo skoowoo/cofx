@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cofunclabs/cofunc/pkg/debug"
 	"github.com/cofunclabs/cofunc/pkg/is"
 	"github.com/pkg/errors"
 )
@@ -305,13 +306,23 @@ func (b *Block) CreateFieldVar(name, field, val string) error {
 
 // CalcVar calcuate the variable's value
 func (b *Block) CalcVar(name string) (string, bool) {
+	var _debug_ strings.Builder
 	for p := b; p != nil; p = p.parent {
+		if debug.Enabled() {
+			_debug_.WriteByte('\t')
+			_debug_.WriteString(p.String())
+			_debug_.WriteByte('\n')
+		}
+
 		v, cached := p.variable.calc(name)
 		if v == nil {
 			continue
 		}
+		debug.Log("*Block.CalcVar()", "calcute variable succeed: '%s', query path:\n%s\n", name, _debug_.String())
 		return v.(string), cached
 	}
+
+	debug.Log("*Block.CalcVar()", "calcute variable failed: '%s', query path:\n%s\n", name, _debug_.String())
 	if strings.Contains(name, ".") {
 		return "", false
 	}

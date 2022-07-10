@@ -124,8 +124,41 @@ func doBlockHeader(b *Block) error {
 	return nil
 }
 
+type aststate int
+
+const (
+	_ast_unknow aststate = iota
+	_ast_identifier
+	_ast_global
+	_ast_co_body
+	_ast_fn_body
+	_ast_args_body
+)
+
+type _FA struct {
+	state    aststate
+	prestate aststate
+}
+
+func (f *_FA) _goto(s aststate) {
+	f.prestate = f.state
+	f.state = s
+}
+
+func (f *_FA) phase() aststate {
+	return f.state
+}
+
 // AST store all blocks in the flowl
 //
+const (
+	_kw_load = "load"
+	_kw_fn   = "fn"
+	_kw_co   = "co"
+	_kw_var  = "var"
+	_kw_args = "args"
+)
+
 type AST struct {
 	global Block
 
@@ -136,7 +169,9 @@ type AST struct {
 func newAST() *AST {
 	ast := &AST{
 		global: Block{
-			kind:      Token{},
+			kind: Token{
+				str: "global",
+			},
 			target:    Token{},
 			operator:  Token{},
 			typevalue: Token{},
@@ -167,39 +202,6 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	}
 	return nil
 }
-
-type aststate int
-
-type _FA struct {
-	state    aststate
-	prestate aststate
-}
-
-func (f *_FA) _goto(s aststate) {
-	f.prestate = f.state
-	f.state = s
-}
-
-func (f *_FA) phase() aststate {
-	return f.state
-}
-
-const (
-	_ast_unknow aststate = iota
-	_ast_identifier
-	_ast_global
-	_ast_co_body
-	_ast_fn_body
-	_ast_args_body
-)
-
-const (
-	_kw_load = "load"
-	_kw_fn   = "fn"
-	_kw_co   = "co"
-	_kw_var  = "var"
-	_kw_args = "args"
-)
 
 var statementPatterns = map[string]struct {
 	min     int
@@ -338,8 +340,130 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 	return body, nil
 }
 
+func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
+	if _, err := ast.preparse("var", line, ln, b); err != nil {
+		return err
+	}
+	name := line[1]
+	var val *Token
+	if len(line) == 4 {
+		val = line[3]
+	}
+
+	stm := newstm("var")
+	stm.Append(name)
+	if val != nil {
+		stm.Append(val)
+	}
+	b.bbody.Append(stm)
+	return nil
+}
+
+func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
+	nb := &Block{
+		child:    []*Block{},
+		parent:   b,
+		variable: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("load", line, ln, nb)
+	if err != nil {
+		return err
+	}
+	nb.bbody = body
+	nb.kind = *line[0]
+	nb.target = *line[1]
+
+	b.child = append(b.child, nb)
+	return nil
+}
+
+func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:    []*Block{},
+		parent:   b,
+		variable: vsys{vars: make(map[string]*_var)},
+		bbody:    &plainbody{},
+	}
+	body, err := ast.preparse("fn", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+
+	kind, target, op, tv := line[0], line[1], line[2], line[3]
+
+	nb.kind = *kind
+	nb.target = *target
+	nb.operator = *op
+	nb.typevalue = *tv
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
+func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:    []*Block{},
+		parent:   b,
+		variable: vsys{vars: make(map[string]*_var)},
+		bbody:    nil,
+	}
+
+	var (
+		body bbody
+		err  error
+	)
+	keys := []string{"co1", "co1+", "co2", "co1->", "co1+->"}
+	for _, k := range keys {
+		body, err = ast.preparse(k, line, ln, nb)
+		if err == nil {
+			nb.kind = *line[0]
+			nb.bbody = body
+			switch k {
+			case "co1": // co sleep
+				nb.target = *line[1]
+			case "co1+": // co sleep {
+				nb.target = *line[1]
+			case "co1->": // co sleep -> out
+				nb.target = *line[1]
+				nb.operator = *line[2]
+				nb.typevalue = *line[3]
+			case "co1+->": // co sleep -> out {
+				nb.target = *line[1]
+				nb.operator = *line[2]
+				nb.typevalue = *line[3]
+			case "co2": // co {
+			}
+			break
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
+func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:    []*Block{},
+		parent:   b,
+		variable: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("args", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+	nb.kind = *line[0]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
 func (ast *AST) scan(lx *lexer) error {
-	parsingblock := &ast.global
+	var parsingblock = &ast.global
 
 	return lx.foreachLine(func(ln int, line []*Token) error {
 		if len(line) == 0 {
@@ -352,105 +476,25 @@ func (ast *AST) scan(lx *lexer) error {
 			case "//":
 				return nil
 			case _kw_load:
-				nb := &Block{
-					child:    []*Block{},
-					parent:   parsingblock,
-					variable: vsys{vars: make(map[string]*_var)},
-				}
-				body, err := ast.preparse("load", line, ln, nb)
-				if err != nil {
-					return err
-				}
-				nb.bbody = body
-				nb.kind = *kind
-				nb.target = *line[1]
-
-				parsingblock.child = append(parsingblock.child, nb)
+				return ast.parseLoad(line, ln, parsingblock)
 			case _kw_fn:
-				nb := &Block{
-					child:    []*Block{},
-					parent:   parsingblock,
-					variable: vsys{vars: make(map[string]*_var)},
-					bbody:    &plainbody{},
-				}
-				body, err := ast.preparse("fn", line, ln, nb)
+				fnblock, err := ast.parseFn(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				nb.bbody = body
-
-				target, op, tv := line[1], line[2], line[3]
-
-				nb.kind = *kind
-				nb.target = *target
-				nb.operator = *op
-				nb.typevalue = *tv
-
-				parsingblock.child = append(parsingblock.child, nb)
-
-				parsingblock = nb
+				parsingblock = fnblock
 				ast._goto(_ast_fn_body)
 			case _kw_co:
-				nb := &Block{
-					child:    []*Block{},
-					parent:   parsingblock,
-					variable: vsys{vars: make(map[string]*_var)},
-					bbody:    nil,
-				}
-
-				var (
-					body bbody
-					err  error
-				)
-				keys := []string{"co1", "co1+", "co2", "co1->", "co1+->"}
-				for _, k := range keys {
-					body, err = ast.preparse(k, line, ln, nb)
-					if err == nil {
-						nb.kind = *kind
-						nb.bbody = body
-						switch k {
-						case "co1": // co sleep
-							nb.target = *line[1]
-						case "co1+": // co sleep {
-							nb.target = *line[1]
-						case "co1->": // co sleep -> out
-							nb.target = *line[1]
-							nb.operator = *line[2]
-							nb.typevalue = *line[3]
-						case "co1+->": // co sleep -> out {
-							nb.target = *line[1]
-							nb.operator = *line[2]
-							nb.typevalue = *line[3]
-						case "co2": // co {
-						}
-						break
-					}
-				}
+				coblock, err := ast.parseCo(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-
-				parsingblock.child = append(parsingblock.child, nb)
-				if nb.bbody != nil {
-					parsingblock = nb
+				if coblock.bbody != nil {
+					parsingblock = coblock
 					ast._goto(_ast_co_body)
 				}
 			case _kw_var:
-				if _, err := ast.preparse("var", line, ln, parsingblock); err != nil {
-					return err
-				}
-				name := line[1]
-				var val *Token
-				if len(line) == 4 {
-					val = line[3]
-				}
-
-				parsingblock.bbody.Append(newstm("var"))
-				body := parsingblock.bbody.(*plainbody)
-				body.Laststm().Append(name)
-				if val != nil {
-					body.Laststm().Append(val)
-				}
+				return ast.parseVar(line, ln, parsingblock)
 			default:
 				return errors.New("invalid block define: " + kind.String())
 			}
@@ -464,25 +508,17 @@ func (ast *AST) scan(lx *lexer) error {
 			kind := line[0]
 			switch kind.String() {
 			case _kw_args:
-				nb := &Block{
-					child:    []*Block{},
-					parent:   parsingblock,
-					variable: vsys{vars: make(map[string]*_var)},
-				}
-				body, err := ast.preparse("args", line, ln, nb)
+				argsblock, err := ast.parseArgs(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				nb.bbody = body
-				nb.kind = *kind
-
-				parsingblock.child = append(parsingblock.child, nb)
-				parsingblock = nb
+				parsingblock = argsblock
 				ast._goto(_ast_args_body)
+			case _kw_var:
+				return ast.parseVar(line, ln, parsingblock)
 			default:
 				return errors.New("invalid statement: " + kind.String())
 			}
-
 		case _ast_args_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
