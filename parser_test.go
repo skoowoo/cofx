@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/pkg/debug"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +55,6 @@ func TestParseBlocksFull(t *testing.T) {
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	debug.Open()
 	for _, b := range blocks {
 		{
 			val, cached := b.CalcVar("a")
