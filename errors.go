@@ -9,8 +9,8 @@ type lexerError struct{}
 func lexerErr() lexerError {
 	return lexerError{}
 }
-func (e lexerError) New(line string, ln int, current rune, state ststate) error {
-	return fmt.Errorf("%d: %s, parsing '%c' in %d: illegal character", ln, line, current, state)
+func (e lexerError) New(line string, ln int, current rune, state lexstate) error {
+	return fmt.Errorf("%d: %s, parsing '%c' in %s: illegal character", ln, line, current, state)
 }
 
 type parseTokenTypeError struct{}
@@ -20,7 +20,7 @@ func parseTokenTypeErr() parseTokenTypeError {
 }
 
 func (e parseTokenTypeError) New(line []*Token, ln int, t *Token, expect TokenType) error {
-	return fmt.Errorf("%d: '%s', actual type '%d', expect type '%d': token type not match", ln, t.String(), t.typ, expect)
+	return fmt.Errorf("%d: '%s', actual type '%s', expect type '%s': token type not match", ln, t.String(), t.typ, expect)
 }
 
 type parseTokenValError struct{}

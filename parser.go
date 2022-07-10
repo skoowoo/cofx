@@ -193,6 +193,14 @@ const (
 	_ast_args_body
 )
 
+const (
+	_kw_load = "load"
+	_kw_fn   = "fn"
+	_kw_co   = "co"
+	_kw_var  = "var"
+	_kw_args = "args"
+)
+
 var statementPatterns = map[string]struct {
 	min     int
 	max     int
@@ -343,7 +351,7 @@ func (ast *AST) scan(lx *lexer) error {
 			switch kind.String() {
 			case "//":
 				return nil
-			case "load":
+			case _kw_load:
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,
@@ -358,7 +366,7 @@ func (ast *AST) scan(lx *lexer) error {
 				nb.target = *line[1]
 
 				parsingblock.child = append(parsingblock.child, nb)
-			case "fn":
+			case _kw_fn:
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,
@@ -382,7 +390,7 @@ func (ast *AST) scan(lx *lexer) error {
 
 				parsingblock = nb
 				ast._goto(_ast_fn_body)
-			case "co":
+			case _kw_co:
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,
@@ -427,7 +435,7 @@ func (ast *AST) scan(lx *lexer) error {
 					parsingblock = nb
 					ast._goto(_ast_co_body)
 				}
-			case "var":
+			case _kw_var:
 				if _, err := ast.preparse("var", line, ln, parsingblock); err != nil {
 					return err
 				}
@@ -455,7 +463,7 @@ func (ast *AST) scan(lx *lexer) error {
 
 			kind := line[0]
 			switch kind.String() {
-			case "args":
+			case _kw_args:
 				nb := &Block{
 					child:    []*Block{},
 					parent:   parsingblock,

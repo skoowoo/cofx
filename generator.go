@@ -63,7 +63,7 @@ func (n *Node) Args() map[string]string {
 	}
 	if n.fn != nil {
 		for _, b := range n.fn.child {
-			if b.Iskind("args") {
+			if b.IsArgs() {
 				args = b.bbody.(*FMap).ToMap()
 				return args
 			}
@@ -136,7 +136,7 @@ func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
 
 func (rq *RunQ) processLoad(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.String() != "load" {
+		if !b.IsLoad() {
 			return nil
 		}
 		s := b.target.String()
@@ -156,7 +156,7 @@ func (rq *RunQ) processLoad(ast *AST) error {
 
 func (rq *RunQ) processFn(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.String() != "fn" {
+		if !b.IsFn() {
 			return nil
 		}
 		nodename, fname := b.target.String(), b.typevalue.String()
@@ -178,7 +178,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 
 func (rq *RunQ) processRun(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
-		if b.kind.String() != "co" {
+		if !b.IsCo() {
 			return nil
 		}
 		if name := b.target.String(); name != "" {

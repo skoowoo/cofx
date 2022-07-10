@@ -93,7 +93,7 @@ load "cmd:function3"
 		assert.FailNow(t, err.Error())
 	}
 	check := func(b *Block, path string) {
-		assert.Equal(t, "load", b.kind.String())
+		assert.True(t, b.IsLoad())
 		assert.Equal(t, path, b.target.String())
 	}
 	// 0 is global block
@@ -195,7 +195,7 @@ hello2"
 	check := func(b *Block, obj string) {
 		assert.Len(t, b.child, 0)
 		assert.NotNil(t, b.parent)
-		assert.Equal(t, "co", b.kind.String())
+		assert.True(t, b.IsCo())
 		assert.Equal(t, obj, b.target.String())
 
 		if obj == "function2" {
@@ -237,7 +237,7 @@ co {
 		assert.Len(t, blocks, 2)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "co", b.kind.String())
+		assert.True(t, b.IsCo())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
@@ -267,7 +267,7 @@ co {
 		assert.Len(t, blocks, 2)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "co", b.kind.String())
+		assert.True(t, b.IsCo())
 		assert.True(t, b.target.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.typevalue.IsEmpty())
@@ -362,7 +362,7 @@ co function2
 		assert.Len(t, blocks, 3)
 		// 0 is global block
 		b := blocks[1]
-		assert.Equal(t, "co", b.kind.String())
+		assert.True(t, b.IsCo())
 		assert.Equal(t, "function1", b.target.String())
 		assert.Equal(t, "->", b.operator.String())
 		assert.Equal(t, "out", b.typevalue.String())
