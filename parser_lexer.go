@@ -1,3 +1,4 @@
+//go:generate stringer -type lexstate
 package cofunc
 
 import (
@@ -6,10 +7,10 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/is"
 )
 
-type ststate int
+type lexstate int
 
 const (
-	_lx_unknow ststate = iota
+	_lx_unknow lexstate = iota
 	_lx_identifier
 	_lx_symbol
 	_lx_string
@@ -21,7 +22,7 @@ const (
 type lexer struct {
 	tt        map[int][]*Token
 	nums      []int
-	state     ststate
+	state     lexstate
 	buf       strings.Builder
 	stringNum int
 }
@@ -59,7 +60,7 @@ func (l *lexer) get(num int) []*Token {
 	return nil
 }
 
-func (l *lexer) _goto(s ststate) {
+func (l *lexer) _goto(s lexstate) {
 	l.state = s
 }
 

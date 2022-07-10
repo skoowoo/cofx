@@ -322,6 +322,26 @@ func (b *Block) Iskind(s string) bool {
 	return b.kind.String() == s
 }
 
+func (b *Block) IsArgs() bool {
+	return b.Iskind(_kw_args)
+}
+
+func (b *Block) IsCo() bool {
+	return b.Iskind(_kw_co)
+}
+
+func (b *Block) IsVar() bool {
+	return b.Iskind(_kw_var)
+}
+
+func (b *Block) IsFn() bool {
+	return b.Iskind(_kw_fn)
+}
+
+func (b *Block) IsLoad() bool {
+	return b.Iskind(_kw_load)
+}
+
 func (b *Block) String() string {
 	if b.bbody != nil {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.bbody.Len())
