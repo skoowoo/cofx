@@ -133,6 +133,7 @@ const (
 	_ast_co_body
 	_ast_fn_body
 	_ast_args_body
+	_ast_for_body
 )
 
 type _FA struct {
@@ -157,6 +158,7 @@ const (
 	_kw_co   = "co"
 	_kw_var  = "var"
 	_kw_args = "args"
+	_kw_for  = "for"
 )
 
 type AST struct {
@@ -286,6 +288,13 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_string_t},
 		[]string{""},
 		[]TokenType{_string_t},
+		nil,
+	},
+	"for": {
+		2, 2,
+		[]TokenType{_identifier_t, _symbol_t},
+		[]string{"", "{"},
+		[]TokenType{_keyword_t, _symbol_t},
 		nil,
 	},
 	"closed": {
@@ -462,6 +471,23 @@ func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 	return nb, nil
 }
 
+func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:    []*Block{},
+		parent:   b,
+		variable: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("for", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+	nb.kind = *line[0]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
 func (ast *AST) scan(lx *lexer) error {
 	var parsingblock = &ast.global
 
@@ -495,6 +521,13 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 			case _kw_var:
 				return ast.parseVar(line, ln, parsingblock)
+			case _kw_for:
+				forblock, err := ast.parseFor(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = forblock
+				ast._goto(_ast_for_body)
 			default:
 				return errors.New("invalid block define: " + kind.String())
 			}
@@ -534,15 +567,37 @@ func (ast *AST) scan(lx *lexer) error {
 		case _ast_co_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
 				parsingblock = parsingblock.parent
+				if parsingblock.IsFor() {
+					ast._goto(_ast_for_body)
+				} else {
+					ast._goto(_ast_global)
+				}
+				break
+			}
+
+			if err := parsingblock.bbody.Append(line); err != nil {
+				return err
+			}
+		case _ast_for_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
 				ast._goto(_ast_global)
 				break
 			}
 
-			for _, t := range line {
-				t._b = parsingblock
-			}
-			if err := parsingblock.bbody.Append(line); err != nil {
-				return err
+			kind := line[0]
+			switch kind.String() {
+			case _kw_co:
+				coblock, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if coblock.bbody != nil {
+					parsingblock = coblock
+					ast._goto(_ast_co_body)
+				}
+			default:
+				return errors.New("invalid statement: " + kind.String())
 			}
 		}
 
