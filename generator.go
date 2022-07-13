@@ -111,7 +111,7 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 	if err := q.processFn(ast); err != nil {
 		return nil, err
 	}
-	if err := q.processRun(ast); err != nil {
+	if err := q.processCo(ast); err != nil {
 		return nil, err
 	}
 	return q, nil
@@ -176,7 +176,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) processRun(ast *AST) error {
+func (rq *RunQ) processCo(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if !b.IsCo() {
 			return nil

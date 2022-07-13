@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/cofunclabs/cofunc/internal/std/command"
+	gobuild "github.com/cofunclabs/cofunc/internal/std/go/go_build"
 	"github.com/cofunclabs/cofunc/internal/std/print"
 	"github.com/cofunclabs/cofunc/internal/std/sleep"
 	cotime "github.com/cofunclabs/cofunc/internal/std/time"
@@ -28,6 +29,7 @@ func init() {
 		print.New,
 		command.New,
 		cotime.New,
+		gobuild.New,
 	}
 
 	for _, New := range stds {
