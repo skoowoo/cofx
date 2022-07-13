@@ -1,18 +1,19 @@
 load "go:print"
 load "go:command"
+load "go:go_build"
 
 co print {
 	"STARING" : "build \"cofunc\""
 }
 
 co print {
-	"go build" : "starting to co ..."
+	"go build" : "starting to run ..."
 }
 co gogenerate
-co gobuild
+co build
 
 co print {
-	"go test" : "starting to co ..."
+	"go test" : "starting to run ..."
 }
 co gotest
 
@@ -20,9 +21,10 @@ co print {
 	"END" : "build \"cofunc\""
 }
 
-fn gobuild = command {
+fn build = go_build {
 	args = {
-		"script" : "go build -o bin/flowl github.com/cofunclabs/cofunc/cmd/flowl"
+		"prefix": "github.com/cofunclabs/cofunc"
+		"mainpkg_path": "cmd/flowl"
 	}
 }
 
