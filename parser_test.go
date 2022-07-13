@@ -382,3 +382,24 @@ co function2
 		assert.Equal(t, "out", b.typevalue.String())
 	}
 }
+
+func TestParseBlocksOnlyFor(t *testing.T) {
+	{
+		const testingdata string = `
+var out
+
+for {
+	co function1 -> out
+	co function2
+}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.Len(t, blocks, 4)
+		// 0 is global block
+		b := blocks[1]
+		assert.True(t, b.IsFor())
+	}
+}

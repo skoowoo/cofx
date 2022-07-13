@@ -353,6 +353,14 @@ func (b *Block) IsLoad() bool {
 	return b.Iskind(_kw_load)
 }
 
+func (b *Block) IsGlobal() bool {
+	return b.Iskind("global")
+}
+
+func (b *Block) IsFor() bool {
+	return b.Iskind("for")
+}
+
 func (b *Block) String() string {
 	if b.bbody != nil {
 		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.bbody.Len())

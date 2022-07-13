@@ -15,3 +15,4 @@
 bin/
 vendor/
 *_string.go
+*DS_Store
