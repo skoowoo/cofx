@@ -8,7 +8,7 @@ import (
 )
 
 func TestCommandFunction(t *testing.T) {
-	mf := New().Manifest()
+	mf := New()
 	assert.Equal(t, "go", mf.Driver)
 	_, err := mf.EntrypointFunc(context.Background(), map[string]string{
 		"script": "echo hello cofunc && sleep 2 && echo hello cofunc2",

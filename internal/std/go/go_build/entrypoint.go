@@ -12,10 +12,10 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Description:    "A tool for building go project that based on 'go mod'",
+	Name:           "go_build",
+	Description:    "For building go project that based on 'go mod'",
 	Driver:         "go",
-	EntryPoint:     "",
-	EntrypointFunc: nil,
+	EntrypointFunc: Entrypoint,
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
@@ -34,32 +34,16 @@ var _manifest = manifest.Manifest{
 				Desc: `Specifies the path of main package, if there are more than one, separated by ','.
  If not specified, the mainpkg is automatically parsed`,
 			},
-			{
-				Name:           "generate",
-				OptionalValues: []string{"true", "false"},
-				Desc:           "",
-			},
 		},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
 
-func New() manifest.Manifester {
-	return &_gobuild{}
+func New() *manifest.Manifest {
+	return &_manifest
 }
 
-type _gobuild struct{}
-
-func (f *_gobuild) Name() string {
-	return "go_build"
-}
-
-func (f *_gobuild) Manifest() manifest.Manifest {
-	_manifest.EntrypointFunc = f.Entrypoint
-	return _manifest
-}
-
-func (f *_gobuild) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	prefix, ok := args["prefix"]
 	if !ok {
 		// TODO:
@@ -76,7 +60,7 @@ func (f *_gobuild) Entrypoint(ctx context.Context, args map[string]string) (map[
 	}
 	paths := strings.Split(mainpkg_path, ",")
 	for _, path := range paths {
-		cmd, err := f.buildCommands(ctx, prefix, binpath, path)
+		cmd, err := buildCommands(ctx, prefix, binpath, path)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +76,7 @@ func (f *_gobuild) Entrypoint(ctx context.Context, args map[string]string) (map[
 	return nil, nil
 }
 
-func (f *_gobuild) buildCommands(ctx context.Context, prefix, binpath, mainpath string) (*exec.Cmd, error) {
+func buildCommands(ctx context.Context, prefix, binpath, mainpath string) (*exec.Cmd, error) {
 	var args []string
 	args = append(args, "build")
 	args = append(args, "-o")

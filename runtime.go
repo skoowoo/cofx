@@ -52,7 +52,7 @@ func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.total = body.GetRunQ().NodeNum()
 		body.results = make(map[string]*FunctionResult)
 
-		body.GetRunQ().Foreach(func(stage int, n *Node) error {
+		err := body.GetRunQ().Foreach(func(stage int, n *Node) error {
 			if err := n.driver.Load(ctx); err != nil {
 				return err
 			}
@@ -65,6 +65,9 @@ func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		body.status = _flow_ready
 		return nil
 	}

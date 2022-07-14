@@ -9,27 +9,20 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/manifest"
 )
 
-func New() manifest.Manifester {
-	return &Command{}
+var _manifest = manifest.Manifest{
+	Name:           "command",
+	Driver:         "go",
+	EntrypointFunc: Entrypoint,
+	Args: map[string]string{
+		"script": "",
+	},
 }
 
-type Command struct{}
-
-func (c *Command) Name() string {
-	return "command"
+func New() *manifest.Manifest {
+	return &_manifest
 }
 
-func (c *Command) Manifest() manifest.Manifest {
-	return manifest.Manifest{
-		Driver:         "go",
-		EntrypointFunc: c.Entrypoint,
-		Args: map[string]string{
-			"script": "",
-		},
-	}
-}
-
-func (c *Command) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	script := args["script"]
 	if script == "" {
 		return nil, errors.New("command function miss 'script' argument")
