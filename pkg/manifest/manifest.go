@@ -2,12 +2,8 @@ package manifest
 
 import "context"
 
-type Manifester interface {
-	Name() string
-	Manifest() Manifest
-}
-
 type Manifest struct {
+	Name           string
 	Description    string                                                              `json:"description"`
 	Driver         string                                                              `json:"driver"`
 	EntryPoint     string                                                              `json:"entrypoint"`

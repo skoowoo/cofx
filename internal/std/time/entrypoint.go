@@ -8,48 +8,41 @@ import (
 	"github.com/pkg/errors"
 )
 
-func New() manifest.Manifester {
-	return &_time{}
-}
-
-type _time struct{}
-
-func (f *_time) Name() string {
-	return "time"
-}
-
-func (f *_time) Manifest() manifest.Manifest {
-	return manifest.Manifest{
-		Description:    "",
-		Driver:         "go",
-		EntryPoint:     "",
-		EntrypointFunc: f.Entrypoint,
-		Args:           map[string]string{},
-		RetryOnFailure: 0,
-		Usage: manifest.Usage{
-			Args: []manifest.UsageDesc{
-				{
-					Name: "format",
-					OptionalValues: []string{
-						"YYYY-MM-DD hh:mm:ss",
-						"YYYY/MM/DD hh:mm:ss",
-						"MM-DD-YYYY hh:mm:ss",
-						"MM/DD/YYYY hh:mm:ss",
-					},
-					Desc: `Specifies the format for getting the current time`,
+var _manifest = manifest.Manifest{
+	Name:           "time",
+	Description:    "",
+	Driver:         "go",
+	EntryPoint:     "",
+	EntrypointFunc: Entrypoint,
+	Args:           map[string]string{},
+	RetryOnFailure: 0,
+	Usage: manifest.Usage{
+		Args: []manifest.UsageDesc{
+			{
+				Name: "format",
+				OptionalValues: []string{
+					"YYYY-MM-DD hh:mm:ss",
+					"YYYY/MM/DD hh:mm:ss",
+					"MM-DD-YYYY hh:mm:ss",
+					"MM/DD/YYYY hh:mm:ss",
 				},
-			},
-			ReturnValues: []manifest.UsageDesc{
-				{
-					Name: "Now",
-					Desc: "Current time",
-				},
+				Desc: `Specifies the format for getting the current time`,
 			},
 		},
-	}
+		ReturnValues: []manifest.UsageDesc{
+			{
+				Name: "Now",
+				Desc: "Current time",
+			},
+		},
+	},
 }
 
-func (f *_time) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func New() *manifest.Manifest {
+	return &_manifest
+}
+
+func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	format, ok := args["format"]
 	if !ok {
 		format = "YYYY-MM-DD hh:mm:ss"

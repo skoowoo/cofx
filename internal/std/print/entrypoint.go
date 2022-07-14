@@ -11,25 +11,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func New() manifest.Manifester {
-	return &printer{}
+var _manifest = manifest.Manifest{
+	Name:           "print",
+	Driver:         "go",
+	EntrypointFunc: Entrypoint,
 }
 
-// Be used to test the go driver
-type printer struct{}
-
-func (p *printer) Manifest() manifest.Manifest {
-	return manifest.Manifest{
-		Driver:         "go",
-		EntrypointFunc: p.Entrypoint,
-	}
+func New() *manifest.Manifest {
+	return &_manifest
 }
 
-func (p *printer) Name() string {
-	return "print"
-}
-
-func (p *printer) Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
 	logrus.Debugf("function print: args=%v\n", args)
 	var slice []string
 	for k, v := range args {

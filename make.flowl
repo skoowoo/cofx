@@ -1,6 +1,7 @@
 load "go:print"
 load "go:command"
 load "go:go_build"
+load "go:go_generate"
 
 co print {
 	"STARING" : "build \"cofunc\""
@@ -9,7 +10,7 @@ co print {
 co print {
 	"go build" : "starting to run ..."
 }
-co gogenerate
+co go_generate
 co build
 
 co print {
@@ -31,11 +32,5 @@ fn build = go_build {
 fn gotest = command {
 	args = {
 		"script" : "go test -v ./..."
-	}
-}
-
-fn gogenerate = command {
-	args = {
-		"script" : "go generate ./..."
 	}
 }

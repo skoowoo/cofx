@@ -30,12 +30,11 @@ func New(loc string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context) error {
-	fn := std.Lookup(d.fname)
-	if fn == nil {
-		return errors.New("in builtins package, not found function: " + d.path)
+	mf := std.Lookup(d.fname)
+	if mf == nil {
+		return errors.New("in builtins package, not found function's manifest: " + d.path)
 	}
-	mf := fn.Manifest()
-	d.manifest = &mf
+	d.manifest = mf
 	return nil
 }
 
