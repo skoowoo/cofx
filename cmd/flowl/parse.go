@@ -43,14 +43,14 @@ func printAST(ast *co.AST, name string) {
 func printRunQ(rq *co.RunQ, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Forstage(func(stage int, n *co.FuncNode) error {
+	rq.Forstage(func(stage int, nodes []*co.FuncNode) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")
 		buf.WriteString(strconv.Itoa(i))
 		buf.WriteString(": ")
-		for p := n; p != nil; p = p.Parallel() {
-			buf.WriteString(p.String())
+		for _, node := range nodes {
+			buf.WriteString(node.String())
 			buf.WriteString(" ")
 		}
 		fmt.Printf("  %s\n", buf.String())

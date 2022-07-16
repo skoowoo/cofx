@@ -61,27 +61,32 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
 		assert.Len(t, rq.stages, 5)
 
-		rq.Forstage(func(stage int, node *FuncNode) error {
+		rq.Forstage(func(stage int, nodes []*FuncNode) error {
 			if stage == 1 {
+				node := nodes[0]
 				assert.Equal(t, "f1", node.name)
 				assert.Len(t, node.Args(), 2)
 				assert.Equal(t, "v1", node.Args()["k"])
 			}
 			if stage == 2 {
+				node := nodes[0]
 				assert.Equal(t, "function2", node.name)
 				assert.Len(t, node.Args(), 1)
 				assert.Equal(t, "v2", node.Args()["k"])
 			}
 			if stage == 3 {
+				node := nodes[0]
 				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.Args(), 0)
 			}
 			if stage == 4 {
+				node := nodes[0]
 				assert.Equal(t, "function4", node.name)
 				assert.NotNil(t, node.parallel)
 				assert.Equal(t, "function5", node.parallel.name)
 			}
 			if stage == 5 {
+				node := nodes[0]
 				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.Args(), 1)
 				assert.Equal(t, "v3", node.Args()["k"])
