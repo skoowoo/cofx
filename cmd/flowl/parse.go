@@ -43,7 +43,7 @@ func printAST(ast *co.AST, name string) {
 func printRunQ(rq *co.RunQ, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.Forstage(func(stage int, n *co.Node) error {
+	rq.Forstage(func(stage int, n *co.FuncNode) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")
