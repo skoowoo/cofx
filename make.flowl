@@ -10,12 +10,16 @@ co print {
 co print {
 	"go build" : "starting to run ..."
 }
+
+// build
 co go_generate
 co build
 
 co print {
 	"go test" : "starting to run ..."
 }
+
+// testing
 co gotest
 
 co print {

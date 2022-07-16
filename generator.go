@@ -30,32 +30,53 @@ type location struct {
 
 // Node
 //
-type Node struct {
+type Node interface {
+	String() string
+	Run() error
+}
+
+type ForNode struct {
+}
+
+func (n *ForNode) String() string {
+	return ""
+}
+
+func (n *ForNode) Run() error {
+	return nil
+}
+
+// FuncNode
+type FuncNode struct {
 	name     string
 	driver   functiondriver.Driver
-	parallel *Node
+	parallel *FuncNode
 	co       *Block
 	fn       *Block
 }
 
-func (n *Node) String() string {
+func (n *FuncNode) String() string {
 	return n.name + "->" + n.driver.FunctionName()
 }
 
-func (n *Node) Parallel() *Node {
+func (n *FuncNode) Parallel() *FuncNode {
 	return n.parallel
 }
 
-func (n *Node) setrb(b *Block) {
+func (n *FuncNode) setrb(b *Block) {
 	n.co = b
 }
 
-func (n *Node) setfb(b *Block) {
+func (n *FuncNode) setfb(b *Block) {
 	n.fn = b
 }
 
+func (n *FuncNode) Run() error {
+	return nil
+}
+
 // Args need to be called at running, because it will calcuate variable's value if has variable
-func (n *Node) Args() map[string]string {
+func (n *FuncNode) Args() map[string]string {
 	var args map[string]string
 	if n.co.bbody != nil {
 		args = n.co.bbody.(*FMap).ToMap()
@@ -74,7 +95,7 @@ func (n *Node) Args() map[string]string {
 
 // SaveReturns need to be called at running, it will create some field var
 // Field Var are dynamic var
-func (n *Node) SaveReturns(returns map[string]string, filter func(string) bool) bool {
+func (n *FuncNode) SaveReturns(returns map[string]string, filter func(string) bool) bool {
 	if n.co.typevalue.IsEmpty() {
 		return false
 	}
@@ -93,16 +114,16 @@ func (n *Node) SaveReturns(returns map[string]string, filter func(string) bool) 
 //
 type RunQ struct {
 	locations       map[string]location
-	configuredNodes map[string]*Node
-	stage           []*Node
+	configuredNodes map[string]*FuncNode
+	stages          []Node
 	ast             *AST
 }
 
 func NewRunQ(ast *AST) (*RunQ, error) {
 	q := &RunQ{
 		locations:       make(map[string]location),
-		configuredNodes: make(map[string]*Node),
-		stage:           make([]*Node, 0),
+		configuredNodes: make(map[string]*FuncNode),
+		stages:          make([]Node, 0),
 		ast:             ast,
 	}
 	if err := q.processLoad(ast); err != nil {
@@ -117,7 +138,7 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 	return q, nil
 }
 
-func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
+func (rq *RunQ) createNode(nodename, fname string) (*FuncNode, error) {
 	loc, ok := rq.locations[fname]
 	if !ok {
 		return nil, errors.New("not load function: " + fname)
@@ -127,7 +148,7 @@ func (rq *RunQ) createNode(nodename, fname string) (*Node, error) {
 	if driver == nil {
 		return nil, errors.New("not found driver: " + l)
 	}
-	node := &Node{
+	node := &FuncNode{
 		name:   nodename,
 		driver: driver,
 	}
@@ -181,9 +202,10 @@ func (rq *RunQ) processCo(ast *AST) error {
 		if !b.IsCo() {
 			return nil
 		}
+
+		// here is the serial run function
+		//
 		if name := b.target.String(); name != "" {
-			// here is the serial run function
-			//
 			node, ok := rq.configuredNodes[name]
 			if !ok {
 				// not configured function, so run directly with default function name
@@ -193,13 +215,13 @@ func (rq *RunQ) processCo(ast *AST) error {
 				}
 			}
 			node.setrb(b)
-			rq.stage = append(rq.stage, node)
+			rq.stages = append(rq.stages, node)
 			return nil
 		}
 
 		// Here is the parallel run function
 		//
-		var last *Node
+		var last *FuncNode
 		names := b.bbody.(*FList).ToSlice()
 		for _, name := range names {
 			node, ok := rq.configuredNodes[name]
@@ -212,7 +234,7 @@ func (rq *RunQ) processCo(ast *AST) error {
 			}
 			node.setrb(b)
 			if last == nil {
-				rq.stage = append(rq.stage, node)
+				rq.stages = append(rq.stages, node)
 			} else {
 				last.parallel = node
 			}
@@ -222,20 +244,28 @@ func (rq *RunQ) processCo(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) Forstage(do func(int, *Node) error) error {
-	for i, e := range rq.stage {
-		if err := do(i+1, e); err != nil {
-			return err
+func (rq *RunQ) Forstage(do func(int, *FuncNode) error) error {
+	for i, e := range rq.stages {
+		if fore, ok := e.(*ForNode); ok {
+			_ = fore
+			continue
+		}
+		if fe, ok := e.(*FuncNode); ok {
+			if err := do(i+1, fe); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (rq *RunQ) Foreach(do func(int, *Node) error) error {
-	for i, e := range rq.stage {
-		for p := e; p != nil; p = p.parallel {
-			if err := do(i+1, p); err != nil {
-				return err
+func (rq *RunQ) ForfuncNode(do func(int, *FuncNode) error) error {
+	for i, e := range rq.stages {
+		if fe, ok := e.(*FuncNode); ok {
+			for p := fe; p != nil; p = p.parallel {
+				if err := do(i+1, p); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -244,9 +274,11 @@ func (rq *RunQ) Foreach(do func(int, *Node) error) error {
 
 func (rq *RunQ) NodeNum() int {
 	var n int
-	for _, e := range rq.stage {
-		for p := e; p != nil; p = p.parallel {
-			n += 1
+	for _, e := range rq.stages {
+		if fe, ok := e.(*FuncNode); ok {
+			for p := fe; p != nil; p = p.parallel {
+				n += 1
+			}
 		}
 	}
 	return n

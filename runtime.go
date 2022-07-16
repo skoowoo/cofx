@@ -52,7 +52,7 @@ func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.total = body.GetRunQ().NodeNum()
 		body.results = make(map[string]*FunctionResult)
 
-		err := body.GetRunQ().Foreach(func(stage int, n *Node) error {
+		err := body.GetRunQ().ForfuncNode(func(stage int, n *FuncNode) error {
 			if err := n.driver.Load(ctx); err != nil {
 				return err
 			}
@@ -85,18 +85,13 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		return err
 	}
 
-	fw.GetRunQ().Forstage(func(stage int, node *Node) error {
-		// find out functions at the stage
-		errResults := make([]*FunctionResult, 0)
-		results := make([]*FunctionResult, 0)
-		for p := node; p != nil; p = p.parallel {
-			results = append(results, fw.results[p.name])
-		}
-		ch := make(chan *FunctionResult, len(results))
-
+	fw.GetRunQ().Forstage(func(stage int, node *FuncNode) error {
+		ch := make(chan *FunctionResult, 1)
+		num := 0
 		// parallel run functions at the stage
 		for p := node; p != nil; p = p.parallel {
-			go func(n *Node, fr *FunctionResult) {
+			num += 1
+			go func(n *FuncNode, fr *FunctionResult) {
 				fr.begin = time.Now()
 				_ = n.driver.MergeArgs(n.Args())
 				fr.returns, fr.err = n.driver.Run(ctx)
@@ -109,7 +104,8 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		}
 
 		// waiting functions at the stage to finish running
-		for i := 0; i < len(results); i++ {
+		errResults := make([]*FunctionResult, 0)
+		for i := 0; i < num; i++ {
 			select {
 			case r := <-ch:
 				if r.err != nil {

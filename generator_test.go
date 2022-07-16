@@ -59,9 +59,9 @@ func TestParseFullWithRunq(t *testing.T) {
 
 		assert.Len(t, rq.configuredNodes, 1)
 		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
-		assert.Len(t, rq.stage, 5)
+		assert.Len(t, rq.stages, 5)
 
-		rq.Forstage(func(stage int, node *Node) error {
+		rq.Forstage(func(stage int, node *FuncNode) error {
 			if stage == 1 {
 				assert.Equal(t, "f1", node.name)
 				assert.Len(t, node.Args(), 2)
