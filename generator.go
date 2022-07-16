@@ -244,14 +244,18 @@ func (rq *RunQ) processCo(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) Forstage(do func(int, *FuncNode) error) error {
+func (rq *RunQ) Forstage(do func(int, []*FuncNode) error) error {
 	for i, e := range rq.stages {
 		if fore, ok := e.(*ForNode); ok {
 			_ = fore
 			continue
 		}
+		var nodes []*FuncNode
 		if fe, ok := e.(*FuncNode); ok {
-			if err := do(i+1, fe); err != nil {
+			for p := fe; p != nil; p = p.parallel {
+				nodes = append(nodes, p)
+			}
+			if err := do(i+1, nodes); err != nil {
 				return err
 			}
 		}
