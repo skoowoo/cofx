@@ -403,3 +403,16 @@ for {
 		assert.True(t, b.IsFor())
 	}
 }
+
+func TestParseBlocksOnlyForErr(t *testing.T) {
+	{
+		const testingdata string = `
+for {
+	co function1 -> out
+	co function2
+}
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+}

@@ -78,6 +78,28 @@ func (t *Token) validate() error {
 	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
 		return errors.Errorf("actual '%s', expect '%s': regex not match", t.str, pattern)
 	}
+
+	// check var
+	for _, seg := range t._segments {
+		if !seg.isvar {
+			continue
+		}
+		name := seg.str
+		if strings.Contains(seg.str, ".") {
+			fields := strings.Split(seg.str, ".")
+			if len(fields) != 2 {
+				return errors.Errorf("var '%s' in token '%s': variable format is not legal", name, t.String())
+			}
+			f1, f2 := fields[0], fields[1]
+			if f1 == "" || f2 == "" {
+				return errors.Errorf("var '%s' in token '%s': variable format is not legal", name, t.String())
+			}
+			name = f1
+		}
+		if v, _ := t._b.GetVar(name); v == nil {
+			return errors.Errorf("var '%s' in token '%s': variable is not defined", name, t.String())
+		}
+	}
 	return nil
 }
 
@@ -335,6 +357,105 @@ func (b *Block) CalcVar(name string) (string, bool) {
 		return "", false
 	}
 	panic("not found variable: " + name)
+}
+
+func (b *Block) extractTokenVar() error {
+	if b.bbody == nil {
+		return nil
+	}
+	lines := b.bbody.List()
+	for _, l := range lines {
+		// handle tokens
+		for _, t := range l.tokens {
+			if err := t.extractVar(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (b *Block) validate() error {
+	ts := []*Token{
+		&b.kind,
+		&b.target,
+		&b.operator,
+		&b.typevalue,
+	}
+	for _, t := range ts {
+		if err := t.validate(); err != nil {
+			return err
+		}
+	}
+	if b.bbody != nil {
+		lines := b.bbody.List()
+		for _, l := range lines {
+			// handle tokens
+			for _, t := range l.tokens {
+				if err := t.validate(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if b.IsCo() && !b.typevalue.IsEmpty() {
+		name := b.typevalue.String()
+		if v, _ := b.GetVar(name); v == nil {
+			return errors.Errorf("var '%s' in '%s': variable is not defined", name, b.String())
+		}
+	}
+	return nil
+}
+
+func (b *Block) buildVarGraph() error {
+	if b.bbody == nil {
+		return nil
+	}
+	lines := b.bbody.List()
+	for _, l := range lines {
+		if err := b._initvsys(l); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *Block) _initvsys(stm *Statement) error {
+	if stm.desc != "var" {
+		return nil
+	}
+	name := stm.tokens[0].String()
+	v := &_var{
+		segments: []struct {
+			str   string
+			isvar bool
+		}{},
+		child: []*_var{},
+	}
+	if len(stm.tokens) == 2 {
+		vt := stm.tokens[1]
+		if !vt.HasVar() {
+			v.v = vt.String()
+			v.cached = true
+		} else {
+			v.segments = vt.Segments()
+			for _, seg := range v.segments {
+				if !seg.isvar {
+					continue
+				}
+				vname := seg.str
+				chld, _ := b.GetVar(vname)
+				if chld != nil {
+					v.child = append(v.child, chld)
+				}
+			}
+		}
+	}
+	if err := b.PutVar(name, v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *Block) Iskind(s string) bool {

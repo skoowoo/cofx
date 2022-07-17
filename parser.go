@@ -35,93 +35,17 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
-		if err := doBlockHeader(b); err != nil {
+		if err := b.extractTokenVar(); err != nil {
 			return err
 		}
-
-		if err := doBlockBody(b); err != nil {
+		if err := b.buildVarGraph(); err != nil {
+			return err
+		}
+		if err := b.validate(); err != nil {
 			return err
 		}
 		return nil
 	})
-}
-
-func doBlockBody(b *Block) error {
-	if b.bbody == nil {
-		return nil
-	}
-	lines := b.bbody.List()
-	for _, l := range lines {
-		// handle tokens
-		for _, t := range l.tokens {
-			if err := t.extractVar(); err != nil {
-				return err
-			}
-			if err := t.validate(); err != nil {
-				return err
-			}
-		}
-
-		if err := buildVarGraph(b, l); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func buildVarGraph(b *Block, stm *Statement) error {
-	if stm.desc != "var" {
-		return nil
-	}
-	name := stm.tokens[0].String()
-	v := &_var{
-		segments: []struct {
-			str   string
-			isvar bool
-		}{},
-		child: []*_var{},
-	}
-	if len(stm.tokens) == 2 {
-		vt := stm.tokens[1]
-		if !vt.HasVar() {
-			v.v = vt.String()
-			v.cached = true
-		} else {
-			v.segments = vt.Segments()
-			for _, seg := range v.segments {
-				if !seg.isvar {
-					continue
-				}
-				vname := seg.str
-				chld, _ := b.GetVar(vname)
-				if chld != nil {
-					v.child = append(v.child, chld)
-				}
-			}
-		}
-	}
-	if err := b.PutVar(name, v); err != nil {
-		return err
-	}
-	return nil
-}
-
-func doBlockHeader(b *Block) error {
-	ts := []*Token{
-		&b.kind,
-		&b.target,
-		&b.operator,
-		&b.typevalue,
-	}
-	for _, t := range ts {
-		if err := t.extractVar(); err != nil {
-			return err
-		}
-		if err := t.validate(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 type aststate int
