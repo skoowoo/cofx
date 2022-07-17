@@ -21,6 +21,45 @@ func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
 	return blocks, bl, rq, nil
 }
 
+func TestForLoopWithRunq(t *testing.T) {
+	{
+		const testingdata string = `
+load "go:print"
+load "go:sleep"
+load "go:time"
+
+var t
+
+for {
+    co time -> t
+    co print {
+        "Time": "$(t.Now)"
+    }
+    co sleep
+}
+		`
+		blocks, bl, rq, err := loadTestingdata2(testingdata)
+		assert.NoError(t, err)
+		assert.NotNil(t, blocks)
+		assert.NotNil(t, bl)
+		assert.NotNil(t, rq)
+
+		assert.Len(t, rq.stages, 5)
+		for_node := rq.stages[0].(*ForNode)
+		assert.Equal(t, "FOR", for_node.Name())
+		assert.Equal(t, "time", rq.stages[1].Name())
+		assert.Equal(t, "print", rq.stages[2].Name())
+		assert.Equal(t, "sleep", rq.stages[3].Name())
+		btf_node := rq.stages[4].(*BtfNode)
+		assert.Equal(t, "BTF", btf_node.Name())
+
+		assert.Equal(t, 0, for_node.idx)
+		assert.Equal(t, 4, for_node.btfIdx)
+		assert.Equal(t, 4, btf_node.idx)
+		assert.Equal(t, 0, btf_node.forIdx)
+	}
+}
+
 func TestParseFullWithRunq(t *testing.T) {
 	{
 		const testingdata string = `
@@ -61,7 +100,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
 		assert.Len(t, rq.stages, 5)
 
-		rq.Forstage(func(stage int, nodes []*FuncNode) error {
+		rq.ForstageAndExec(func(stage int, nodes []*FuncNode) error {
 			if stage == 1 {
 				node := nodes[0]
 				assert.Equal(t, "f1", node.name)

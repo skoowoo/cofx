@@ -85,10 +85,10 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		return err
 	}
 
-	fw.GetRunQ().Forstage(func(stage int, nodes []*FuncNode) error {
-		ch := make(chan *FunctionResult, len(nodes))
+	fw.GetRunQ().ForstageAndExec(func(stage int, batch []*FuncNode) error {
+		ch := make(chan *FunctionResult, len(batch))
 		// parallel run functions at the stage
-		for _, node := range nodes {
+		for _, node := range batch {
 			go func(n *FuncNode, fr *FunctionResult) {
 				fr.begin = time.Now()
 				_ = n.driver.MergeArgs(n.Args())
@@ -103,7 +103,7 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 
 		// waiting functions at the stage to finish running
 		errResults := make([]*FunctionResult, 0)
-		for i := 0; i < len(nodes); i++ {
+		for i := 0; i < len(batch); i++ {
 			select {
 			case r := <-ch:
 				if r.err != nil {

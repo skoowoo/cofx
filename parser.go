@@ -575,6 +575,9 @@ func (ast *AST) scan(lx *lexer) error {
 				break
 			}
 
+			for _, t := range line {
+				t._b = parsingblock
+			}
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
 			}

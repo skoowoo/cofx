@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
+	"github.com/sirupsen/logrus"
 )
 
 func ParseFlowl(rd io.Reader) (rq *RunQ, ast *AST, err error) {
@@ -32,17 +33,44 @@ type location struct {
 //
 type Node interface {
 	String() string
-	Run() error
+	Name() string
+	Exec() error
 }
 
+// ForNode stands for the starting of 'for' loop statement
 type ForNode struct {
+	idx    int
+	btfIdx int
 }
 
 func (n *ForNode) String() string {
-	return ""
+	return "for loop"
 }
 
-func (n *ForNode) Run() error {
+func (n *ForNode) Name() string {
+	return "FOR"
+}
+
+func (n *ForNode) Exec() error {
+	return nil
+}
+
+// btf is an abbreviation for 'back to for'
+// BtfNode back to the starting of 'for' statement, start a new cycle
+type BtfNode struct {
+	idx    int
+	forIdx int
+}
+
+func (n *BtfNode) String() string {
+	return "back to for"
+}
+
+func (n *BtfNode) Name() string {
+	return "BTF"
+}
+
+func (n *BtfNode) Exec() error {
 	return nil
 }
 
@@ -59,8 +87,12 @@ func (n *FuncNode) String() string {
 	return n.name + "->" + n.driver.FunctionName()
 }
 
-func (n *FuncNode) Parallel() *FuncNode {
-	return n.parallel
+func (n *FuncNode) Name() string {
+	return n.name
+}
+
+func (n *FuncNode) Exec() error {
+	return nil
 }
 
 func (n *FuncNode) setrb(b *Block) {
@@ -69,10 +101,6 @@ func (n *FuncNode) setrb(b *Block) {
 
 func (n *FuncNode) setfb(b *Block) {
 	n.fn = b
-}
-
-func (n *FuncNode) Run() error {
-	return nil
 }
 
 // Args need to be called at running, because it will calcuate variable's value if has variable
@@ -105,7 +133,9 @@ func (n *FuncNode) SaveReturns(returns map[string]string, filter func(string) bo
 		if filter != nil && !filter(field) {
 			continue
 		}
-		b.CreateFieldVar(name, field, val)
+		if err := b.CreateFieldVar(name, field, val); err != nil {
+			logrus.Errorln(err)
+		}
 	}
 	return true
 }
@@ -113,10 +143,11 @@ func (n *FuncNode) SaveReturns(returns map[string]string, filter func(string) bo
 // RunQ
 //
 type RunQ struct {
-	locations       map[string]location
-	configuredNodes map[string]*FuncNode
-	stages          []Node
-	ast             *AST
+	ast               *AST
+	locations         map[string]location
+	configuredNodes   map[string]*FuncNode
+	stages            []Node
+	processingForNode *ForNode
 }
 
 func NewRunQ(ast *AST) (*RunQ, error) {
@@ -132,13 +163,13 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 	if err := q.processFn(ast); err != nil {
 		return nil, err
 	}
-	if err := q.processCo(ast); err != nil {
+	if err := q.processCoAndFor(ast); err != nil {
 		return nil, err
 	}
 	return q, nil
 }
 
-func (rq *RunQ) createNode(nodename, fname string) (*FuncNode, error) {
+func (rq *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	loc, ok := rq.locations[fname]
 	if !ok {
 		return nil, errors.New("not load function: " + fname)
@@ -184,7 +215,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 		if nodename == fname {
 			return errors.New("node and function name are the same: " + nodename)
 		}
-		node, err := rq.createNode(nodename, fname)
+		node, err := rq.createFuncNode(nodename, fname)
 		if err != nil {
 			return err
 		}
@@ -197,20 +228,54 @@ func (rq *RunQ) processFn(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) processCo(ast *AST) error {
-	return ast.Foreach(func(b *Block) error {
-		if !b.IsCo() {
+func (rq *RunQ) processCoAndFor(ast *AST) error {
+	err := ast.Foreach(func(b *Block) error {
+		if !b.IsCo() && !b.IsFor() {
 			return nil
 		}
 
-		// here is the serial run function
+		// Here is the for statement
+		//
+		if b.IsFor() {
+			if rq.processingForNode != nil {
+				// It means that a 'for' loop already exists
+				// Before a new 'for' starts, it should mark the end of the previous 'for'
+				node := &BtfNode{
+					idx:    len(rq.stages),
+					forIdx: rq.processingForNode.idx,
+				}
+				rq.processingForNode.btfIdx = node.idx
+				rq.stages = append(rq.stages, node)
+			}
+
+			node := &ForNode{
+				idx: len(rq.stages), // save the runq's index of 'ForNode'
+			}
+			rq.stages = append(rq.stages, node)
+			rq.processingForNode = node
+			return nil
+		}
+
+		if rq.processingForNode != nil && !b.parent.IsFor() {
+			// It means that a 'for' loop already exists
+			// The current 'co' statement is outside the 'for' loop, means that the 'for' loop has ended
+			node := &BtfNode{
+				idx:    len(rq.stages),
+				forIdx: rq.processingForNode.idx,
+			}
+			rq.processingForNode.btfIdx = node.idx
+			rq.stages = append(rq.stages, node)
+			rq.processingForNode = nil
+		}
+
+		// Here is the serial run function
 		//
 		if name := b.target.String(); name != "" {
 			node, ok := rq.configuredNodes[name]
 			if !ok {
-				// not configured function, so run directly with default function name
+				// Not configured function, so run directly with default function name
 				var err error
-				if node, err = rq.createNode(name, name); err != nil {
+				if node, err = rq.createFuncNode(name, name); err != nil {
 					return err
 				}
 			}
@@ -226,9 +291,9 @@ func (rq *RunQ) processCo(ast *AST) error {
 		for _, name := range names {
 			node, ok := rq.configuredNodes[name]
 			if !ok {
-				// not configured function, so run directly with default function name
+				// Not configured function, so run directly with default function name
 				var err error
-				if node, err = rq.createNode(name, name); err != nil {
+				if node, err = rq.createFuncNode(name, name); err != nil {
 					return err
 				}
 			}
@@ -242,23 +307,17 @@ func (rq *RunQ) processCo(ast *AST) error {
 		}
 		return nil
 	})
-}
-
-func (rq *RunQ) Forstage(do func(int, []*FuncNode) error) error {
-	for i, e := range rq.stages {
-		if fore, ok := e.(*ForNode); ok {
-			_ = fore
-			continue
+	if err != nil {
+		return err
+	}
+	if rq.processingForNode != nil {
+		node := &BtfNode{
+			idx:    len(rq.stages),
+			forIdx: rq.processingForNode.idx,
 		}
-		var nodes []*FuncNode
-		if fe, ok := e.(*FuncNode); ok {
-			for p := fe; p != nil; p = p.parallel {
-				nodes = append(nodes, p)
-			}
-			if err := do(i+1, nodes); err != nil {
-				return err
-			}
-		}
+		rq.processingForNode.btfIdx = node.idx
+		rq.stages = append(rq.stages, node)
+		rq.processingForNode = nil
 	}
 	return nil
 }
@@ -286,4 +345,37 @@ func (rq *RunQ) NodeNum() int {
 		}
 	}
 	return n
+}
+
+// ForstageAndExec is the entry and main program for executing the run queue
+func (rq *RunQ) ForstageAndExec(exec func(int, []*FuncNode) error) error {
+	i := 0
+	for i < len(rq.stages) {
+		e := rq.stages[i]
+
+		if n, ok := e.(*ForNode); ok {
+			if err := e.Exec(); err != nil {
+				i = n.btfIdx + 1
+				continue
+			}
+		}
+
+		if n, ok := e.(*BtfNode); ok {
+			i = n.forIdx
+			continue
+		}
+
+		if n, ok := e.(*FuncNode); ok {
+			var batch []*FuncNode
+			for p := n; p != nil; p = p.parallel {
+				batch = append(batch, p)
+			}
+			if err := exec(i+1, batch); err != nil {
+				return err
+			}
+		}
+
+		i += 1
+	}
+	return nil
 }

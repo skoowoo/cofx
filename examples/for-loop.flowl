@@ -1,0 +1,13 @@
+load "go:print"
+load "go:sleep"
+load "go:time"
+
+var t
+
+for {
+    co time -> t
+    co print {
+        "Time": "$(t.Now)"
+    }
+    co sleep
+}
