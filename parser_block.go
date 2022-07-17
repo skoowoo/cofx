@@ -294,18 +294,26 @@ func (b *Block) PutVar(name string, v *_var) error {
 	return b.variable.put(name, v)
 }
 
+// UpdateVar insert or update a variable into map
+func (b *Block) UpdateVar(name string, v *_var) error {
+	return b.variable.putOrUpdate(name, v)
+}
+
 // CreateFieldVar TODO:
 func (b *Block) CreateFieldVar(name, field, val string) error {
 	s := name + "." + field
 	v := &_var{
 		v:      val,
-		cached: true,
+		cached: false,
 	}
-	return b.PutVar(s, v)
+	return b.UpdateVar(s, v)
 }
 
 // CalcVar calcuate the variable's value
 func (b *Block) CalcVar(name string) (string, bool) {
+	if b == nil {
+		panic(fmt.Sprintf("var name '%s': block is nil", name))
+	}
 	var _debug_ strings.Builder
 	for p := b; p != nil; p = p.parent {
 		if debug.Enabled() {

@@ -23,6 +23,14 @@ type vsys struct {
 	vars map[string]*_var
 }
 
+func (vs *vsys) putOrUpdate(name string, v *_var) error {
+	vs.Lock()
+	defer vs.Unlock()
+
+	vs.vars[name] = v
+	return nil
+}
+
 func (vs *vsys) put(name string, v *_var) error {
 	vs.Lock()
 	defer vs.Unlock()
