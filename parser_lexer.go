@@ -137,7 +137,7 @@ func (l *lexer) split(line string, ln int) error {
 			}
 			l.insert(ln, &Token{
 				str: l.exportString(),
-				typ: _identifier_t,
+				typ: _ident_t,
 			})
 
 			if is.Space(c) || is.EOL(c) {

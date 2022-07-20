@@ -3,11 +3,24 @@ package cofunc
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
+func WrapErrorf(err error, format string, args ...interface{}) error {
+	var builder strings.Builder
+	builder.WriteString(err.Error())
+	builder.WriteString(": ")
+	return fmt.Errorf(builder.String()+format, args...)
+}
+
 func ParseErrorf(ln int, err error, format string, args ...interface{}) error {
-	return fmt.Errorf("%d: %w: "+format, ln, err, args)
+	var builder strings.Builder
+	builder.WriteString(strconv.Itoa(ln))
+	builder.WriteString(": ")
+	builder.WriteString(err.Error())
+	builder.WriteString(": ")
+	return fmt.Errorf(builder.String()+format, args...)
 }
 
 var (

@@ -420,21 +420,42 @@ for {
 }
 
 func TestInferTree(t *testing.T) {
-	var tokens []*Token = []*Token{
-		{
-			str: "",
-			typ: _string_t,
-		},
-		{
-			str: "->",
-			typ: _symbol_t,
-		},
-		{
-			str: "",
-			typ: _identifier_t,
-		},
+	{
+		var tokens []*Token = []*Token{
+			{
+				str: "hello",
+				typ: _string_t,
+			},
+			{
+				str: "->",
+				typ: _symbol_t,
+			},
+			{
+				str: "a",
+				typ: _ident_t,
+			},
+		}
+		infertree := _buildInferTree()
+		_, err := _lookupInferTree(infertree, tokens)
+		assert.NoError(t, err)
 	}
-	infertree := buildInferTree()
-	_, err := lookupInferTree(infertree, tokens)
-	assert.NoError(t, err)
+	{
+		var tokens []*Token = []*Token{
+			{
+				str: "a",
+				typ: _ident_t,
+			},
+			{
+				str: "<-",
+				typ: _symbol_t,
+			},
+			{
+				str: "hello",
+				typ: _string_t,
+			},
+		}
+		infertree := _buildInferTree()
+		_, err := _lookupInferTree(infertree, tokens)
+		assert.NoError(t, err)
+	}
 }

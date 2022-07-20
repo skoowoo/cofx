@@ -43,7 +43,7 @@ func EQ(x rune) bool {
 }
 
 func Symbol(x rune) bool {
-	return LB(x) || RB(x) || x == '>' || x == ':' || EQ(x) || x == '+' || x == '-' || x == '*' || x == '/'
+	return LB(x) || RB(x) || x == '>' || x == '<' || x == ':' || EQ(x) || x == '+' || x == '-' || x == '*' || x == '/'
 }
 
 func Identifier(x rune) bool {
