@@ -359,22 +359,6 @@ func (b *Block) CalcVar(name string) (string, bool) {
 	panic("not found variable: " + name)
 }
 
-func (b *Block) extractTokenVar() error {
-	if b.bbody == nil {
-		return nil
-	}
-	lines := b.bbody.List()
-	for _, l := range lines {
-		// handle tokens
-		for _, t := range l.tokens {
-			if err := t.extractVar(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (b *Block) validate() error {
 	ts := []*Token{
 		&b.kind,
@@ -387,41 +371,22 @@ func (b *Block) validate() error {
 			return err
 		}
 	}
-	if b.bbody != nil {
-		lines := b.bbody.List()
-		for _, l := range lines {
-			// handle tokens
-			for _, t := range l.tokens {
-				if err := t.validate(); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	if b.IsCo() && !b.typevalue.IsEmpty() {
-		name := b.typevalue.String()
-		if v, _ := b.GetVar(name); v == nil {
-			return VarErrorf(b.typevalue.ln, ErrVariableNotDefined, "'%s'", name)
-		}
-	}
-	return nil
-}
-
-func (b *Block) buildVarGraph() error {
 	if b.bbody == nil {
 		return nil
 	}
 	lines := b.bbody.List()
 	for _, l := range lines {
-		if err := b._initvsys(l); err != nil {
-			return err
+		// handle tokens
+		for _, t := range l.tokens {
+			if err := t.validate(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (b *Block) _initvsys(stm *Statement) error {
+func (b *Block) insertVar(stm *Statement) error {
 	if stm.desc != "var" {
 		return nil
 	}
@@ -448,8 +413,9 @@ func (b *Block) _initvsys(stm *Statement) error {
 				chld, _ := b.GetVar(vname)
 				if chld != nil {
 					v.child = append(v.child, chld)
+				} else {
+					return TokenErrorf(vt.ln, ErrVariableNotDefined, "'%s', variable name '%s'", vt, vname)
 				}
-				// TODO:
 			}
 		}
 	}

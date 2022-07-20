@@ -435,8 +435,8 @@ func TestInferTree(t *testing.T) {
 				typ: _ident_t,
 			},
 		}
-		infertree := buildInferTree()
-		_, err := lookupInferTree(infertree, tokens)
+		infertree := _buildInferTree()
+		_, err := _lookupInferTree(infertree, tokens)
 		assert.NoError(t, err)
 	}
 	{
@@ -454,8 +454,8 @@ func TestInferTree(t *testing.T) {
 				typ: _string_t,
 			},
 		}
-		infertree := buildInferTree()
-		_, err := lookupInferTree(infertree, tokens)
+		infertree := _buildInferTree()
+		_, err := _lookupInferTree(infertree, tokens)
 		assert.NoError(t, err)
 	}
 }

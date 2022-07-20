@@ -5,21 +5,23 @@ import (
 	"bufio"
 	"io"
 	"math"
+	"strings"
 )
 
 func init() {
-	infertree = buildInferTree()
+	infertree = _buildInferTree()
 }
 
 var infertree *_InferNode
 
 const (
-	_kw_load = "load"
-	_kw_fn   = "fn"
-	_kw_co   = "co"
-	_kw_var  = "var"
-	_kw_args = "args"
-	_kw_for  = "for"
+	_kw_comment = "//"
+	_kw_load    = "load"
+	_kw_fn      = "fn"
+	_kw_co      = "co"
+	_kw_var     = "var"
+	_kw_args    = "args"
+	_kw_for     = "for"
 )
 
 type aststate int
@@ -162,12 +164,6 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
-		if err := b.extractTokenVar(); err != nil {
-			return err
-		}
-		if err := b.buildVarGraph(); err != nil {
-			return err
-		}
 		if err := b.validate(); err != nil {
 			return err
 		}
@@ -253,6 +249,10 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 
 	for _, t := range line {
 		t._b = b
+		t.ln = ln
+		if err := t.extractVar(); err != nil {
+			return nil, err
+		}
 	}
 
 	var body bbody
@@ -273,12 +273,15 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		val = line[3]
 	}
 
-	stm := newstm("var")
-	stm.Append(name)
+	var stm *Statement
 	if val != nil {
-		stm.Append(val)
+		stm = newstm("var").Append(name).Append(val)
+	} else {
+		stm = newstm("var").Append(name)
 	}
-	b.bbody.Append(stm)
+	if err := b.insertVar(stm); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -364,6 +367,13 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		return nil, err
 	}
 
+	if !nb.typevalue.IsEmpty() {
+		name := nb.typevalue.String()
+		if v, _ := nb.GetVar(name); v == nil {
+			return nil, VarErrorf(nb.typevalue.ln, ErrVariableNotDefined, "'%s'", name)
+		}
+	}
+
 	b.child = append(b.child, nb)
 	return nb, nil
 }
@@ -413,7 +423,8 @@ func (ast *AST) scan(lx *lexer) error {
 		case _ast_global:
 			kind := line[0]
 			switch kind.String() {
-			case "//":
+			case _kw_comment:
+				// discard the commments
 				return nil
 			case _kw_load:
 				return ast.parseLoad(line, ln, parsingblock)
@@ -443,10 +454,13 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock = forblock
 				ast._goto(_ast_for_body)
 			default:
-				if _, err := lookupInferTree(infertree, line); err == nil {
+				if _parse, err := _lookupInferTree(infertree, line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return StatementTokensErrorf(err, line)
+					}
 					return nil
 				}
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return StatementTokensErrorf(ErrStatementUnknow, line)
 			}
 		case _ast_fn_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -476,7 +490,11 @@ func (ast *AST) scan(lx *lexer) error {
 				break
 			}
 			for _, t := range line {
+				t.ln = ln
 				t._b = parsingblock
+				if err := t.extractVar(); err != nil {
+					return StatementTokensErrorf(err, line)
+				}
 			}
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
@@ -493,7 +511,11 @@ func (ast *AST) scan(lx *lexer) error {
 			}
 
 			for _, t := range line {
+				t.ln = ln
 				t._b = parsingblock
+				if err := t.extractVar(); err != nil {
+					return StatementTokensErrorf(err, line)
+				}
 			}
 			if err := parsingblock.bbody.Append(line); err != nil {
 				return err
@@ -547,13 +569,13 @@ type _InferData struct {
 type _InferNode struct {
 	data   _InferData
 	childs []_InferNode
-	_parse func(*Block, []*Token) error
+	_parse func(*Block, []*Token, int) error
 }
 
-func lookupInferTree(root *_InferNode, tokens []*Token) (func(*Block, []*Token) error, error) {
+func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, int) error, error) {
 	var found = false
 	p := root
-	for _, t := range tokens {
+	for _, t := range line {
 		for i, child := range p.childs {
 			if child.data.tt != t.typ {
 				continue
@@ -567,35 +589,36 @@ func lookupInferTree(root *_InferNode, tokens []*Token) (func(*Block, []*Token) 
 		if found {
 			found = false
 		} else {
-			return nil, StatementTokensErrorf(ErrStatementInferFailed, tokens)
+			return nil, StatementTokensErrorf(ErrStatementInferFailed, line)
 		}
 	}
 	return p._parse, nil
 }
 
-func buildInferTree() *_InferNode {
-	var rules [][]_InferData = [][]_InferData{
-		{{_string_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
-		{{_number_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
-		{{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},
-		{{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},
+func _buildInferTree() *_InferNode {
+	var rules map[string][]_InferData = map[string][]_InferData{
+		"write_var1": {{_string_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
+		"write_var2": {{_number_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
+		"write_var3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},
+		"write_var4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},
 	}
 
 	root := &_InferNode{}
 	p := root
-	for _, rule := range rules {
+	for k, rule := range rules {
 		for _, e := range rule {
-			p = insertInferTree(p, e)
+			p = _insertInferTree(p, e)
 		}
-		// TODO: set _parse
-		p._parse = nil
+		if strings.HasPrefix(k, "write_var") {
+			p._parse = _parseWriteVar
+		}
 
 		p = root
 	}
 	return root
 }
 
-func insertInferTree(p *_InferNode, n _InferData) *_InferNode {
+func _insertInferTree(p *_InferNode, n _InferData) *_InferNode {
 	for i, child := range p.childs {
 		if child.data.tt == n.tt && child.data.tv == n.tv {
 			return &p.childs[i]
@@ -606,4 +629,27 @@ func insertInferTree(p *_InferNode, n _InferData) *_InferNode {
 	})
 	l := len(p.childs)
 	return &p.childs[l-1]
+}
+
+func _parseWriteVar(b *Block, line []*Token, ln int) error {
+	t1, op, t2 := line[0], line[1], line[2]
+	if op.String() == "->" {
+		t1, t2 = t2, t1
+	}
+
+	t1.typ = _varname_t
+	t1._b = b
+	t1.ln = ln
+
+	t2._b = b
+	t2.ln = ln
+	if err := t2.extractVar(); err != nil {
+		return err
+	}
+
+	name := t1.String()
+	if v, _ := b.GetVar(name); v == nil {
+		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+	}
+	return b.bbody.Append(newstm("write_var").Append(t1).Append(t2))
 }
