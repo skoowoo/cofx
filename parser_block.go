@@ -16,7 +16,7 @@ type TokenType int
 
 const (
 	_unknow_t TokenType = iota
-	_identifier_t
+	_ident_t
 	_symbol_t
 	_number_t
 	_string_t
@@ -31,7 +31,7 @@ const (
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
 	_string_t:       regexp.MustCompile(`^*$`),
-	_identifier_t:   regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
+	_ident_t:        regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
 	_number_t:       regexp.MustCompile(`^[1-9][0-9]*$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
 	_operator_t:     regexp.MustCompile(`^(=|->)$`),
@@ -449,12 +449,14 @@ func (b *Block) _initvsys(stm *Statement) error {
 				if chld != nil {
 					v.child = append(v.child, chld)
 				}
+				// TODO:
 			}
 		}
 	}
 	if err := b.PutVar(name, v); err != nil {
 		return StatementTokensErrorf(err, stm.tokens)
 	}
+	b.CalcVar(name)
 	return nil
 }
 

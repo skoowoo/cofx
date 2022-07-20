@@ -44,63 +44,63 @@ var statementPatterns = map[string]struct {
 }{
 	"load": {
 		2, 2,
-		[]TokenType{_identifier_t, _string_t},
+		[]TokenType{_ident_t, _string_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _load_t},
 		nil,
 	},
 	"fn": {
 		5, 5,
-		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
 		[]string{"", "", "=", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"co1": {
 		2, 2,
-		[]TokenType{_identifier_t, _identifier_t},
+		[]TokenType{_ident_t, _ident_t},
 		[]string{"", ""},
 		[]TokenType{_keyword_t, _functionname_t},
 		nil,
 	},
 	"co1->": {
 		4, 4,
-		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t},
+		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t},
 		[]string{"", "", "->", ""},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t},
 		nil,
 	},
 	"co1+": {
 		3, 3,
-		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _ident_t, _symbol_t},
 		[]string{"", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"co1+->": {
 		5, 5,
-		[]TokenType{_identifier_t, _identifier_t, _symbol_t, _identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
 		[]string{"", "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"co2": {
 		2, 2,
-		[]TokenType{_identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _symbol_t},
 		[]string{"", "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &FList{etype: _functionname_t} },
 	},
 	"var": {
 		2, math.MaxInt,
-		[]TokenType{_identifier_t, _identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _ident_t, _symbol_t},
 		[]string{"", "", "="},
 		[]TokenType{_keyword_t, _varname_t, _operator_t},
 		nil,
 	},
 	"args": {
 		3, 3,
-		[]TokenType{_identifier_t, _symbol_t, _symbol_t},
+		[]TokenType{_ident_t, _symbol_t, _symbol_t},
 		[]string{"", "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
 		func() bbody { return &FMap{} },
@@ -121,7 +121,7 @@ var statementPatterns = map[string]struct {
 	},
 	"for": {
 		2, 2,
-		[]TokenType{_identifier_t, _symbol_t},
+		[]TokenType{_ident_t, _symbol_t},
 		[]string{"", "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		nil,
@@ -575,8 +575,10 @@ func lookupInferTree(root *_InferNode, tokens []*Token) (func(*Block, []*Token) 
 
 func buildInferTree() *_InferNode {
 	var rules [][]_InferData = [][]_InferData{
-		{{_string_t, ""}, {_symbol_t, "->"}, {_identifier_t, ""}},
-		{{_number_t, ""}, {_symbol_t, "->"}, {_identifier_t, ""}},
+		{{_string_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
+		{{_number_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
+		{{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},
+		{{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},
 	}
 
 	root := &_InferNode{}

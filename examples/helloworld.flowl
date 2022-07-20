@@ -2,6 +2,11 @@ load "go:print"
 
 var a = "hello world!!!"
 
+
+var b = "$(a)"
+
+a <- $(a)
+
 co print {
     "_" : "$(a)"
 }
