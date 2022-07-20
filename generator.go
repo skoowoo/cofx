@@ -1,7 +1,6 @@
 package cofunc
 
 import (
-	"errors"
 	"io"
 	"path"
 	"strings"
@@ -172,12 +171,12 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 func (rq *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	loc, ok := rq.locations[fname]
 	if !ok {
-		return nil, errors.New("not load function: " + fname)
+		return nil, GeneratorErrorf(ErrFunctionNotLoaded, "'%s'", fname)
 	}
 	l := loc.dname + ":" + loc.path
 	driver := functiondriver.New(l)
 	if driver == nil {
-		return nil, errors.New("not found driver: " + l)
+		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", l)
 	}
 	node := &FuncNode{
 		name:   nodename,
@@ -195,7 +194,7 @@ func (rq *RunQ) processLoad(ast *AST) error {
 		fields := strings.Split(s, ":")
 		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
 		if _, ok := rq.locations[fname]; ok {
-			return errors.New("repeat to load function: " + fname)
+			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", fname)
 		}
 		rq.locations[fname] = location{
 			dname: dname,
@@ -213,7 +212,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 		}
 		nodename, fname := b.target.String(), b.typevalue.String()
 		if nodename == fname {
-			return errors.New("node and function name are the same: " + nodename)
+			return GeneratorErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
 		}
 		node, err := rq.createFuncNode(nodename, fname)
 		if err != nil {
@@ -221,7 +220,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 		}
 		node.setfb(b)
 		if _, ok := rq.configuredNodes[node.name]; ok {
-			return errors.New("repeat to configure function:" + node.name)
+			return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s', function name '%s'", node.name, fname)
 		}
 		rq.configuredNodes[node.name] = node
 		return nil
@@ -276,7 +275,7 @@ func (rq *RunQ) processCoAndFor(ast *AST) error {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = rq.createFuncNode(name, name); err != nil {
-					return err
+					return GeneratorErrorf(err, "in serial run function")
 				}
 			}
 			node.setrb(b)
@@ -294,7 +293,7 @@ func (rq *RunQ) processCoAndFor(ast *AST) error {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = rq.createFuncNode(name, name); err != nil {
-					return err
+					return GeneratorErrorf(err, "in parallel run function")
 				}
 			}
 			node.setrb(b)

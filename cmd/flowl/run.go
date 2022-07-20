@@ -21,19 +21,19 @@ func runFlowl(name string) error {
 		f.Close()
 	}()
 
-	sd := co.NewScheduler()
+	sched := co.New()
 
 	fid := feedbackid.NewDefaultID(name)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := sd.AddFlow(ctx, fid, f); err != nil {
+	if err := sched.AddFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if err := sd.ReadyFlow(ctx, fid); err != nil {
+	if err := sched.ReadyFlow(ctx, fid); err != nil {
 		return err
 	}
-	if err := sd.StartFlow(ctx, fid); err != nil {
+	if err := sched.StartFlow(ctx, fid); err != nil {
 		return err
 	}
 	return nil

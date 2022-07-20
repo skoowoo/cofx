@@ -60,7 +60,7 @@ func (b *flowBody) GetAST() *AST {
 	return b.ast
 }
 
-func newFlow(id feedbackid.ID, runq *RunQ, ast *AST) *Flow {
+func newflow(id feedbackid.ID, runq *RunQ, ast *AST) *Flow {
 	return &Flow{
 		flowBody: flowBody{
 			id:   id,

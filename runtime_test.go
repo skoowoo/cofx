@@ -26,7 +26,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 	co	sleep
 	`
 
-	sd := NewScheduler()
+	sd := New()
 
 	ctx := context.Background()
 	id := feedbackid.NewDefaultID("testingdata.flowl")
