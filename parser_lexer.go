@@ -95,7 +95,7 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_var_directuse1)
 				break
 			}
-			return lexerErr().New(line, ln, c, l.state)
+			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_symbol:
 			if is.Symbol(c) {
 				l.saveRune(c)
@@ -129,7 +129,7 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_string)
 				break
 			}
-			return lexerErr().New(line, ln, c, l.state)
+			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_identifier:
 			if is.Identifier(c) {
 				l.saveRune(c)
@@ -149,7 +149,7 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_symbol)
 				break
 			}
-			return lexerErr().New(line, ln, c, l.state)
+			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_string:
 			if is.BackSlash(c) {
 				l._goto(_lx_string_backslash)
@@ -177,7 +177,7 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_var_directuse2)
 				break
 			}
-			return lexerErr().New(line, ln, c, l.state)
+			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_var_directuse2:
 			if is.Identifier(c) {
 				l.saveRune(c)
@@ -192,7 +192,7 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_unknow)
 				break
 			}
-			return lexerErr().New(line, ln, c, l.state)
+			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		}
 	}
 	return nil

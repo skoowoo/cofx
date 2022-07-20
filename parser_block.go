@@ -8,7 +8,6 @@ import (
 
 	"github.com/cofunclabs/cofunc/pkg/debug"
 	"github.com/cofunclabs/cofunc/pkg/is"
-	"github.com/pkg/errors"
 )
 
 // Token
@@ -45,6 +44,7 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 type Token struct {
 	str         string
 	typ         TokenType
+	ln          int
 	_b          *Block
 	_persistent string
 	_segments   []struct {
@@ -76,7 +76,7 @@ func (t *Token) String() string {
 
 func (t *Token) validate() error {
 	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
-		return errors.Errorf("actual '%s', expect '%s': regex not match", t.str, pattern)
+		return TokenErrorf(t.ln, ErrTokenRegex, "actual '%s', expect '%s'", t, pattern)
 	}
 
 	// check var
@@ -88,16 +88,16 @@ func (t *Token) validate() error {
 		if strings.Contains(seg.str, ".") {
 			fields := strings.Split(seg.str, ".")
 			if len(fields) != 2 {
-				return errors.Errorf("var '%s' in token '%s': variable format is not legal", name, t.String())
+				return VarErrorf(t.ln, ErrVariableFormat, "'%s' in token '%s'", name, t)
 			}
 			f1, f2 := fields[0], fields[1]
 			if f1 == "" || f2 == "" {
-				return errors.Errorf("var '%s' in token '%s': variable format is not legal", name, t.String())
+				return VarErrorf(t.ln, ErrVariableFormat, "'%s' in token '%s'", name, t)
 			}
 			name = f1
 		}
 		if v, _ := t._b.GetVar(name); v == nil {
-			return errors.Errorf("var '%s' in token '%s': variable is not defined", name, t.String())
+			return VarErrorf(t.ln, ErrVariableNotDefined, "'%s' in token '%s'", name, t)
 		}
 	}
 	return nil
@@ -195,7 +195,7 @@ func (t *Token) extractVar() error {
 				}
 				name := t.str[vstart+2 : i] // start +2: skip "$("
 				if name == "" {
-					return errors.New("contain invalid var: " + t.str)
+					return VarErrorf(t.ln, ErrVariableNameEmpty, "token '%s'", t)
 				}
 
 				if start < vstart {
@@ -402,7 +402,7 @@ func (b *Block) validate() error {
 	if b.IsCo() && !b.typevalue.IsEmpty() {
 		name := b.typevalue.String()
 		if v, _ := b.GetVar(name); v == nil {
-			return errors.Errorf("var '%s' in '%s': variable is not defined", name, b.String())
+			return VarErrorf(b.typevalue.ln, ErrVariableNotDefined, "'%s'", name)
 		}
 	}
 	return nil
@@ -453,7 +453,7 @@ func (b *Block) _initvsys(stm *Statement) error {
 		}
 	}
 	if err := b.PutVar(name, v); err != nil {
-		return err
+		return StatementTokensErrorf(err, stm.tokens)
 	}
 	return nil
 }
@@ -487,13 +487,13 @@ func (b *Block) IsGlobal() bool {
 }
 
 func (b *Block) IsFor() bool {
-	return b.Iskind("for")
+	return b.Iskind(_kw_for)
 }
 
 func (b *Block) String() string {
 	if b.bbody != nil {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s", bodylen="%d"`, &b.kind, &b.target, &b.operator, &b.typevalue, b.bbody.Len())
+		return fmt.Sprintf("%s %s %s %s {}", &b.kind, &b.target, &b.operator, &b.typevalue)
 	} else {
-		return fmt.Sprintf(`kind="%s", target="%s", operator="%s", tov="%s"`, &b.kind, &b.target, &b.operator, &b.typevalue)
+		return fmt.Sprintf("%s %s %s %s", &b.kind, &b.target, &b.operator, &b.typevalue)
 	}
 }

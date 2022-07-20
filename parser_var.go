@@ -1,7 +1,7 @@
 package cofunc
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -37,7 +37,7 @@ func (vs *vsys) put(name string, v *_var) error {
 
 	_, ok := vs.vars[name]
 	if ok {
-		return errors.New("variable name is same: " + name)
+		return fmt.Errorf("'%s': %w", name, ErrVariableNameDuplicated)
 	}
 	vs.vars[name] = v
 	return nil
