@@ -40,6 +40,8 @@ func TestParseBlocksFull(t *testing.T) {
 	co	function3
 	co function4
 
+	"test" -> c
+
 	fn f1 = function1 {
 		args = {
 			"k1": "v1"
@@ -415,4 +417,24 @@ for {
 		_, err := loadTestingdata(testingdata)
 		assert.Error(t, err)
 	}
+}
+
+func TestInferTree(t *testing.T) {
+	var tokens []*Token = []*Token{
+		{
+			str: "",
+			typ: _string_t,
+		},
+		{
+			str: "->",
+			typ: _symbol_t,
+		},
+		{
+			str: "",
+			typ: _identifier_t,
+		},
+	}
+	infertree := buildInferTree()
+	_, err := lookupInferTree(infertree, tokens)
+	assert.NoError(t, err)
 }

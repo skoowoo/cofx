@@ -7,45 +7,20 @@ import (
 	"math"
 )
 
-func ParseAST(rd io.Reader) (*AST, error) {
-	lx := newLexer()
-	buff := bufio.NewReader(rd)
-	for n := 1; ; n += 1 {
-		line, err := buff.ReadString('\n')
-		if err == io.EOF {
-			if len(line) != 0 {
-				if err := lx.split(line, n); err != nil {
-					return nil, err
-				}
-			}
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if err := lx.split(line, n); err != nil {
-			return nil, err
-		}
-	}
-
-	ast := newAST()
-	if err := ast.scan(lx); err != nil {
-		return nil, err
-	}
-
-	return ast, ast.Foreach(func(b *Block) error {
-		if err := b.extractTokenVar(); err != nil {
-			return err
-		}
-		if err := b.buildVarGraph(); err != nil {
-			return err
-		}
-		if err := b.validate(); err != nil {
-			return err
-		}
-		return nil
-	})
+func init() {
+	infertree = buildInferTree()
 }
+
+var infertree *_InferNode
+
+const (
+	_kw_load = "load"
+	_kw_fn   = "fn"
+	_kw_co   = "co"
+	_kw_var  = "var"
+	_kw_args = "args"
+	_kw_for  = "for"
+)
 
 type aststate int
 
@@ -58,75 +33,6 @@ const (
 	_ast_args_body
 	_ast_for_body
 )
-
-type _FA struct {
-	state    aststate
-	prestate aststate
-}
-
-func (f *_FA) _goto(s aststate) {
-	f.prestate = f.state
-	f.state = s
-}
-
-func (f *_FA) phase() aststate {
-	return f.state
-}
-
-// AST store all blocks in the flowl
-//
-const (
-	_kw_load = "load"
-	_kw_fn   = "fn"
-	_kw_co   = "co"
-	_kw_var  = "var"
-	_kw_args = "args"
-	_kw_for  = "for"
-)
-
-type AST struct {
-	global Block
-
-	// for parsing
-	_FA
-}
-
-func newAST() *AST {
-	ast := &AST{
-		global: Block{
-			kind: Token{
-				str: "global",
-			},
-			target:    Token{},
-			operator:  Token{},
-			typevalue: Token{},
-			child:     make([]*Block, 0),
-			parent:    nil,
-			variable:  vsys{vars: make(map[string]*_var)},
-			bbody:     &plainbody{},
-		},
-		_FA: _FA{
-			state: _ast_global,
-		},
-	}
-	return ast
-}
-
-func (a *AST) Foreach(do func(*Block) error) error {
-	return deepwalk(&a.global, do)
-}
-
-func deepwalk(b *Block, do func(*Block) error) error {
-	if err := do(b); err != nil {
-		return err
-	}
-	for _, c := range b.child {
-		if err := deepwalk(c, do); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 var statementPatterns = map[string]struct {
 	min     int
@@ -227,6 +133,91 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_symbol_t},
 		nil,
 	},
+}
+
+func ParseAST(rd io.Reader) (*AST, error) {
+	lx := newLexer()
+	buff := bufio.NewReader(rd)
+	for n := 1; ; n += 1 {
+		line, err := buff.ReadString('\n')
+		if err == io.EOF {
+			if len(line) != 0 {
+				if err := lx.split(line, n); err != nil {
+					return nil, err
+				}
+			}
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := lx.split(line, n); err != nil {
+			return nil, err
+		}
+	}
+
+	ast := newAST()
+	if err := ast.scan(lx); err != nil {
+		return nil, err
+	}
+
+	return ast, ast.Foreach(func(b *Block) error {
+		if err := b.extractTokenVar(); err != nil {
+			return err
+		}
+		if err := b.buildVarGraph(); err != nil {
+			return err
+		}
+		if err := b.validate(); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// AST store all blocks in the flowl
+type AST struct {
+	global Block
+
+	// for parsing
+	_FA
+}
+
+func newAST() *AST {
+	ast := &AST{
+		global: Block{
+			kind: Token{
+				str: "global",
+			},
+			target:    Token{},
+			operator:  Token{},
+			typevalue: Token{},
+			child:     make([]*Block, 0),
+			parent:    nil,
+			variable:  vsys{vars: make(map[string]*_var)},
+			bbody:     &plainbody{},
+		},
+		_FA: _FA{
+			state: _ast_global,
+		},
+	}
+	return ast
+}
+
+func (a *AST) Foreach(do func(*Block) error) error {
+	return deepwalk(&a.global, do)
+}
+
+func deepwalk(b *Block, do func(*Block) error) error {
+	if err := do(b); err != nil {
+		return err
+	}
+	for _, c := range b.child {
+		if err := deepwalk(c, do); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, error) {
@@ -452,6 +443,9 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock = forblock
 				ast._goto(_ast_for_body)
 			default:
+				if _, err := lookupInferTree(infertree, line); err == nil {
+					return nil
+				}
 				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_fn_body:
@@ -529,4 +523,85 @@ func (ast *AST) scan(lx *lexer) error {
 
 		return nil
 	})
+}
+
+type _FA struct {
+	state aststate
+}
+
+func (f *_FA) _goto(s aststate) {
+	f.state = s
+}
+
+func (f *_FA) phase() aststate {
+	return f.state
+}
+
+//
+//
+type _InferData struct {
+	tt TokenType
+	tv string
+}
+
+type _InferNode struct {
+	data   _InferData
+	childs []_InferNode
+	_parse func(*Block, []*Token) error
+}
+
+func lookupInferTree(root *_InferNode, tokens []*Token) (func(*Block, []*Token) error, error) {
+	var found = false
+	p := root
+	for _, t := range tokens {
+		for i, child := range p.childs {
+			if child.data.tt != t.typ {
+				continue
+			}
+			if child.data.tv != "" && child.data.tv != t.String() {
+				continue
+			}
+			p = &p.childs[i]
+			found = true
+		}
+		if found {
+			found = false
+		} else {
+			return nil, StatementTokensErrorf(ErrStatementInferFailed, tokens)
+		}
+	}
+	return p._parse, nil
+}
+
+func buildInferTree() *_InferNode {
+	var rules [][]_InferData = [][]_InferData{
+		{{_string_t, ""}, {_symbol_t, "->"}, {_identifier_t, ""}},
+		{{_number_t, ""}, {_symbol_t, "->"}, {_identifier_t, ""}},
+	}
+
+	root := &_InferNode{}
+	p := root
+	for _, rule := range rules {
+		for _, e := range rule {
+			p = insertInferTree(p, e)
+		}
+		// TODO: set _parse
+		p._parse = nil
+
+		p = root
+	}
+	return root
+}
+
+func insertInferTree(p *_InferNode, n _InferData) *_InferNode {
+	for i, child := range p.childs {
+		if child.data.tt == n.tt && child.data.tv == n.tv {
+			return &p.childs[i]
+		}
+	}
+	p.childs = append(p.childs, _InferNode{
+		data: n,
+	})
+	l := len(p.childs)
+	return &p.childs[l-1]
 }
