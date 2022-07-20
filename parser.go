@@ -3,7 +3,6 @@ package cofunc
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"math"
 )
@@ -234,7 +233,7 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 	pattern := statementPatterns[k]
 
 	if l := len(line); l < pattern.min || l > pattern.max {
-		return nil, errors.New("invalid statement(token number): " + k)
+		return nil, TokenErrorf(ln, ErrTokenNumInLine, "actual %d, expect [%d,%d]", l, pattern.min, pattern.max)
 	}
 
 	min := len(line)
@@ -248,10 +247,10 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 		expectVal := pattern.values[i]
 
 		if expectTyp != t.typ {
-			return nil, parseTokenTypeErr().New(line, ln, t, expectTyp)
+			return nil, TokenTypeErrorf(t, expectTyp)
 		}
 		if expectVal != "" && expectVal != t.String() {
-			return nil, parseTokenValErr().New(line, ln, t, expectVal)
+			return nil, TokenValueErrorf(t, expectVal)
 		}
 	}
 
@@ -453,7 +452,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock = forblock
 				ast._goto(_ast_for_body)
 			default:
-				return errors.New("invalid block define: " + kind.String())
+				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_fn_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -474,7 +473,7 @@ func (ast *AST) scan(lx *lexer) error {
 			case _kw_var:
 				return ast.parseVar(line, ln, parsingblock)
 			default:
-				return errors.New("invalid statement: " + kind.String())
+				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_args_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -524,7 +523,7 @@ func (ast *AST) scan(lx *lexer) error {
 					ast._goto(_ast_co_body)
 				}
 			default:
-				return errors.New("invalid statement: " + kind.String())
+				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		}
 

@@ -1,9 +1,5 @@
 package cofunc
 
-import (
-	"errors"
-)
-
 const (
 	_map  = "map"
 	_list = "list"
@@ -29,11 +25,20 @@ func (m *FMap) Type() string {
 func (m *FMap) Append(o interface{}) error {
 	ts := o.([]*Token)
 	if len(ts) != 3 {
-		return errors.New("invalid kv in map")
+		return StatementTokensErrorf(ErrMapKVIllegal, ts)
 	}
 	k, delim, v := ts[0], ts[1], ts[2]
-	if k.typ != _string_t || delim.typ != _symbol_t || delim.String() != ":" || v.typ != _string_t {
-		return errors.New("invalid kv in map")
+	if k.typ != _string_t {
+		return TokenTypeErrorf(k, _string_t)
+	}
+	if delim.typ != _symbol_t {
+		return TokenTypeErrorf(delim, _symbol_t)
+	}
+	if delim.String() != ":" {
+		return TokenValueErrorf(delim, ":")
+	}
+	if v.typ != _string_t {
+		return TokenTypeErrorf(k, _string_t)
 	}
 	m.lines = append(m.lines, newstm("kv").Append(k).Append(v))
 
@@ -61,7 +66,7 @@ func (l *FList) Type() string {
 func (l *FList) Append(o interface{}) error {
 	ts := o.([]*Token)
 	if len(ts) != 1 {
-		return errors.New("invalid list element")
+		return StatementTokensErrorf(ErrListElemIllegal, ts)
 	}
 	t := ts[0]
 	t.typ = l.etype
