@@ -15,7 +15,7 @@ type Scheduler struct {
 	store *flowstore
 }
 
-func NewScheduler() *Scheduler {
+func New() *Scheduler {
 	s := &Scheduler{}
 	s.store = &flowstore{
 		entity: make(map[string]*Flow),
@@ -28,7 +28,7 @@ func (sd *Scheduler) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reade
 	if err != nil {
 		return err
 	}
-	fw := newFlow(fid, rq, ast)
+	fw := newflow(fid, rq, ast)
 	if err := sd.store.store(fid.Value(), fw); err != nil {
 		return err
 	}
