@@ -3,11 +3,11 @@ package cofunc
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func ParseErrorf(ln int, err error, format string, args ...interface{}) error {
-	args = append(args, err)
-	return fmt.Errorf("%d: "+format+": %w", ln, args)
+	return fmt.Errorf("%d: %w: "+format, ln, err, args)
 }
 
 var (
@@ -31,9 +31,10 @@ func TokenValueErrorf(t *Token, expect string) error {
 }
 
 var (
-	ErrStatementUnknow error = errors.New("unknow statement")
-	ErrMapKVIllegal    error = errors.New("map kv format illegal")
-	ErrListElemIllegal error = errors.New("list element format illegal")
+	ErrStatementUnknow      error = errors.New("unknow statement")
+	ErrMapKVIllegal         error = errors.New("map kv format illegal")
+	ErrListElemIllegal      error = errors.New("list element format illegal")
+	ErrStatementInferFailed error = errors.New("statement infer failed")
 )
 
 func StatementErrorf(ln int, err error, format string, args ...interface{}) error {
@@ -44,13 +45,14 @@ func StatementTokensErrorf(err error, tokens []*Token) error {
 	if len(tokens) == 0 {
 		return err
 	}
-	format := ""
+	var builder strings.Builder
 	ln := 0
 	for _, t := range tokens {
 		ln = t.ln
-		format = format + "'%s' "
+		builder.WriteString("'" + t.String() + "'")
+		builder.WriteString(" ")
 	}
-	return ParseErrorf(ln, err, format, tokens)
+	return ParseErrorf(ln, err, "%s", builder.String())
 }
 
 var (
