@@ -1,6 +1,7 @@
 package cofunc
 
 import (
+	"context"
 	"io"
 	"path"
 	"strings"
@@ -33,7 +34,8 @@ type location struct {
 type Node interface {
 	String() string
 	Name() string
-	Exec() error
+	Init(context.Context, ...func(context.Context, *FuncNode) error) error
+	Exec(context.Context) error
 }
 
 // ForNode stands for the starting of 'for' loop statement
@@ -50,7 +52,11 @@ func (n *ForNode) Name() string {
 	return "FOR"
 }
 
-func (n *ForNode) Exec() error {
+func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
+	return nil
+}
+
+func (n *ForNode) Exec(ctx context.Context) error {
 	return nil
 }
 
@@ -68,18 +74,23 @@ func (n *BtfNode) String() string {
 func (n *BtfNode) Name() string {
 	return "BTF"
 }
+func (n *BtfNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
+	return nil
+}
 
-func (n *BtfNode) Exec() error {
+func (n *BtfNode) Exec(ctx context.Context) error {
 	return nil
 }
 
 // FuncNode
 type FuncNode struct {
-	name     string
-	driver   functiondriver.Driver
-	parallel *FuncNode
-	co       *Block
-	fn       *Block
+	name       string
+	driver     functiondriver.Driver
+	parallel   *FuncNode
+	co         *Block
+	fn         *Block
+	args       *FMap
+	retVarName string
 }
 
 func (n *FuncNode) String() string {
@@ -90,45 +101,69 @@ func (n *FuncNode) Name() string {
 	return n.name
 }
 
-func (n *FuncNode) Exec() error {
-	return nil
-}
-
-func (n *FuncNode) setrb(b *Block) {
-	n.co = b
-}
-
-func (n *FuncNode) setfb(b *Block) {
-	n.fn = b
-}
-
-// Args need to be called at running, because it will calcuate variable's value if has variable
-func (n *FuncNode) Args() map[string]string {
-	var args map[string]string
+func withArgs(ctx context.Context, n *FuncNode) error {
 	if n.co.bbody != nil {
-		args = n.co.bbody.(*FMap).ToMap()
-		return args
+		m, ok := n.co.bbody.(*FMap)
+		if ok {
+			n.args = m
+			return nil
+		}
 	}
+
 	if n.fn != nil {
 		for _, b := range n.fn.child {
 			if b.IsArgs() {
-				args = b.bbody.(*FMap).ToMap()
-				return args
+				n.args = b.bbody.(*FMap)
+				return nil
 			}
 		}
 	}
 	return nil
 }
 
-// SaveReturns need to be called at running, it will create some field var
-// Field Var are dynamic var
-func (n *FuncNode) SaveReturns(returns map[string]string, filter func(string) bool) bool {
-	if n.co.typevalue.IsEmpty() {
-		return false
+func withLoad(ctx context.Context, n *FuncNode) error {
+	return n.driver.Load(ctx)
+}
+
+func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
+	if len(with) == 0 {
+		with = append(with, withArgs, withLoad)
 	}
-	name := n.co.typevalue.String()
+	for _, f := range with {
+		if err := f(ctx, n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *FuncNode) Exec(ctx context.Context) error {
+	if err := n.driver.MergeArgs(n._args()); err != nil {
+		return err
+	}
+	rets, err := n.driver.Run(ctx)
+	if err != nil {
+		return err
+	}
+	if n.needSaveReturns() {
+		n._saveReturns(rets, nil)
+	}
+	return nil
+}
+
+func (n *FuncNode) _args() map[string]string {
+	if n.args == nil {
+		return map[string]string{}
+	}
+	return n.args.ToMap()
+}
+
+// _saveReturns will create some field var
+// Field Var are dynamic var
+func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bool) bool {
+	name := n.retVarName
 	_, b := n.co.GetVar(name)
-	for field, val := range returns {
+	for field, val := range retkvs {
 		if filter != nil && !filter(field) {
 			continue
 		}
@@ -139,10 +174,13 @@ func (n *FuncNode) SaveReturns(returns map[string]string, filter func(string) bo
 	return true
 }
 
+func (n *FuncNode) needSaveReturns() bool {
+	return n.retVarName != ""
+}
+
 // RunQ
 //
 type RunQ struct {
-	ast               *AST
 	locations         map[string]location
 	configuredNodes   map[string]*FuncNode
 	stages            []Node
@@ -154,15 +192,14 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 		locations:       make(map[string]location),
 		configuredNodes: make(map[string]*FuncNode),
 		stages:          make([]Node, 0),
-		ast:             ast,
 	}
-	if err := q.processLoad(ast); err != nil {
+	if err := q.convertLoad(ast); err != nil {
 		return nil, err
 	}
-	if err := q.processFn(ast); err != nil {
+	if err := q.convertFn(ast); err != nil {
 		return nil, err
 	}
-	if err := q.processCoAndFor(ast); err != nil {
+	if err := q.convertCoAndFor(ast); err != nil {
 		return nil, err
 	}
 	return q, nil
@@ -185,7 +222,7 @@ func (rq *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	return node, nil
 }
 
-func (rq *RunQ) processLoad(ast *AST) error {
+func (rq *RunQ) convertLoad(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if !b.IsLoad() {
 			return nil
@@ -205,7 +242,7 @@ func (rq *RunQ) processLoad(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) processFn(ast *AST) error {
+func (rq *RunQ) convertFn(ast *AST) error {
 	return ast.Foreach(func(b *Block) error {
 		if !b.IsFn() {
 			return nil
@@ -218,7 +255,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 		if err != nil {
 			return err
 		}
-		node.setfb(b)
+		node.fn = b
 		if _, ok := rq.configuredNodes[node.name]; ok {
 			return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s', function name '%s'", node.name, fname)
 		}
@@ -227,7 +264,7 @@ func (rq *RunQ) processFn(ast *AST) error {
 	})
 }
 
-func (rq *RunQ) processCoAndFor(ast *AST) error {
+func (rq *RunQ) convertCoAndFor(ast *AST) error {
 	err := ast.Foreach(func(b *Block) error {
 		if !b.IsCo() && !b.IsFor() {
 			return nil
@@ -278,7 +315,8 @@ func (rq *RunQ) processCoAndFor(ast *AST) error {
 					return GeneratorErrorf(err, "in serial run function")
 				}
 			}
-			node.setrb(b)
+			node.co = b
+			node.retVarName = b.typevalue.String()
 			rq.stages = append(rq.stages, node)
 			return nil
 		}
@@ -296,7 +334,8 @@ func (rq *RunQ) processCoAndFor(ast *AST) error {
 					return GeneratorErrorf(err, "in parallel run function")
 				}
 			}
-			node.setrb(b)
+			node.co = b
+			node.retVarName = b.typevalue.String()
 			if last == nil {
 				rq.stages = append(rq.stages, node)
 			} else {
@@ -321,19 +360,6 @@ func (rq *RunQ) processCoAndFor(ast *AST) error {
 	return nil
 }
 
-func (rq *RunQ) ForfuncNode(do func(int, *FuncNode) error) error {
-	for i, e := range rq.stages {
-		if fe, ok := e.(*FuncNode); ok {
-			for p := fe; p != nil; p = p.parallel {
-				if err := do(i+1, p); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
 func (rq *RunQ) NodeNum() int {
 	var n int
 	for _, e := range rq.stages {
@@ -346,14 +372,28 @@ func (rq *RunQ) NodeNum() int {
 	return n
 }
 
+func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
+	for i, e := range rq.stages {
+		if fe, ok := e.(*FuncNode); ok {
+			for p := fe; p != nil; p = p.parallel {
+				if err := do(i+1, p); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // ForstageAndExec is the entry and main program for executing the run queue
-func (rq *RunQ) ForstageAndExec(exec func(int, []*FuncNode) error) error {
+func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+	stage := 1
 	i := 0
 	for i < len(rq.stages) {
 		e := rq.stages[i]
 
 		if n, ok := e.(*ForNode); ok {
-			if err := e.Exec(); err != nil {
+			if err := e.Exec(ctx); err != nil {
 				i = n.btfIdx + 1
 				continue
 			}
@@ -365,13 +405,14 @@ func (rq *RunQ) ForstageAndExec(exec func(int, []*FuncNode) error) error {
 		}
 
 		if n, ok := e.(*FuncNode); ok {
-			var batch []*FuncNode
+			var batch []Node
 			for p := n; p != nil; p = p.parallel {
 				batch = append(batch, p)
 			}
-			if err := exec(i+1, batch); err != nil {
+			if err := exec(stage, batch); err != nil {
 				return err
 			}
+			stage += 1
 		}
 
 		i += 1

@@ -25,7 +25,7 @@ const (
 
 type FunctionResult struct {
 	fid     feedbackid.ID
-	node    *FuncNode
+	node    Node
 	returns map[string]string
 	begin   time.Time
 	end     time.Time

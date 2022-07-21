@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -43,7 +44,7 @@ func printAST(ast *co.AST, name string) {
 func printRunQ(rq *co.RunQ, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.ForstageAndExec(func(stage int, nodes []*co.FuncNode) error {
+	rq.ForstageAndExec(context.Background(), func(stage int, nodes []co.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")
