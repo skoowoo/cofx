@@ -167,6 +167,9 @@ func ParseAST(rd io.Reader) (*AST, error) {
 		if err := b.validate(); err != nil {
 			return err
 		}
+		if err := b.variables.cyclecheck(); err != nil {
+			return err
+		}
 		return nil
 	})
 }
@@ -190,7 +193,7 @@ func newAST() *AST {
 			typevalue: Token{},
 			child:     make([]*Block, 0),
 			parent:    nil,
-			variable:  vsys{vars: make(map[string]*_var)},
+			variables: vsys{vars: make(map[string]*_var)},
 			bbody:     &plainbody{},
 		},
 		_FA: _FA{
@@ -279,7 +282,7 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 	} else {
 		stm = newstm("var").Append(name)
 	}
-	if err := b.insertVar(stm); err != nil {
+	if err := b.initVar(stm); err != nil {
 		return err
 	}
 	return nil
@@ -287,9 +290,9 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 
 func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
 	nb := &Block{
-		child:    []*Block{},
-		parent:   b,
-		variable: vsys{vars: make(map[string]*_var)},
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("load", line, ln, nb)
 	if err != nil {
@@ -305,10 +308,10 @@ func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
 
 func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:    []*Block{},
-		parent:   b,
-		variable: vsys{vars: make(map[string]*_var)},
-		bbody:    &plainbody{},
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
+		bbody:     &plainbody{},
 	}
 	body, err := ast.preparse("fn", line, ln, nb)
 	if err != nil {
@@ -329,10 +332,10 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:    []*Block{},
-		parent:   b,
-		variable: vsys{vars: make(map[string]*_var)},
-		bbody:    nil,
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
+		bbody:     nil,
 	}
 
 	var (
@@ -380,9 +383,9 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:    []*Block{},
-		parent:   b,
-		variable: vsys{vars: make(map[string]*_var)},
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("args", line, ln, nb)
 	if err != nil {
@@ -397,9 +400,9 @@ func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:    []*Block{},
-		parent:   b,
-		variable: vsys{vars: make(map[string]*_var)},
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("for", line, ln, nb)
 	if err != nil {
@@ -651,5 +654,9 @@ func _parseWriteVar(b *Block, line []*Token, ln int) error {
 	if v, _ := b.GetVar(name); v == nil {
 		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
-	return b.bbody.Append(newstm("write_var").Append(t1).Append(t2))
+	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	if err := b.rewriteVar(stm); err != nil {
+		return err
+	}
+	return b.bbody.Append(stm)
 }

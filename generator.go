@@ -57,6 +57,7 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncN
 }
 
 func (n *ForNode) Exec(ctx context.Context) error {
+	// TODO: exec 'write variable' statement of for block
 	return nil
 }
 
@@ -138,6 +139,15 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *Func
 }
 
 func (n *FuncNode) Exec(ctx context.Context) error {
+	// exec 'rewrite variable' statement of fn block
+	if n.fn != nil {
+		for _, stm := range n.fn.List() {
+			if err := n.fn.rewriteVar(stm); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := n.driver.MergeArgs(n._args()); err != nil {
 		return err
 	}
@@ -184,6 +194,7 @@ type RunQ struct {
 	locations         map[string]location
 	configuredNodes   map[string]*FuncNode
 	stages            []Node
+	g                 *Block
 	processingForNode *ForNode
 }
 
@@ -192,6 +203,7 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 		locations:       make(map[string]location),
 		configuredNodes: make(map[string]*FuncNode),
 		stages:          make([]Node, 0),
+		g:               &ast.global,
 	}
 	if err := q.convertLoad(ast); err != nil {
 		return nil, err
@@ -387,6 +399,13 @@ func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
 
 // ForstageAndExec is the entry and main program for executing the run queue
 func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+	// exec 'rewrite variable' statement of global
+	for _, stm := range rq.g.List() {
+		if err := rq.g.rewriteVar(stm); err != nil {
+			return err
+		}
+	}
+
 	stage := 1
 	i := 0
 	for i < len(rq.stages) {

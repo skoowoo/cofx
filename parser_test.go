@@ -70,8 +70,8 @@ func TestParseBlocksFull(t *testing.T) {
 		}
 		{
 			val, cached := b.CalcVar("c")
-			assert.False(t, cached)
-			assert.Equal(t, "", val)
+			assert.True(t, cached)
+			assert.Equal(t, "test", val)
 		}
 		{
 			val, cached := b.CalcVar("d")
@@ -457,5 +457,28 @@ func TestInferTree(t *testing.T) {
 		infertree := _buildInferTree()
 		_, err := _lookupInferTree(infertree, tokens)
 		assert.NoError(t, err)
+	}
+}
+
+func TestVarCycleCheck(t *testing.T) {
+	{
+		const testingdata string = `
+		var a = "1"
+		var b = $(a)
+		var c = $(b)
+
+		a <- $(c)
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+	{
+		const testingdata string = `
+		var a = "1"
+		var b = "$(a)"
+		a <- $(b)
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
 	}
 }

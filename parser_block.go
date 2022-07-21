@@ -42,19 +42,17 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 }
 
 type Token struct {
-	str         string
-	typ         TokenType
-	ln          int
-	_b          *Block
-	_persistent string
-	_segments   []struct {
+	str       string
+	typ       TokenType
+	ln        int
+	_b        *Block
+	_segments []struct {
 		str   string
 		isvar bool
 	}
 	_get func(*Block, string) (string, bool)
 }
 
-// _lookupVar be called at running, not parsing
 func _lookupVar(b *Block, name string) (string, bool) {
 	return b.CalcVar(name)
 }
@@ -103,37 +101,27 @@ func (t *Token) validate() error {
 	return nil
 }
 
-// @running
 // Value will calcuate the variable's value, if the token contain some variables
 func (t *Token) Value() string {
 	if !t.HasVar() {
 		return t.str
 	}
-	if len(t._persistent) != 0 {
-		return t._persistent
-	}
 	if t._get == nil {
 		t._get = _lookupVar
 	}
 	var bd strings.Builder
-	cacheable := true
 	for _, seg := range t._segments {
 		if seg.isvar {
 			val, cached := t._get(t._b, seg.str)
 			if !cached {
-				cacheable = false
+				_ = cached
 			}
 			bd.WriteString(val)
 		} else {
 			bd.WriteString(seg.str)
 		}
 	}
-	s := bd.String()
-	if cacheable {
-		// cache the token
-		t._persistent = s
-	}
-	return s
+	return bd.String()
 }
 
 func (t *Token) HasVar() bool {
@@ -295,14 +283,14 @@ type Block struct {
 	typevalue Token
 	child     []*Block
 	parent    *Block
-	variable  vsys
+	variables vsys
 	bbody
 }
 
 // Getvar lookup variable by name in map
 func (b *Block) GetVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
-		v, ok := p.variable.get(name)
+		v, ok := p.variables.get(name)
 		if !ok {
 			continue
 		}
@@ -313,12 +301,12 @@ func (b *Block) GetVar(name string) (*_var, *Block) {
 
 // PutVar insert a variable into map
 func (b *Block) PutVar(name string, v *_var) error {
-	return b.variable.put(name, v)
+	return b.variables.put(name, v)
 }
 
 // UpdateVar insert or update a variable into map
 func (b *Block) UpdateVar(name string, v *_var) error {
-	return b.variable.putOrUpdate(name, v)
+	return b.variables.putOrUpdate(name, v)
 }
 
 // CreateFieldVar TODO:
@@ -344,7 +332,7 @@ func (b *Block) CalcVar(name string) (string, bool) {
 			_debug_.WriteByte('\n')
 		}
 
-		v, cached := p.variable.calc(name)
+		v, cached := p.variables.calc(name)
 		if v == nil {
 			continue
 		}
@@ -386,40 +374,32 @@ func (b *Block) validate() error {
 	return nil
 }
 
-func (b *Block) insertVar(stm *Statement) error {
+func (b *Block) initVar(stm *Statement) error {
 	if stm.desc != "var" {
 		return nil
 	}
 	name := stm.tokens[0].String()
-	v := &_var{
-		segments: []struct {
-			str   string
-			isvar bool
-		}{},
-		child: []*_var{},
-	}
-	if len(stm.tokens) == 2 {
-		vt := stm.tokens[1]
-		if !vt.HasVar() {
-			v.v = vt.String()
-			v.cached = true
-		} else {
-			v.segments = vt.Segments()
-			for _, seg := range v.segments {
-				if !seg.isvar {
-					continue
-				}
-				vname := seg.str
-				chld, _ := b.GetVar(vname)
-				if chld != nil {
-					v.child = append(v.child, chld)
-				} else {
-					return TokenErrorf(vt.ln, ErrVariableNotDefined, "'%s', variable name '%s'", vt, vname)
-				}
-			}
-		}
+	v, err := statement2var(stm)
+	if err != nil {
+		return err
 	}
 	if err := b.PutVar(name, v); err != nil {
+		return StatementTokensErrorf(err, stm.tokens)
+	}
+	b.CalcVar(name)
+	return nil
+}
+
+func (b *Block) rewriteVar(stm *Statement) error {
+	if stm.desc != "rewrite_var" {
+		return nil
+	}
+	name := stm.tokens[0].String()
+	v, err := statement2var(stm)
+	if err != nil {
+		return err
+	}
+	if err := b.UpdateVar(name, v); err != nil {
 		return StatementTokensErrorf(err, stm.tokens)
 	}
 	b.CalcVar(name)
