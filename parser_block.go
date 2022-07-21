@@ -283,14 +283,14 @@ type Block struct {
 	typevalue Token
 	child     []*Block
 	parent    *Block
-	variable  vsys
+	variables vsys
 	bbody
 }
 
 // Getvar lookup variable by name in map
 func (b *Block) GetVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
-		v, ok := p.variable.get(name)
+		v, ok := p.variables.get(name)
 		if !ok {
 			continue
 		}
@@ -301,12 +301,12 @@ func (b *Block) GetVar(name string) (*_var, *Block) {
 
 // PutVar insert a variable into map
 func (b *Block) PutVar(name string, v *_var) error {
-	return b.variable.put(name, v)
+	return b.variables.put(name, v)
 }
 
 // UpdateVar insert or update a variable into map
 func (b *Block) UpdateVar(name string, v *_var) error {
-	return b.variable.putOrUpdate(name, v)
+	return b.variables.putOrUpdate(name, v)
 }
 
 // CreateFieldVar TODO:
@@ -332,7 +332,7 @@ func (b *Block) CalcVar(name string) (string, bool) {
 			_debug_.WriteByte('\n')
 		}
 
-		v, cached := p.variable.calc(name)
+		v, cached := p.variables.calc(name)
 		if v == nil {
 			continue
 		}

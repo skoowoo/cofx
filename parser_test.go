@@ -459,3 +459,26 @@ func TestInferTree(t *testing.T) {
 		assert.NoError(t, err)
 	}
 }
+
+func TestVarCycleCheck(t *testing.T) {
+	{
+		const testingdata string = `
+		var a = "1"
+		var b = $(a)
+		var c = $(b)
+
+		a <- $(c)
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+	{
+		const testingdata string = `
+		var a = "1"
+		var b = "$(a)"
+		a <- $(b)
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+}

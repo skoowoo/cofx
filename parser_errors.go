@@ -73,6 +73,7 @@ var (
 	ErrVariableNameEmpty      error = errors.New("variable name is empty")
 	ErrVariableNameDuplicated error = errors.New("variable name is duplicated")
 	ErrVariableNotDefined     error = errors.New("variable not defined")
+	ErrVariableHasCycle       error = errors.New("variable has cycle")
 )
 
 func VarErrorf(ln int, err error, format string, args ...interface{}) error {
