@@ -1,6 +1,7 @@
 package cofunc
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -10,6 +11,12 @@ import (
 func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
 	rd := strings.NewReader(data)
 	rq, bl, err := ParseFlowl(rd)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = rq.ForfuncNode(func(stage int, n Node) error {
+		return n.Init(context.TODO(), withArgs)
+	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -39,6 +46,9 @@ for {
 }
 		`
 		blocks, bl, rq, err := loadTestingdata2(testingdata)
+		if err != nil {
+			t.FailNow()
+		}
 		assert.NoError(t, err)
 		assert.NotNil(t, blocks)
 		assert.NotNil(t, bl)
@@ -91,6 +101,9 @@ func TestParseFullWithRunq(t *testing.T) {
 	`
 
 		blocks, bl, rq, err := loadTestingdata2(testingdata)
+		if err != nil {
+			t.FailNow()
+		}
 		assert.NoError(t, err)
 		assert.NotNil(t, blocks)
 		assert.NotNil(t, bl)
@@ -100,35 +113,35 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
 		assert.Len(t, rq.stages, 5)
 
-		rq.ForstageAndExec(func(stage int, nodes []*FuncNode) error {
+		rq.ForstageAndExec(context.Background(), func(stage int, nodes []Node) error {
 			if stage == 1 {
-				node := nodes[0]
+				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "f1", node.name)
-				assert.Len(t, node.Args(), 2)
-				assert.Equal(t, "v1", node.Args()["k"])
+				assert.Len(t, node._args(), 2)
+				assert.Equal(t, "v1", node._args()["k"])
 			}
 			if stage == 2 {
-				node := nodes[0]
+				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function2", node.name)
-				assert.Len(t, node.Args(), 1)
-				assert.Equal(t, "v2", node.Args()["k"])
+				assert.Len(t, node._args(), 1)
+				assert.Equal(t, "v2", node._args()["k"])
 			}
 			if stage == 3 {
-				node := nodes[0]
+				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node.Args(), 0)
+				assert.Len(t, node._args(), 0)
 			}
 			if stage == 4 {
-				node := nodes[0]
+				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function4", node.name)
 				assert.NotNil(t, node.parallel)
 				assert.Equal(t, "function5", node.parallel.name)
 			}
 			if stage == 5 {
-				node := nodes[0]
+				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node.Args(), 1)
-				assert.Equal(t, "v3", node.Args()["k"])
+				assert.Len(t, node._args(), 1)
+				assert.Equal(t, "v3", node._args()["k"])
 			}
 			return nil
 		})
