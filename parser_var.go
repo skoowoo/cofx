@@ -92,3 +92,54 @@ func calcvarval(v *_var) (string, bool) {
 	v.v = vb.String()
 	return v.v, v.cached
 }
+
+func token2var(t *Token) (*_var, error) {
+	v := &_var{
+		segments: []struct {
+			str   string
+			isvar bool
+		}{},
+		child: []*_var{},
+	}
+	if !t.HasVar() {
+		v.v = t.String()
+		v.cached = true
+	} else {
+		v.segments = t.Segments()
+		for _, seg := range v.segments {
+			if !seg.isvar {
+				continue
+			}
+			vname := seg.str
+			chld, _ := t._b.GetVar(vname)
+			if chld != nil {
+				v.child = append(v.child, chld)
+			} else {
+				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, vname)
+			}
+		}
+	}
+	return v, nil
+}
+
+func statement2var(stm *Statement) (*_var, error) {
+	var (
+		v   *_var
+		err error
+	)
+	if len(stm.tokens) == 2 {
+		vt := stm.tokens[1]
+		if v, err = token2var(vt); err != nil {
+			return nil, err
+		}
+	} else {
+		v = &_var{
+			segments: []struct {
+				str   string
+				isvar bool
+			}{},
+			child: []*_var{},
+		}
+	}
+	return v, nil
+}

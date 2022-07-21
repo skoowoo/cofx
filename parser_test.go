@@ -70,8 +70,8 @@ func TestParseBlocksFull(t *testing.T) {
 		}
 		{
 			val, cached := b.CalcVar("c")
-			assert.False(t, cached)
-			assert.Equal(t, "", val)
+			assert.True(t, cached)
+			assert.Equal(t, "test", val)
 		}
 		{
 			val, cached := b.CalcVar("d")

@@ -279,7 +279,7 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 	} else {
 		stm = newstm("var").Append(name)
 	}
-	if err := b.insertVar(stm); err != nil {
+	if err := b.initVar(stm); err != nil {
 		return err
 	}
 	return nil
@@ -651,5 +651,9 @@ func _parseWriteVar(b *Block, line []*Token, ln int) error {
 	if v, _ := b.GetVar(name); v == nil {
 		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
-	return b.bbody.Append(newstm("write_var").Append(t1).Append(t2))
+	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	if err := b.rewriteVar(stm); err != nil {
+		return err
+	}
+	return b.bbody.Append(stm)
 }
