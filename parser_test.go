@@ -481,4 +481,13 @@ func TestVarCycleCheck(t *testing.T) {
 		_, err := loadTestingdata(testingdata)
 		assert.Error(t, err)
 	}
+	{
+		const testingdata string = `
+		var a = "1"
+		var b = "$(a)"
+		a <- "$(a) 2"
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+	}
 }
