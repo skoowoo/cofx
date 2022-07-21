@@ -42,6 +42,7 @@ type Node interface {
 type ForNode struct {
 	idx    int
 	btfIdx int
+	b      *Block
 }
 
 func (n *ForNode) String() string {
@@ -57,7 +58,12 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncN
 }
 
 func (n *ForNode) Exec(ctx context.Context) error {
-	// TODO: exec 'write variable' statement of for block
+	// exec 'rewrite variable' statement of for block
+	for _, stm := range n.b.List() {
+		if err := n.b.rewriteVar(stm); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -298,6 +304,7 @@ func (rq *RunQ) convertCoAndFor(ast *AST) error {
 
 			node := &ForNode{
 				idx: len(rq.stages), // save the runq's index of 'ForNode'
+				b:   b,
 			}
 			rq.stages = append(rq.stages, node)
 			rq.processingForNode = node

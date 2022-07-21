@@ -63,6 +63,6 @@ func Entrypoint(ctx context.Context, args map[string]string) (map[string]string,
 	}
 
 	return map[string]string{
-		"Now": now,
+		"now": now,
 	}, nil
 }
