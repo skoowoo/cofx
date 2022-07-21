@@ -135,11 +135,24 @@ func (vs *vsys) calc(name string) (_v interface{}, cached bool) {
 	return v.calcvarval()
 }
 
-func (vs *vsys) cyclecheck() error {
+func (vs *vsys) cyclecheck(names ...string) error {
 	vs.Lock()
 	defer vs.Unlock()
 
 	stack := list.New()
+
+	if len(names) != 0 {
+		for _, name := range names {
+			v, ok := vs.vars[name]
+			if ok {
+				if err := v.dfscycle(stack); err != nil {
+					return fmt.Errorf("%w: start variable '%s'", err, name)
+				}
+			}
+		}
+		return nil
+	}
+
 	for name, v := range vs.vars {
 		if err := v.dfscycle(stack); err != nil {
 			return fmt.Errorf("%w: start variable '%s'", err, name)

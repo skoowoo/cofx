@@ -386,6 +386,9 @@ func (b *Block) initVar(stm *Statement) error {
 	if err := b.PutVar(name, v); err != nil {
 		return StatementTokensErrorf(err, stm.tokens)
 	}
+	if err := b.variables.cyclecheck(name); err != nil {
+		return err
+	}
 	b.CalcVar(name)
 	return nil
 }
@@ -395,12 +398,25 @@ func (b *Block) rewriteVar(stm *Statement) error {
 		return nil
 	}
 	name := stm.tokens[0].String()
+	s, _ := b.CalcVar(name)
+
+	segments := stm.tokens[1].Segments()
+	for i, seg := range segments {
+		if seg.isvar && seg.str == name {
+			segments[i].isvar = false
+			segments[i].str = s
+		}
+	}
+
 	v, err := statement2var(stm)
 	if err != nil {
 		return err
 	}
 	if err := b.UpdateVar(name, v); err != nil {
 		return StatementTokensErrorf(err, stm.tokens)
+	}
+	if err := b.variables.cyclecheck(name); err != nil {
+		return err
 	}
 	b.CalcVar(name)
 	return nil
