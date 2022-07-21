@@ -1,0 +1,21 @@
+load "go:print"
+load "go:sleep"
+load "go:time"
+
+var v1 = "a"
+var v2 = "$(v1) b"
+
+var out
+var v3
+
+for {
+    v3 <- "$(v2)"
+
+    co time -> out
+
+    co print {
+        "_": "$(v3) $(out.now)"
+    }
+
+    co sleep
+}

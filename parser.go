@@ -126,7 +126,7 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{"", "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		nil,
+		func() bbody { return &plainbody{} },
 	},
 	"closed": {
 		1, 1,
@@ -484,6 +484,12 @@ func (ast *AST) scan(lx *lexer) error {
 			case _kw_var:
 				return ast.parseVar(line, ln, parsingblock)
 			default:
+				if _parse, err := _lookupInferTree(infertree, line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return StatementTokensErrorf(err, line)
+					}
+					return nil
+				}
 				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_args_body:
@@ -542,6 +548,12 @@ func (ast *AST) scan(lx *lexer) error {
 					ast._goto(_ast_co_body)
 				}
 			default:
+				if _parse, err := _lookupInferTree(infertree, line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return StatementTokensErrorf(err, line)
+					}
+					return nil
+				}
 				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		}
