@@ -14,5 +14,6 @@
 # Dependency directories (remove the comment below to include it)
 bin/
 vendor/
+.vscode/
 *_string.go
 *DS_Store

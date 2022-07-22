@@ -16,7 +16,9 @@ var _manifest = manifest.Manifest{
 	Description:    "For building go project that based on 'go mod'",
 	Driver:         "go",
 	EntrypointFunc: Entrypoint,
-	Args:           map[string]string{},
+	Args: map[string]string{
+		"bindir": "bin/",
+	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
 		Args: []manifest.UsageDesc{
@@ -26,7 +28,7 @@ var _manifest = manifest.Manifest{
 				OptionalValues: nil,
 			},
 			{
-				Name: "binpath",
+				Name: "bindir",
 				Desc: "",
 			},
 			{
@@ -49,10 +51,7 @@ func Entrypoint(ctx context.Context, args map[string]string) (map[string]string,
 		// TODO:
 		_ = ok
 	}
-	binpath, ok := args["binpath"]
-	if !ok {
-		binpath = "bin"
-	}
+	bindir := args["bindir"]
 	mainpkg_path, ok := args["mainpkg_path"]
 	if !ok {
 		// TODO:
@@ -60,7 +59,7 @@ func Entrypoint(ctx context.Context, args map[string]string) (map[string]string,
 	}
 	paths := strings.Split(mainpkg_path, ",")
 	for _, path := range paths {
-		cmd, err := buildCommands(ctx, prefix, binpath, path)
+		cmd, err := buildCommands(ctx, prefix, bindir, path)
 		if err != nil {
 			return nil, err
 		}
