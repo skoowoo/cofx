@@ -26,13 +26,14 @@ const (
 	_load_t
 	_keyword_t
 	_varname_t
+	_exp_t
 )
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
 	_string_t:       regexp.MustCompile(`^*$`),
 	_ident_t:        regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
-	_number_t:       regexp.MustCompile(`^[1-9][0-9]*$`),
+	_number_t:       regexp.MustCompile(`^[0-9\.]+$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
 	_operator_t:     regexp.MustCompile(`^(=|->)$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
@@ -162,7 +163,7 @@ func (t *Token) extractVar() error {
 			}
 		case _ast_identifier: // from '$'
 			// keep
-			if is.Identifier(c) || c == '(' {
+			if is.Ident(c) || c == '(' {
 				break
 			}
 			// transfer

@@ -38,15 +38,23 @@ func BackSlash(x rune) bool {
 	return x == '\\'
 }
 
-func EQ(x rune) bool {
-	return x == '='
-}
-
 func Symbol(x rune) bool {
-	return LB(x) || RB(x) || x == '>' || x == '<' || x == ':' || EQ(x) || x == '+' || x == '-' || x == '*' || x == '/'
+	symbols := []rune{
+		'{', '}',
+		'>', '<', '=',
+		':',
+		'+', '-', '*', '/',
+		'(', ')',
+	}
+	for _, c := range symbols {
+		if c == x {
+			return true
+		}
+	}
+	return false
 }
 
-func Identifier(x rune) bool {
+func Ident(x rune) bool {
 	if x >= 'a' && x <= 'z' {
 		return true
 	}

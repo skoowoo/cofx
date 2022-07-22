@@ -146,7 +146,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 }
 
 func TestValidateToken(t *testing.T) {
-	// int
+	// number
 	{
 		tk := &Token{
 			str: "100",
@@ -157,11 +157,11 @@ func TestValidateToken(t *testing.T) {
 	}
 	{
 		tk := &Token{
-			str: "0100",
+			str: "0.1",
 			typ: _number_t,
 		}
 		err := tk.validate()
-		assert.Error(t, err)
+		assert.NoError(t, err)
 	}
 	{
 		tk := &Token{
@@ -169,7 +169,7 @@ func TestValidateToken(t *testing.T) {
 			typ: _number_t,
 		}
 		err := tk.validate()
-		assert.Error(t, err)
+		assert.NoError(t, err)
 	}
 
 	// load

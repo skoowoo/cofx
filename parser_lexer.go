@@ -2,6 +2,7 @@
 package cofunc
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/is"
@@ -11,7 +12,7 @@ type lexstate int
 
 const (
 	_lx_unknow lexstate = iota
-	_lx_identifier
+	_lx_ident
 	_lx_symbol
 	_lx_string
 	_lx_string_backslash
@@ -73,9 +74,9 @@ func (l *lexer) split(line string, ln int) error {
 			if is.Space(c) || is.EOL(c) {
 				break
 			}
-			if is.Identifier(c) {
+			if is.Ident(c) {
 				l.saveRune(c)
-				l._goto(_lx_identifier)
+				l._goto(_lx_ident)
 				break
 			}
 			if is.Symbol(c) {
@@ -119,9 +120,9 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_unknow)
 				break
 			}
-			if is.Identifier(c) {
+			if is.Ident(c) {
 				l.saveRune(c)
-				l._goto(_lx_identifier)
+				l._goto(_lx_ident)
 				break
 			}
 			if is.Quotation(c) {
@@ -130,14 +131,20 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
-		case _lx_identifier:
-			if is.Identifier(c) {
+		case _lx_ident:
+			if is.Ident(c) {
 				l.saveRune(c)
 				break
 			}
+			s := l.exportString()
+			typ := _ident_t
+			if _, err := strconv.ParseFloat(s, 64); err == nil {
+				// An identifier is considered a number if it can be converted to float64
+				typ = _number_t
+			}
 			l.insert(ln, &Token{
-				str: l.exportString(),
-				typ: _ident_t,
+				str: s,
+				typ: typ,
 			})
 
 			if is.Space(c) || is.EOL(c) {
@@ -179,7 +186,7 @@ func (l *lexer) split(line string, ln int) error {
 			}
 			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_var_directuse2:
-			if is.Identifier(c) {
+			if is.Ident(c) {
 				l.saveRune(c)
 				break
 			}

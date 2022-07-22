@@ -74,6 +74,7 @@ var (
 	ErrVariableNameDuplicated error = errors.New("variable name is duplicated")
 	ErrVariableNotDefined     error = errors.New("variable not defined")
 	ErrVariableHasCycle       error = errors.New("variable has cycle")
+	ErrVariableValueType      error = errors.New("variable's value type illegal")
 )
 
 func VarErrorf(ln int, err error, format string, args ...interface{}) error {
