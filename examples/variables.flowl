@@ -2,6 +2,7 @@ load "go:print"
 load "go:sleep"
 load "go:time"
 
+var v0 = 100
 var v1 = "a"
 var v2 = "$(v1) b"
 

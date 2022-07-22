@@ -491,3 +491,25 @@ func TestVarCycleCheck(t *testing.T) {
 		assert.NoError(t, err)
 	}
 }
+
+func TestVarDefine(t *testing.T) {
+	{
+		const testingdata string = `
+		var a = 100
+		var b = $(a)
+		var c = "$(a)"
+		var d = "foo"
+		var e = 0.1
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+	}
+	{
+		const testingdata string = `
+		var a = a100
+		var d = foo
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.Error(t, err)
+	}
+}

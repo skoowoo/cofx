@@ -271,9 +271,16 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		return err
 	}
 	name := line[1]
+
 	var val *Token
 	if len(line) == 4 {
+		// e.g.:
+		// 		var v = "foo"
+		// 		var v = 100
 		val = line[3]
+		if val.typ != _string_t && val.typ != _number_t {
+			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
+		}
 	}
 
 	var stm *Statement
