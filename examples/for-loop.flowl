@@ -7,7 +7,7 @@ var t
 for {
     co time -> t
     co print {
-        "Time": "$(t.Now)"
+        "Time": "$(t.now)"
     }
     co sleep
 }
