@@ -6,6 +6,8 @@ import (
 	"io"
 	"math"
 	"strings"
+
+	"github.com/cofunclabs/cofunc/pkg/enabled"
 )
 
 func init() {
@@ -28,7 +30,7 @@ type aststate int
 
 const (
 	_ast_unknow aststate = iota
-	_ast_identifier
+	_ast_ident
 	_ast_global
 	_ast_co_body
 	_ast_fn_body
@@ -158,9 +160,18 @@ func ParseAST(rd io.Reader) (*AST, error) {
 		}
 	}
 
+	lx.debug()
+
 	ast := newAST()
 	if err := ast.scan(lx); err != nil {
 		return nil, err
+	}
+
+	if enabled.Debug() {
+		ast.Foreach(func(b *Block) error {
+			b.debug()
+			return nil
+		})
 	}
 
 	return ast, ast.Foreach(func(b *Block) error {
@@ -280,6 +291,26 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		val = line[3]
 		if val.typ != _string_t && val.typ != _number_t {
 			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
+		}
+	} else if len(line) > 4 {
+		// e.g.:
+		// 		var v = 1 + 1
+		// 		var v = -1
+		// 		var v = 1 + $(foo)
+		// the value is a expression
+		var builder strings.Builder
+		for _, t := range line[3:] {
+			builder.WriteString(t.String())
+		}
+		exp := builder.String()
+		val = &Token{
+			str: exp,
+			typ: _exp_t,
+			ln:  ln,
+			_b:  b,
+		}
+		if err := val.extractVar(); err != nil {
+			return err
 		}
 	}
 
@@ -429,13 +460,15 @@ func (ast *AST) scan(lx *lexer) error {
 		if len(line) == 0 {
 			return nil
 		}
+		// discard the commments
+		if line[0].String() == _kw_comment {
+			return nil
+		}
+
 		switch ast.phase() {
 		case _ast_global:
 			kind := line[0]
 			switch kind.String() {
-			case _kw_comment:
-				// discard the commments
-				return nil
 			case _kw_load:
 				return ast.parseLoad(line, ln, parsingblock)
 			case _kw_fn:
@@ -598,6 +631,10 @@ func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, i
 	var found = false
 	p := root
 	for _, t := range line {
+		if len(p.childs) == 0 && p._parse != nil {
+			return p._parse, nil
+		}
+
 		for i, child := range p.childs {
 			if child.data.tt != t.typ {
 				continue
@@ -619,10 +656,12 @@ func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, i
 
 func _buildInferTree() *_InferNode {
 	var rules map[string][]_InferData = map[string][]_InferData{
-		"write_var1": {{_string_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
-		"write_var2": {{_number_t, ""}, {_symbol_t, "->"}, {_ident_t, ""}},
-		"write_var3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},
-		"write_var4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},
+		"rewrite_var1":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},                   // e.g.: v <- "foo"
+		"rewrite_var2":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},                   // e.g.: v <- 100
+		"rewrite_var_exp1": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "-"}, {_number_t, ""}}, // e.g.: v <- -100
+		"rewrite_var_exp2": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "("}},                  // e.g.: v <- (1 + 2) * 3
+		"rewrite_var_exp3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}, {_symbol_t, ""}},  // e.g.: v <- $(foo) + 1
+		"rewrite_var_exp4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}, {_symbol_t, ""}},  // e.g.: v <- 100 + 1
 	}
 
 	root := &_InferNode{}
@@ -631,8 +670,10 @@ func _buildInferTree() *_InferNode {
 		for _, e := range rule {
 			p = _insertInferTree(p, e)
 		}
-		if strings.HasPrefix(k, "write_var") {
-			p._parse = _parseWriteVar
+		if strings.HasPrefix(k, "rewrite_var_exp") {
+			p._parse = _parseRewriteVarWithExp
+		} else if strings.HasPrefix(k, "rewrite_var") {
+			p._parse = _parseRewriteVar
 		}
 
 		p = root
@@ -653,11 +694,8 @@ func _insertInferTree(p *_InferNode, n _InferData) *_InferNode {
 	return &p.childs[l-1]
 }
 
-func _parseWriteVar(b *Block, line []*Token, ln int) error {
-	t1, op, t2 := line[0], line[1], line[2]
-	if op.String() == "->" {
-		t1, t2 = t2, t1
-	}
+func _parseRewriteVar(b *Block, line []*Token, ln int) error {
+	t1, t2 := line[0], line[2]
 
 	t1.typ = _varname_t
 	t1._b = b
@@ -674,8 +712,41 @@ func _parseWriteVar(b *Block, line []*Token, ln int) error {
 		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
 	stm := newstm("rewrite_var").Append(t1).Append(t2)
-	if err := b.rewriteVar(stm); err != nil {
+	// if err := b.rewriteVar(stm); err != nil {
+	// 	return err
+	// }
+	return b.bbody.Append(stm)
+}
+
+func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
+	t1 := line[0]
+
+	t1.typ = _varname_t
+	t1._b = b
+	t1.ln = ln
+
+	var builder strings.Builder
+	for _, t := range line[2:] {
+		builder.WriteString(t.String())
+	}
+	exp := builder.String()
+	t2 := &Token{
+		str: exp,
+		typ: _exp_t,
+		ln:  ln,
+		_b:  b,
+	}
+	if err := t2.extractVar(); err != nil {
 		return err
 	}
+
+	name := t1.String()
+	if v, _ := b.GetVar(name); v == nil {
+		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+	}
+	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	//if err := b.rewriteVar(stm); err != nil {
+	//	return err
+	//}
 	return b.bbody.Append(stm)
 }
