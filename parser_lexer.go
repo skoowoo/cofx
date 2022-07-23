@@ -2,9 +2,11 @@
 package cofunc
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/cofunclabs/cofunc/pkg/enabled"
 	"github.com/cofunclabs/cofunc/pkg/is"
 )
 
@@ -130,6 +132,11 @@ func (l *lexer) split(line string, ln int) error {
 				l._goto(_lx_string)
 				break
 			}
+			if is.Dollar(c) {
+				l.saveRune(c)
+				l._goto(_lx_var_directuse1)
+				break
+			}
 			return ParseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_ident:
 			if is.Ident(c) {
@@ -205,7 +212,7 @@ func (l *lexer) split(line string, ln int) error {
 	return nil
 }
 
-func (l *lexer) foreachLine(do func(num int, line []*Token) error) error {
+func (l *lexer) foreachLine(do func(int, []*Token) error) error {
 	for n := range l.nums {
 		line, ok := l.tt[n]
 		if !ok {
@@ -216,4 +223,20 @@ func (l *lexer) foreachLine(do func(num int, line []*Token) error) error {
 		}
 	}
 	return nil
+}
+
+func (l *lexer) debug() {
+	if !enabled.Debug() {
+		return
+	}
+	l.foreachLine(func(num int, line []*Token) error {
+		var builder strings.Builder
+		for _, t := range line {
+			builder.WriteString(t.FormatString())
+			builder.WriteString(", ")
+		}
+		s := strings.TrimSuffix(builder.String(), ", ")
+		fmt.Printf("%d: %s\n", num, s)
+		return nil
+	})
 }

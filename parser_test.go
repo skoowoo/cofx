@@ -40,7 +40,7 @@ func TestParseBlocksFull(t *testing.T) {
 	co	function3
 	co function4
 
-	"test" -> c
+	c <- "test"
 
 	fn f1 = function1 {
 		args = {
@@ -70,8 +70,8 @@ func TestParseBlocksFull(t *testing.T) {
 		}
 		{
 			val, cached := b.CalcVar("c")
-			assert.True(t, cached)
-			assert.Equal(t, "test", val)
+			assert.False(t, cached)
+			assert.Equal(t, "", val)
 		}
 		{
 			val, cached := b.CalcVar("d")
@@ -423,25 +423,6 @@ func TestInferTree(t *testing.T) {
 	{
 		var tokens []*Token = []*Token{
 			{
-				str: "hello",
-				typ: _string_t,
-			},
-			{
-				str: "->",
-				typ: _symbol_t,
-			},
-			{
-				str: "a",
-				typ: _ident_t,
-			},
-		}
-		infertree := _buildInferTree()
-		_, err := _lookupInferTree(infertree, tokens)
-		assert.NoError(t, err)
-	}
-	{
-		var tokens []*Token = []*Token{
-			{
 				str: "a",
 				typ: _ident_t,
 			},
@@ -461,26 +442,26 @@ func TestInferTree(t *testing.T) {
 }
 
 func TestVarCycleCheck(t *testing.T) {
-	{
-		const testingdata string = `
-		var a = "1"
-		var b = $(a)
-		var c = $(b)
+	// {
+	// 	const testingdata string = `
+	// 	var a = "1"
+	// 	var b = $(a)
+	// 	var c = $(b)
 
-		a <- $(c)
-	`
-		_, err := loadTestingdata(testingdata)
-		assert.Error(t, err)
-	}
-	{
-		const testingdata string = `
-		var a = "1"
-		var b = "$(a)"
-		a <- $(b)
-	`
-		_, err := loadTestingdata(testingdata)
-		assert.Error(t, err)
-	}
+	// 	a <- $(c)
+	// `
+	// 	_, err := loadTestingdata(testingdata)
+	// 	assert.Error(t, err)
+	// }
+	// {
+	// 	const testingdata string = `
+	// 	var a = "1"
+	// 	var b = "$(a)"
+	// 	a <- $(b)
+	// `
+	// 	_, err := loadTestingdata(testingdata)
+	// 	assert.Error(t, err)
+	// }
 	{
 		const testingdata string = `
 		var a = "1"
@@ -500,6 +481,8 @@ func TestVarDefine(t *testing.T) {
 		var c = "$(a)"
 		var d = "foo"
 		var e = 0.1
+		var f = 1 + 1
+		var g = $(a) + 1
 	`
 		_, err := loadTestingdata(testingdata)
 		assert.NoError(t, err)
@@ -511,5 +494,56 @@ func TestVarDefine(t *testing.T) {
 	`
 		_, err := loadTestingdata(testingdata)
 		assert.Error(t, err)
+	}
+}
+
+func TestRewriteVar(t *testing.T) {
+	{
+		const testingdata string = `
+		var a = 100
+		var b = $(a)
+		var c = "$(a)"
+		var d = "foo"
+		var e = 0.1
+		var f = 1 + 1
+		var g = $(a) + 1
+
+		a <- 100
+		b <- "bar"
+		c <- -1
+		c <- 1 + 1
+		c <- (1 + 1)
+	`
+		_, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+	}
+}
+
+func TestVarExpression(t *testing.T) {
+	{
+		const testingdata string = `
+		var a = 100
+		var b = (($(a) + 1) * 1024) / (512 * 2)
+
+		var c = (2+1)
+		var d = 2 > 1
+	`
+		blocks, err := loadTestingdata(testingdata)
+		if err != nil {
+			t.FailNow()
+		}
+		for _, b := range blocks {
+			v, _ := b.CalcVar("a")
+			assert.Equal(t, "100", v)
+
+			v, _ = b.CalcVar("b")
+			assert.Equal(t, "101", v)
+
+			v, _ = b.CalcVar("c")
+			assert.Equal(t, "3", v)
+
+			v, _ = b.CalcVar("d")
+			assert.Equal(t, "true", v)
+		}
 	}
 }

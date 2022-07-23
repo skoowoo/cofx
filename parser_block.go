@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/pkg/debug"
+	"github.com/cofunclabs/cofunc/pkg/enabled"
 	"github.com/cofunclabs/cofunc/pkg/is"
 )
 
@@ -65,6 +65,19 @@ func (t *Token) Segments() []struct {
 	return t._segments
 }
 
+func (t *Token) CopySegments() []struct {
+	str   string
+	isvar bool
+} {
+	var segments []struct {
+		str   string
+		isvar bool
+	}
+
+	segments = append(segments, t._segments...)
+	return segments
+}
+
 func (t *Token) IsEmpty() bool {
 	return len(t.str) == 0
 }
@@ -73,9 +86,15 @@ func (t *Token) String() string {
 	return t.str
 }
 
+func (t *Token) FormatString() string {
+	return fmt.Sprintf("['%s','%s']", t.str, t.typ)
+}
+
 func (t *Token) validate() error {
-	if pattern := tokenPatterns[t.typ]; !pattern.MatchString(t.str) {
-		return TokenErrorf(t.ln, ErrTokenRegex, "actual '%s', expect '%s'", t, pattern)
+	if pattern, ok := tokenPatterns[t.typ]; ok {
+		if !pattern.MatchString(t.str) {
+			return TokenErrorf(t.ln, ErrTokenRegex, "actual '%s', expect '%s'", t, pattern)
+		}
 	}
 
 	// check var
@@ -136,7 +155,7 @@ func (t *Token) HasVar() bool {
 
 func (t *Token) extractVar() error {
 	// $(var)
-	if t.typ != _string_t {
+	if t.typ != _string_t && t.typ != _exp_t {
 		return nil
 	}
 	var (
@@ -159,9 +178,9 @@ func (t *Token) extractVar() error {
 			// transfer
 			if c == '$' && next(i) == '(' {
 				vstart = i
-				state = _ast_identifier
+				state = _ast_ident
 			}
-		case _ast_identifier: // from '$'
+		case _ast_ident: // from '$'
 			// keep
 			if is.Ident(c) || c == '(' {
 				break
@@ -236,6 +255,24 @@ func (s *Statement) LastToken() *Token {
 func (s *Statement) Append(t *Token) *Statement {
 	s.tokens = append(s.tokens, t)
 	return s
+}
+
+func (s *Statement) Copy() *Statement {
+	stm := &Statement{
+		desc: s.desc,
+	}
+	for _, t := range s.tokens {
+		nt := &Token{
+			str:       t.str,
+			typ:       t.typ,
+			ln:        t.ln,
+			_b:        t._b,
+			_segments: t.CopySegments(),
+			_get:      t._get,
+		}
+		stm.tokens = append(stm.tokens, nt)
+	}
+	return stm
 }
 
 // Block
@@ -327,7 +364,7 @@ func (b *Block) CalcVar(name string) (string, bool) {
 	}
 	var _debug_ strings.Builder
 	for p := b; p != nil; p = p.parent {
-		if debug.Enabled() {
+		if enabled.Debug() {
 			_debug_.WriteByte('\t')
 			_debug_.WriteString(p.String())
 			_debug_.WriteByte('\n')
@@ -337,11 +374,11 @@ func (b *Block) CalcVar(name string) (string, bool) {
 		if v == nil {
 			continue
 		}
-		debug.Log("*Block.CalcVar()", "calcute variable succeed: '%s', query path:\n%s\n", name, _debug_.String())
+		// debug.Log("*Block.CalcVar()", "calcute variable succeed: '%s', query path:\n%s\n", name, _debug_.String())
 		return v.(string), cached
 	}
 
-	debug.Log("*Block.CalcVar()", "calcute variable failed: '%s', query path:\n%s\n", name, _debug_.String())
+	// debug.Log("*Block.CalcVar()", "calcute variable failed: '%s', query path:\n%s\n", name, _debug_.String())
 	if strings.Contains(name, ".") {
 		return "", false
 	}
@@ -390,11 +427,11 @@ func (b *Block) initVar(stm *Statement) error {
 	if err := b.variables.cyclecheck(name); err != nil {
 		return err
 	}
-	b.CalcVar(name)
 	return nil
 }
 
 func (b *Block) rewriteVar(stm *Statement) error {
+	stm = stm.Copy()
 	if stm.desc != "rewrite_var" {
 		return nil
 	}
@@ -404,8 +441,8 @@ func (b *Block) rewriteVar(stm *Statement) error {
 	segments := stm.tokens[1].Segments()
 	for i, seg := range segments {
 		if seg.isvar && seg.str == name {
-			segments[i].isvar = false
 			segments[i].str = s
+			segments[i].isvar = false
 		}
 	}
 
@@ -419,7 +456,6 @@ func (b *Block) rewriteVar(stm *Statement) error {
 	if err := b.variables.cyclecheck(name); err != nil {
 		return err
 	}
-	b.CalcVar(name)
 	return nil
 }
 
@@ -461,4 +497,24 @@ func (b *Block) String() string {
 	} else {
 		return fmt.Sprintf("%s %s %s %s", &b.kind, &b.target, &b.operator, &b.typevalue)
 	}
+}
+
+func (b *Block) debug() {
+	if !enabled.Debug() {
+		return
+	}
+
+	fmt.Printf("block: '%s'\n", b.String())
+	if b.parent != nil {
+		fmt.Printf("\tparent: '%s'\n", b.parent.String())
+	} else {
+		fmt.Println("\tparent: 'nil'")
+	}
+
+	fmt.Println("\tchild:")
+	for _, c := range b.child {
+		fmt.Printf("\t\t'%s'\n", c.String())
+	}
+
+	b.variables.debug("\t")
 }

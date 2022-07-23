@@ -3,11 +3,14 @@ load "go:sleep"
 load "go:time"
 
 var t
+var counter = 0
 
 for {
+    counter <- $(counter) + 1
+
     co time -> t
     co print {
-        "Time": "$(t.now)"
+        "Time": "$(t.now) $(counter)"
     }
     co sleep
 }

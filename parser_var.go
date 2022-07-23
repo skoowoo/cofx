@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/cofunclabs/cofunc/pkg/enabled"
+	"github.com/cofunclabs/cofunc/pkg/eval"
 )
 
 type _var struct {
@@ -16,6 +19,7 @@ type _var struct {
 	}
 	child  []*_var
 	cached bool
+	asexp  bool
 }
 
 func (v *_var) updateval(nv *_var) {
@@ -32,7 +36,7 @@ func (v *_var) calcvarval() (string, bool) {
 	v.Lock()
 	defer v.Unlock()
 
-	if v.cached || len(v.child) == 0 {
+	if (v.cached || len(v.child) == 0) && !v.asexp {
 		return v.v, v.cached
 	}
 	var (
@@ -55,10 +59,21 @@ func (v *_var) calcvarval() (string, bool) {
 		}
 		vb.WriteString(seg.str)
 	}
+
+	if v.asexp {
+		s := vb.String()
+		res, err := eval.String(s)
+		if err != nil {
+			panic(fmt.Errorf("%w: '%s' '%p'", err, s, v))
+		}
+		v.v = res
+		return res, false
+	}
+
+	v.v = vb.String()
 	if cacheable {
 		v.cached = true
 	}
-	v.v = vb.String()
 	return v.v, v.cached
 }
 
@@ -92,6 +107,20 @@ func (v *_var) dfscycle(stack *list.List) error {
 type vsys struct {
 	sync.Mutex
 	vars map[string]*_var
+}
+
+func (vs *vsys) debug(tab ...string) {
+	if !enabled.Debug() {
+		return
+	}
+	indent := strings.Join(tab, "")
+	fmt.Println(indent + "variables in block:")
+	for k, v := range vs.vars {
+		fmt.Printf(indent+"\tname:'%s', value:'%s', exp:'%t', addr:%p, segments:'%+v'\n", k, v.v, v.asexp, v, v.segments)
+		for _, c := range v.child {
+			fmt.Printf(indent+"\t\taddr:'%p', value:'%s', exp:'%t'\n", c, c.v, c.asexp)
+		}
+	}
 }
 
 func (vs *vsys) putOrUpdate(name string, v *_var) error {
@@ -163,17 +192,12 @@ func (vs *vsys) cyclecheck(names ...string) error {
 
 func token2var(t *Token) (*_var, error) {
 	v := &_var{
-		segments: []struct {
-			str   string
-			isvar bool
-		}{},
-		child: []*_var{},
+		segments: t.Segments(),
 	}
 	if !t.HasVar() {
 		v.v = t.String()
 		v.cached = true
 	} else {
-		v.segments = t.Segments()
 		for _, seg := range v.segments {
 			if !seg.isvar {
 				continue
@@ -187,6 +211,7 @@ func token2var(t *Token) (*_var, error) {
 			}
 		}
 	}
+	v.asexp = (t.typ == _exp_t)
 	return v, nil
 }
 
