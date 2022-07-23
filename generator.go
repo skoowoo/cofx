@@ -2,6 +2,7 @@ package cofunc
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -405,7 +406,13 @@ func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
 }
 
 // ForstageAndExec is the entry and main program for executing the run queue
-func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) (err1 error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err1 = fmt.Errorf("PANIC: %v", r)
+		}
+	}()
+
 	// exec 'rewrite variable' statement of global
 	for _, stm := range rq.g.List() {
 		if err := rq.g.rewriteVar(stm); err != nil {
