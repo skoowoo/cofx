@@ -98,18 +98,28 @@ co {
 }
 ```
 
-#### :balloon: for
+#### :balloon: for 循环
 TODO:
 
-#### :balloon: var
-var 可以定义一个变量，:warning: 注意：变量是没有类型的，所以变量都是字符串（后续会增加数字类型）
+#### :balloon: 变量
+`var` 关键字可以定义一个变量，:warning: 注意：变量本身是没有类型的，但内置默认区分处理字符串和数字，数字变量能够进行算术运算
 
 ```go
 var a = "Hello World!"
 var b = $(a)
+var c = (1 + 1) * 2
+var d = $(c) * 2
 ``` 
 
-:warning: 注意： var 可以在 global 和 fn 两个块作用域里使用，不能在 run 里使用。
+:warning: 注意： var 可以在 global、fn、for 作用域里使用，不能在 run 里使用。
+
+`<-` 操作符用于变量重写 （其他语言里一般叫赋值）
+
+```go
+var a = "foo"
+a <- "bar
+// <- 重写变量后，a 变量的值就变成了 bar
+```
 
 ## :bullettrain_side: 标准函数库
 - :white_check_mark: print
