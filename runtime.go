@@ -9,21 +9,21 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
-// Scheduler
+// Sched
 //
-type Scheduler struct {
+type Sched struct {
 	store *flowstore
 }
 
-func New() *Scheduler {
-	s := &Scheduler{}
+func New() *Sched {
+	s := &Sched{}
 	s.store = &flowstore{
 		entity: make(map[string]*Flow),
 	}
 	return s
 }
 
-func (sd *Scheduler) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
+func (sd *Sched) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
 	rq, ast, err := ParseFlowl(rd)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (sd *Scheduler) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reade
 	return nil
 }
 
-func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
+func (sd *Sched) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 	fw, err := sd.store.get(fid.Value())
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (sd *Scheduler) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 	return fw.updateField(ready)
 }
 
-func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
+func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 	fw, err := sd.store.get(fid.Value())
 	if err != nil {
 		return err
@@ -93,6 +93,7 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 				fr.begin = time.Now()
 				fr.err = n.Exec(ctx)
 				fr.end = time.Now()
+
 				select {
 				case ch <- fr:
 				case <-ctx.Done():
@@ -127,7 +128,7 @@ func (sd *Scheduler) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (sd *Scheduler) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(flowBody) error) error {
+func (sd *Sched) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(flowBody) error) error {
 	flow, err := sd.store.get(fid.Value())
 	if err != nil {
 		return err
@@ -138,10 +139,10 @@ func (sd *Scheduler) InspectFlow(ctx context.Context, fid feedbackid.ID, read fu
 	return nil
 }
 
-func (sd *Scheduler) StopFlow(ctx context.Context, fid feedbackid.ID) error {
+func (sd *Sched) StopFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (sd *Scheduler) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
+func (sd *Sched) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }

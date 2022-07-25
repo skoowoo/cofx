@@ -201,7 +201,7 @@ func (l *lexer) split(line string, ln int) error {
 				l.saveRune(c)
 				l.insert(ln, &Token{
 					str: l.exportString(),
-					typ: _string_t,
+					typ: _refvar_t,
 				})
 				l._goto(_lx_unknow)
 				break

@@ -527,6 +527,7 @@ func TestVarExpression(t *testing.T) {
 
 		var c = (2+1)
 		var d = 2 > 1
+		var e = "a" > "b"
 	`
 		blocks, err := loadTestingdata(testingdata)
 		if err != nil {
@@ -544,6 +545,9 @@ func TestVarExpression(t *testing.T) {
 
 			v, _ = b.CalcVar("d")
 			assert.Equal(t, "true", v)
+
+			v, _ = b.CalcVar("e")
+			assert.Equal(t, "false", v)
 		}
 	}
 }
