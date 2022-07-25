@@ -11,6 +11,7 @@ var (
 	ErrConfigedFunctionDuplicated error = errors.New("configured function duplicated")
 	ErrDriverNotFound             error = errors.New("driver not found")
 	ErrNameConflict               error = errors.New("name conflict")
+	ErrConditionIsFalse           error = errors.New("condition is false")
 )
 
 func GeneratorErrorf(err error, format string, args ...interface{}) error {

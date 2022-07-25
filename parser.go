@@ -49,84 +49,70 @@ var statementPatterns = map[string]struct {
 	"load": {
 		2, 2,
 		[]TokenType{_ident_t, _string_t},
-		[]string{"", ""},
+		[]string{_kw_load, ""},
 		[]TokenType{_keyword_t, _load_t},
 		nil,
 	},
 	"fn": {
 		5, 5,
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
-		[]string{"", "", "=", "", "{"},
+		[]string{_kw_fn, "", "=", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"co1": {
 		2, 2,
 		[]TokenType{_ident_t, _ident_t},
-		[]string{"", ""},
+		[]string{_kw_co, ""},
 		[]TokenType{_keyword_t, _functionname_t},
 		nil,
 	},
 	"co1->": {
 		4, 4,
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t},
-		[]string{"", "", "->", ""},
+		[]string{_kw_co, "", "->", ""},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t},
 		nil,
 	},
 	"co1+": {
 		3, 3,
 		[]TokenType{_ident_t, _ident_t, _symbol_t},
-		[]string{"", "", "{"},
+		[]string{_kw_co, "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"co1+->": {
 		5, 5,
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
-		[]string{"", "", "->", "", "{"},
+		[]string{_kw_co, "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
 	"co2": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
-		[]string{"", "{"},
+		[]string{_kw_co, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &FList{etype: _functionname_t} },
 	},
 	"var": {
 		2, math.MaxInt,
 		[]TokenType{_ident_t, _ident_t, _symbol_t},
-		[]string{"", "", "="},
+		[]string{_kw_var, "", "="},
 		[]TokenType{_keyword_t, _varname_t, _operator_t},
 		nil,
 	},
 	"args": {
 		3, 3,
 		[]TokenType{_ident_t, _symbol_t, _symbol_t},
-		[]string{"", "=", "{"},
+		[]string{_kw_args, "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
 		func() bbody { return &FMap{} },
-	},
-	"kv": {
-		3, 3,
-		[]TokenType{_string_t, _symbol_t, _string_t},
-		[]string{"", ":", ""},
-		[]TokenType{_mapkey_t, _symbol_t, _string_t},
-		nil,
-	},
-	"element": {
-		1, 1,
-		[]TokenType{_string_t},
-		[]string{""},
-		[]TokenType{_string_t},
-		nil,
 	},
 	"for": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
-		[]string{"", "{"},
+		[]string{_kw_for, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
@@ -199,9 +185,9 @@ func newAST() *AST {
 			kind: Token{
 				str: "global",
 			},
-			target:    Token{},
+			target1:   Token{},
 			operator:  Token{},
-			typevalue: Token{},
+			target2:   Token{},
 			child:     make([]*Block, 0),
 			parent:    nil,
 			variables: vsys{vars: make(map[string]*_var)},
@@ -405,7 +391,7 @@ func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
 	}
 	nb.bbody = body
 	nb.kind = *line[0]
-	nb.target = *line[1]
+	nb.target1 = *line[1]
 
 	b.child = append(b.child, nb)
 	return nil
@@ -427,9 +413,9 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 	kind, target, op, tv := line[0], line[1], line[2], line[3]
 
 	nb.kind = *kind
-	nb.target = *target
+	nb.target1 = *target
 	nb.operator = *op
-	nb.typevalue = *tv
+	nb.target2 = *tv
 
 	b.child = append(b.child, nb)
 	return nb, nil
@@ -455,17 +441,17 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 			nb.bbody = body
 			switch k {
 			case "co1": // co sleep
-				nb.target = *line[1]
+				nb.target1 = *line[1]
 			case "co1+": // co sleep {
-				nb.target = *line[1]
+				nb.target1 = *line[1]
 			case "co1->": // co sleep -> out
-				nb.target = *line[1]
+				nb.target1 = *line[1]
 				nb.operator = *line[2]
-				nb.typevalue = *line[3]
+				nb.target2 = *line[3]
 			case "co1+->": // co sleep -> out {
-				nb.target = *line[1]
+				nb.target1 = *line[1]
 				nb.operator = *line[2]
-				nb.typevalue = *line[3]
+				nb.target2 = *line[3]
 			case "co2": // co {
 			}
 			break
@@ -475,10 +461,10 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		return nil, err
 	}
 
-	if !nb.typevalue.IsEmpty() {
-		name := nb.typevalue.String()
+	if !nb.target2.IsEmpty() {
+		name := nb.target2.String()
 		if v, _ := nb.GetVar(name); v == nil {
-			return nil, VarErrorf(nb.typevalue.ln, ErrVariableNotDefined, "'%s'", name)
+			return nil, VarErrorf(nb.target2.ln, ErrVariableNotDefined, "'%s'", name)
 		}
 	}
 
@@ -511,10 +497,45 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 	}
 	body, err := ast.preparse("for", line, ln, nb)
 	if err != nil {
-		return nil, err
+		l := len(line)
+		// for $(i) < 10 {
+		if l > 2 && line[l-1].String() == "{" && line[l-1].typ == _symbol_t {
+			var builder strings.Builder
+			for _, t := range line[1 : l-1] {
+				if t.typ == _string_t {
+					builder.WriteString("\"" + t.String() + "\"")
+				} else {
+					builder.WriteString(t.String())
+				}
+			}
+
+			nb.kind = *line[0]
+			nb.target1 = Token{
+				ln:  ln,
+				_b:  b,
+				str: "for_condition_expr__",
+				typ: _varname_t,
+			}
+			nb.target2 = Token{
+				ln:  ln,
+				_b:  b,
+				str: builder.String(),
+				typ: _expr_t,
+			}
+			if err := nb.target1.extractVar(); err != nil {
+				return nil, err
+			}
+			if err := nb.target2.extractVar(); err != nil {
+				return nil, err
+			}
+			nb.bbody = &plainbody{}
+		} else {
+			return nil, err
+		}
+	} else {
+		nb.bbody = body
+		nb.kind = *line[0]
 	}
-	nb.bbody = body
-	nb.kind = *line[0]
 
 	b.child = append(b.child, nb)
 	return nb, nil

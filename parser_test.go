@@ -70,7 +70,7 @@ func TestParseBlocksFull(t *testing.T) {
 		}
 		{
 			val, cached := b.CalcVar("c")
-			assert.False(t, cached)
+			assert.True(t, cached)
 			assert.Equal(t, "", val)
 		}
 		{
@@ -79,7 +79,7 @@ func TestParseBlocksFull(t *testing.T) {
 			assert.Equal(t, "hello word", val)
 		}
 
-		if b.IsFn() && b.target.String() == "f1" {
+		if b.IsFn() && b.target1.String() == "f1" {
 			{
 				val, cached := b.CalcVar("fa")
 				assert.True(t, cached)
@@ -110,7 +110,7 @@ load "cmd:function3"
 	}
 	check := func(b *Block, path string) {
 		assert.True(t, b.IsLoad())
-		assert.Equal(t, path, b.target.String())
+		assert.Equal(t, path, b.target1.String())
 	}
 	// 0 is global block
 	check(blocks[1], "cmd:function1")
@@ -212,7 +212,7 @@ hello2"
 		assert.Len(t, b.child, 0)
 		assert.NotNil(t, b.parent)
 		assert.True(t, b.IsCo())
-		assert.Equal(t, obj, b.target.String())
+		assert.Equal(t, obj, b.target1.String())
 
 		if obj == "function2" {
 			kvs := b.bbody.(*FMap).ToMap()
@@ -254,9 +254,9 @@ co {
 		// 0 is global block
 		b := blocks[1]
 		assert.True(t, b.IsCo())
-		assert.True(t, b.target.IsEmpty())
+		assert.True(t, b.target1.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
-		assert.True(t, b.typevalue.IsEmpty())
+		assert.True(t, b.target2.IsEmpty())
 
 		slice := b.bbody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
@@ -284,9 +284,9 @@ co {
 		// 0 is global block
 		b := blocks[1]
 		assert.True(t, b.IsCo())
-		assert.True(t, b.target.IsEmpty())
+		assert.True(t, b.target1.IsEmpty())
 		assert.True(t, b.operator.IsEmpty())
-		assert.True(t, b.typevalue.IsEmpty())
+		assert.True(t, b.target2.IsEmpty())
 
 		slice := b.bbody.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
@@ -379,9 +379,9 @@ co function2
 		// 0 is global block
 		b := blocks[1]
 		assert.True(t, b.IsCo())
-		assert.Equal(t, "function1", b.target.String())
+		assert.Equal(t, "function1", b.target1.String())
 		assert.Equal(t, "->", b.operator.String())
-		assert.Equal(t, "out", b.typevalue.String())
+		assert.Equal(t, "out", b.target2.String())
 	}
 }
 

@@ -2,7 +2,6 @@ package cofunc
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -59,6 +58,18 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncN
 }
 
 func (n *ForNode) Exec(ctx context.Context) error {
+	// exec 'for condition' expression
+	if !n.b.target1.IsEmpty() && !n.b.target2.IsEmpty() {
+		stm := newstm("rewrite_var").Append(&n.b.target1).Append(&n.b.target2)
+		if err := n.b.rewriteVar(stm); err != nil {
+			return err
+		}
+		v, _ := n.b.CalcVar("for_condition_expr__")
+		if v != "true" {
+			return ErrConditionIsFalse
+		}
+	}
+
 	// exec 'rewrite variable' statement of for block
 	for _, stm := range n.b.List() {
 		if err := n.b.rewriteVar(stm); err != nil {
@@ -246,7 +257,7 @@ func (rq *RunQ) convertLoad(ast *AST) error {
 		if !b.IsLoad() {
 			return nil
 		}
-		s := b.target.String()
+		s := b.target1.String()
 		fields := strings.Split(s, ":")
 		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
 		if _, ok := rq.locations[fname]; ok {
@@ -266,7 +277,7 @@ func (rq *RunQ) convertFn(ast *AST) error {
 		if !b.IsFn() {
 			return nil
 		}
-		nodename, fname := b.target.String(), b.typevalue.String()
+		nodename, fname := b.target1.String(), b.target2.String()
 		if nodename == fname {
 			return GeneratorErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
 		}
@@ -326,7 +337,7 @@ func (rq *RunQ) convertCoAndFor(ast *AST) error {
 
 		// Here is the serial run function
 		//
-		if name := b.target.String(); name != "" {
+		if name := b.target1.String(); name != "" {
 			node, ok := rq.configuredNodes[name]
 			if !ok {
 				// Not configured function, so run directly with default function name
@@ -336,7 +347,7 @@ func (rq *RunQ) convertCoAndFor(ast *AST) error {
 				}
 			}
 			node.co = b
-			node.retVarName = b.typevalue.String()
+			node.retVarName = b.target2.String()
 			rq.stages = append(rq.stages, node)
 			return nil
 		}
@@ -355,7 +366,7 @@ func (rq *RunQ) convertCoAndFor(ast *AST) error {
 				}
 			}
 			node.co = b
-			node.retVarName = b.typevalue.String()
+			node.retVarName = b.target2.String()
 			if last == nil {
 				rq.stages = append(rq.stages, node)
 			} else {
@@ -407,12 +418,6 @@ func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
 
 // ForstageAndExec is the entry and main program for executing the run queue
 func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) (err1 error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err1 = fmt.Errorf("PANIC: %v", r)
-		}
-	}()
-
 	// exec 'rewrite variable' statement of global
 	for _, stm := range rq.g.List() {
 		if err := rq.g.rewriteVar(stm); err != nil {
@@ -427,8 +432,11 @@ func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) erro
 
 		if n, ok := e.(*ForNode); ok {
 			if err := e.Exec(ctx); err != nil {
-				i = n.btfIdx + 1
-				continue
+				if err == ErrConditionIsFalse {
+					i = n.btfIdx + 1
+					continue
+				}
+				return err
 			}
 		}
 
