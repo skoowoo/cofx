@@ -211,7 +211,7 @@ func token2var(t *Token) (*_var, error) {
 			}
 		}
 	}
-	v.asexp = (t.typ == _exp_t)
+	v.asexp = (t.typ == _expr_t)
 	return v, nil
 }
 

@@ -288,8 +288,9 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		// e.g.:
 		// 		var v = "foo"
 		// 		var v = 100
+		// 		var v = $(a)
 		val = line[3]
-		if val.typ != _string_t && val.typ != _number_t {
+		if val.typ != _string_t && val.typ != _number_t && val.typ != _refvar_t {
 			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
 		}
 	} else if len(line) > 4 {
@@ -297,15 +298,20 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		// 		var v = 1 + 1
 		// 		var v = -1
 		// 		var v = 1 + $(foo)
+		// 		var v = "a" > "b"
 		// the value is a expression
 		var builder strings.Builder
 		for _, t := range line[3:] {
-			builder.WriteString(t.String())
+			if t.typ == _string_t {
+				builder.WriteString("\"" + t.String() + "\"")
+			} else {
+				builder.WriteString(t.String())
+			}
 		}
-		exp := builder.String()
+		expr := builder.String()
 		val = &Token{
-			str: exp,
-			typ: _exp_t,
+			str: expr,
+			typ: _expr_t,
 			ln:  ln,
 			_b:  b,
 		}
@@ -324,6 +330,67 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		return err
 	}
 	return nil
+}
+
+func _parseRewriteVar(b *Block, line []*Token, ln int) error {
+	t1, t2 := line[0], line[2]
+
+	t1.typ = _varname_t
+	t1._b = b
+	t1.ln = ln
+
+	t2._b = b
+	t2.ln = ln
+	if err := t2.extractVar(); err != nil {
+		return err
+	}
+
+	name := t1.String()
+	if v, _ := b.GetVar(name); v == nil {
+		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+	}
+	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	// if err := b.rewriteVar(stm); err != nil {
+	// 	return err
+	// }
+	return b.bbody.Append(stm)
+}
+
+func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
+	t1 := line[0]
+
+	t1.typ = _varname_t
+	t1._b = b
+	t1.ln = ln
+
+	var builder strings.Builder
+	for _, t := range line[2:] {
+		if t.typ == _string_t {
+			builder.WriteString("\"" + t.String() + "\"")
+		} else {
+			builder.WriteString(t.String())
+		}
+	}
+	exp := builder.String()
+	t2 := &Token{
+		str: exp,
+		typ: _expr_t,
+		ln:  ln,
+		_b:  b,
+	}
+	if err := t2.extractVar(); err != nil {
+		return err
+	}
+
+	name := t1.String()
+	if v, _ := b.GetVar(name); v == nil {
+		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+	}
+	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	//if err := b.rewriteVar(stm); err != nil {
+	//	return err
+	//}
+	return b.bbody.Append(stm)
 }
 
 func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
@@ -658,10 +725,12 @@ func _buildInferTree() *_InferNode {
 	var rules map[string][]_InferData = map[string][]_InferData{
 		"rewrite_var1":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},                   // e.g.: v <- "foo"
 		"rewrite_var2":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},                   // e.g.: v <- 100
+		"rewrite_var3":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}},                   // e.g.: v <- $(foo)
 		"rewrite_var_exp1": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "-"}, {_number_t, ""}}, // e.g.: v <- -100
 		"rewrite_var_exp2": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "("}},                  // e.g.: v <- (1 + 2) * 3
-		"rewrite_var_exp3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}, {_symbol_t, ""}},  // e.g.: v <- $(foo) + 1
+		"rewrite_var_exp3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}, {_symbol_t, ""}},  // e.g.: v <- "a" > "b"
 		"rewrite_var_exp4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}, {_symbol_t, ""}},  // e.g.: v <- 100 + 1
+		"rewrite_var_exp5": {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}, {_symbol_t, ""}},  // e.g.: v <- $(foo) + 1
 	}
 
 	root := &_InferNode{}
@@ -692,61 +761,4 @@ func _insertInferTree(p *_InferNode, n _InferData) *_InferNode {
 	})
 	l := len(p.childs)
 	return &p.childs[l-1]
-}
-
-func _parseRewriteVar(b *Block, line []*Token, ln int) error {
-	t1, t2 := line[0], line[2]
-
-	t1.typ = _varname_t
-	t1._b = b
-	t1.ln = ln
-
-	t2._b = b
-	t2.ln = ln
-	if err := t2.extractVar(); err != nil {
-		return err
-	}
-
-	name := t1.String()
-	if v, _ := b.GetVar(name); v == nil {
-		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
-	}
-	stm := newstm("rewrite_var").Append(t1).Append(t2)
-	// if err := b.rewriteVar(stm); err != nil {
-	// 	return err
-	// }
-	return b.bbody.Append(stm)
-}
-
-func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
-	t1 := line[0]
-
-	t1.typ = _varname_t
-	t1._b = b
-	t1.ln = ln
-
-	var builder strings.Builder
-	for _, t := range line[2:] {
-		builder.WriteString(t.String())
-	}
-	exp := builder.String()
-	t2 := &Token{
-		str: exp,
-		typ: _exp_t,
-		ln:  ln,
-		_b:  b,
-	}
-	if err := t2.extractVar(); err != nil {
-		return err
-	}
-
-	name := t1.String()
-	if v, _ := b.GetVar(name); v == nil {
-		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
-	}
-	stm := newstm("rewrite_var").Append(t1).Append(t2)
-	//if err := b.rewriteVar(stm); err != nil {
-	//	return err
-	//}
-	return b.bbody.Append(stm)
 }
