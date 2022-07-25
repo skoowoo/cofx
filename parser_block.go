@@ -322,9 +322,9 @@ func (r *plainbody) Laststm() *Statement {
 
 type Block struct {
 	kind      Token
-	target    Token
+	target1   Token
 	operator  Token
-	typevalue Token
+	target2   Token
 	child     []*Block
 	parent    *Block
 	variables vsys
@@ -359,6 +359,10 @@ func (b *Block) CreateFieldVar(name, field, val string) error {
 	v := &_var{
 		v:      val,
 		cached: false,
+		segments: []struct {
+			str   string
+			isvar bool
+		}{{val, false}},
 	}
 	return b.UpdateVar(s, v)
 }
@@ -394,9 +398,9 @@ func (b *Block) CalcVar(name string) (string, bool) {
 func (b *Block) validate() error {
 	ts := []*Token{
 		&b.kind,
-		&b.target,
+		&b.target1,
 		&b.operator,
-		&b.typevalue,
+		&b.target2,
 	}
 	for _, t := range ts {
 		if err := t.validate(); err != nil {
@@ -442,13 +446,16 @@ func (b *Block) rewriteVar(stm *Statement) error {
 		return nil
 	}
 	name := stm.tokens[0].String()
-	s, _ := b.CalcVar(name)
 
-	segments := stm.tokens[1].Segments()
-	for i, seg := range segments {
-		if seg.isvar && seg.str == name {
-			segments[i].str = s
-			segments[i].isvar = false
+	// Eliminate the circular dependency of the variable itself to itself
+	if name != "for_condition_expr__" {
+		s, _ := b.CalcVar(name)
+		segments := stm.tokens[1].Segments()
+		for i, seg := range segments {
+			if seg.isvar && seg.str == name {
+				segments[i].str = s
+				segments[i].isvar = false
+			}
 		}
 	}
 
@@ -456,9 +463,17 @@ func (b *Block) rewriteVar(stm *Statement) error {
 	if err != nil {
 		return err
 	}
-	if err := b.UpdateVar(name, v); err != nil {
-		return StatementTokensErrorf(err, stm.tokens)
+	if _, inblock := b.GetVar(name); inblock != nil {
+		if err := inblock.UpdateVar(name, v); err != nil {
+			return StatementTokensErrorf(err, stm.tokens)
+		}
+	} else {
+		// WARNING:
+		if err := b.UpdateVar(name, v); err != nil {
+			return StatementTokensErrorf(err, stm.tokens)
+		}
 	}
+
 	if err := b.variables.cyclecheck(name); err != nil {
 		return err
 	}
@@ -499,9 +514,9 @@ func (b *Block) IsFor() bool {
 
 func (b *Block) String() string {
 	if b.bbody != nil {
-		return fmt.Sprintf("%s %s %s %s {}", &b.kind, &b.target, &b.operator, &b.typevalue)
+		return fmt.Sprintf("%s %s %s %s {}", &b.kind, &b.target1, &b.operator, &b.target2)
 	} else {
-		return fmt.Sprintf("%s %s %s %s", &b.kind, &b.target, &b.operator, &b.typevalue)
+		return fmt.Sprintf("%s %s %s %s", &b.kind, &b.target1, &b.operator, &b.target2)
 	}
 }
 

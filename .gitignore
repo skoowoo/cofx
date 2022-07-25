@@ -15,5 +15,6 @@
 bin/
 vendor/
 .vscode/
+.VSCode*/
 *_string.go
 *DS_Store

@@ -5,7 +5,7 @@ load "go:time"
 var t
 var counter = 0
 
-for {
+for $(counter) < 10 {
     counter <- $(counter) + 1
 
     co time -> t

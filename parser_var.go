@@ -30,13 +30,14 @@ func (v *_var) updateval(nv *_var) {
 	v.segments = nv.segments
 	v.child = nv.child
 	v.cached = nv.cached
+	v.asexp = nv.asexp
 }
 
 func (v *_var) calcvarval() (string, bool) {
 	v.Lock()
 	defer v.Unlock()
 
-	if (v.cached || len(v.child) == 0) && !v.asexp {
+	if v.cached && !v.asexp {
 		return v.v, v.cached
 	}
 	var (
@@ -67,7 +68,10 @@ func (v *_var) calcvarval() (string, bool) {
 			panic(fmt.Errorf("%w: '%s' '%p'", err, s, v))
 		}
 		v.v = res
-		return res, false
+		if len(v.child) == 0 {
+			v.cached = true
+		}
+		return v.v, v.cached
 	}
 
 	v.v = vb.String()
@@ -192,26 +196,25 @@ func (vs *vsys) cyclecheck(names ...string) error {
 
 func token2var(t *Token) (*_var, error) {
 	v := &_var{
+		v:        t.String(),
 		segments: t.Segments(),
+		asexp:    t.typ == _expr_t,
 	}
 	if !t.HasVar() {
-		v.v = t.String()
 		v.cached = true
-	} else {
-		for _, seg := range v.segments {
-			if !seg.isvar {
-				continue
-			}
-			vname := seg.str
-			chld, _ := t._b.GetVar(vname)
-			if chld != nil {
-				v.child = append(v.child, chld)
-			} else {
-				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, vname)
-			}
+	}
+	for _, seg := range v.segments {
+		if !seg.isvar {
+			continue
+		}
+		vname := seg.str
+		chld, _ := t._b.GetVar(vname)
+		if chld != nil {
+			v.child = append(v.child, chld)
+		} else {
+			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, vname)
 		}
 	}
-	v.asexp = (t.typ == _expr_t)
 	return v, nil
 }
 
