@@ -10,7 +10,7 @@ for $(counter) < 10 {
 
     co time -> t
     co print {
-        "Time": "$(t.now) $(counter)"
+        "Time": "$(t.now) / $(t.year) / $(t.month) / $(t.day) $(counter)"
     }
     co sleep
 }

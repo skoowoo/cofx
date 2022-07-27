@@ -9,11 +9,13 @@ import (
 
 var _manifest = manifest.Manifest{
 	Name:           "sleep",
-	Description:    "",
+	Description:    "Used to pause the program for a period of time",
 	Driver:         "go",
 	EntryPoint:     "",
 	EntrypointFunc: Entrypoint,
-	Args:           map[string]string{},
+	Args: map[string]string{
+		"time": "1s",
+	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
 		Args:         []manifest.UsageDesc{},
