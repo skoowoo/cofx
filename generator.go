@@ -35,14 +35,16 @@ type Node interface {
 	String() string
 	Name() string
 	Init(context.Context, ...func(context.Context, *FuncNode) error) error
+	ConditionExec(context.Context) error
 	Exec(context.Context) error
 }
 
 // ForNode stands for the starting of 'for' loop statement
 type ForNode struct {
-	idx    int
-	btfIdx int
-	b      *Block
+	idx       int
+	btfIdx    int
+	b         *Block
+	condition *Statement
 }
 
 func (n *ForNode) String() string {
@@ -57,19 +59,17 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncN
 	return nil
 }
 
-func (n *ForNode) Exec(ctx context.Context) error {
+func (n *ForNode) ConditionExec(ctx context.Context) error {
 	// exec 'for condition' expression
-	if !n.b.target1.IsEmpty() && !n.b.target2.IsEmpty() {
-		stm := newstm("rewrite_var").Append(&n.b.target1).Append(&n.b.target2)
-		if err := n.b.rewriteVar(stm); err != nil {
-			return err
-		}
-		v, _ := n.b.CalcVar("for_condition_expr__")
-		if v != "true" {
+	if n.condition != nil {
+		if !n.b.CalcConditionTrue() {
 			return ErrConditionIsFalse
 		}
 	}
+	return nil
+}
 
+func (n *ForNode) Exec(ctx context.Context) error {
 	// exec 'rewrite variable' statement of for block
 	for _, stm := range n.b.List() {
 		if err := n.b.rewriteVar(stm); err != nil {
@@ -94,6 +94,10 @@ func (n *BtfNode) Name() string {
 	return "BTF"
 }
 func (n *BtfNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
+	return nil
+}
+
+func (n *BtfNode) ConditionExec(ctx context.Context) error {
 	return nil
 }
 
@@ -153,6 +157,10 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *Func
 			return err
 		}
 	}
+	return nil
+}
+
+func (n *FuncNode) ConditionExec(ctx context.Context) error {
 	return nil
 }
 
@@ -217,183 +225,27 @@ type RunQ struct {
 }
 
 func NewRunQ(ast *AST) (*RunQ, error) {
-	q := &RunQ{
+	r := &RunQ{
 		locations:       make(map[string]location),
 		configuredNodes: make(map[string]*FuncNode),
 		stages:          make([]Node, 0),
 		g:               &ast.global,
 	}
-	if err := q.convertLoad(ast); err != nil {
+	if err := r.convertLoad(ast); err != nil {
 		return nil, err
 	}
-	if err := q.convertFn(ast); err != nil {
+	if err := r.convertFn(ast); err != nil {
 		return nil, err
 	}
-	if err := q.convertCoAndFor(ast); err != nil {
+	if err := r.convertCoAndFor(ast); err != nil {
 		return nil, err
 	}
-	return q, nil
+	return r, nil
 }
 
-func (rq *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
-	loc, ok := rq.locations[fname]
-	if !ok {
-		return nil, GeneratorErrorf(ErrFunctionNotLoaded, "'%s'", fname)
-	}
-	l := loc.dname + ":" + loc.path
-	driver := functiondriver.New(l)
-	if driver == nil {
-		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", l)
-	}
-	node := &FuncNode{
-		name:   nodename,
-		driver: driver,
-	}
-	return node, nil
-}
-
-func (rq *RunQ) convertLoad(ast *AST) error {
-	return ast.Foreach(func(b *Block) error {
-		if !b.IsLoad() {
-			return nil
-		}
-		s := b.target1.String()
-		fields := strings.Split(s, ":")
-		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
-		if _, ok := rq.locations[fname]; ok {
-			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", fname)
-		}
-		rq.locations[fname] = location{
-			dname: dname,
-			path:  p,
-			fname: fname,
-		}
-		return nil
-	})
-}
-
-func (rq *RunQ) convertFn(ast *AST) error {
-	return ast.Foreach(func(b *Block) error {
-		if !b.IsFn() {
-			return nil
-		}
-		nodename, fname := b.target1.String(), b.target2.String()
-		if nodename == fname {
-			return GeneratorErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
-		}
-		node, err := rq.createFuncNode(nodename, fname)
-		if err != nil {
-			return err
-		}
-		node.fn = b
-		if _, ok := rq.configuredNodes[node.name]; ok {
-			return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s', function name '%s'", node.name, fname)
-		}
-		rq.configuredNodes[node.name] = node
-		return nil
-	})
-}
-
-func (rq *RunQ) convertCoAndFor(ast *AST) error {
-	err := ast.Foreach(func(b *Block) error {
-		if !b.IsCo() && !b.IsFor() {
-			return nil
-		}
-
-		// Here is the for statement
-		//
-		if b.IsFor() {
-			if rq.processingForNode != nil {
-				// It means that a 'for' loop already exists
-				// Before a new 'for' starts, it should mark the end of the previous 'for'
-				node := &BtfNode{
-					idx:    len(rq.stages),
-					forIdx: rq.processingForNode.idx,
-				}
-				rq.processingForNode.btfIdx = node.idx
-				rq.stages = append(rq.stages, node)
-			}
-
-			node := &ForNode{
-				idx: len(rq.stages), // save the runq's index of 'ForNode'
-				b:   b,
-			}
-			rq.stages = append(rq.stages, node)
-			rq.processingForNode = node
-			return nil
-		}
-
-		if rq.processingForNode != nil && !b.parent.IsFor() {
-			// It means that a 'for' loop already exists
-			// The current 'co' statement is outside the 'for' loop, means that the 'for' loop has ended
-			node := &BtfNode{
-				idx:    len(rq.stages),
-				forIdx: rq.processingForNode.idx,
-			}
-			rq.processingForNode.btfIdx = node.idx
-			rq.stages = append(rq.stages, node)
-			rq.processingForNode = nil
-		}
-
-		// Here is the serial run function
-		//
-		if name := b.target1.String(); name != "" {
-			node, ok := rq.configuredNodes[name]
-			if !ok {
-				// Not configured function, so run directly with default function name
-				var err error
-				if node, err = rq.createFuncNode(name, name); err != nil {
-					return GeneratorErrorf(err, "in serial run function")
-				}
-			}
-			node.co = b
-			node.retVarName = b.target2.String()
-			rq.stages = append(rq.stages, node)
-			return nil
-		}
-
-		// Here is the parallel run function
-		//
-		var last *FuncNode
-		names := b.bbody.(*FList).ToSlice()
-		for _, name := range names {
-			node, ok := rq.configuredNodes[name]
-			if !ok {
-				// Not configured function, so run directly with default function name
-				var err error
-				if node, err = rq.createFuncNode(name, name); err != nil {
-					return GeneratorErrorf(err, "in parallel run function")
-				}
-			}
-			node.co = b
-			node.retVarName = b.target2.String()
-			if last == nil {
-				rq.stages = append(rq.stages, node)
-			} else {
-				last.parallel = node
-			}
-			last = node
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if rq.processingForNode != nil {
-		node := &BtfNode{
-			idx:    len(rq.stages),
-			forIdx: rq.processingForNode.idx,
-		}
-		rq.processingForNode.btfIdx = node.idx
-		rq.stages = append(rq.stages, node)
-		rq.processingForNode = nil
-	}
-	return nil
-}
-
-func (rq *RunQ) NodeNum() int {
+func (r *RunQ) NodeNum() int {
 	var n int
-	for _, e := range rq.stages {
+	for _, e := range r.stages {
 		if fe, ok := e.(*FuncNode); ok {
 			for p := fe; p != nil; p = p.parallel {
 				n += 1
@@ -403,8 +255,8 @@ func (rq *RunQ) NodeNum() int {
 	return n
 }
 
-func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
-	for i, e := range rq.stages {
+func (r *RunQ) ForfuncNode(do func(int, Node) error) error {
+	for i, e := range r.stages {
 		if fe, ok := e.(*FuncNode); ok {
 			for p := fe; p != nil; p = p.parallel {
 				if err := do(i+1, p); err != nil {
@@ -417,25 +269,25 @@ func (rq *RunQ) ForfuncNode(do func(int, Node) error) error {
 }
 
 // ForstageAndExec is the entry and main program for executing the run queue
-func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) (err1 error) {
-	// exec 'rewrite variable' statement of global
-	for _, stm := range rq.g.List() {
-		if err := rq.g.rewriteVar(stm); err != nil {
-			return err
-		}
+func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+	if err := r.beforeExec(ctx); err != nil {
+		return err
 	}
 
 	stage := 1
 	i := 0
-	for i < len(rq.stages) {
-		e := rq.stages[i]
+	for i < len(r.stages) {
+		e := r.stages[i]
 
 		if n, ok := e.(*ForNode); ok {
-			if err := e.Exec(ctx); err != nil {
+			if err := n.ConditionExec(ctx); err != nil {
 				if err == ErrConditionIsFalse {
 					i = n.btfIdx + 1
 					continue
 				}
+				return err
+			}
+			if err := n.Exec(ctx); err != nil {
 				return err
 			}
 		}
@@ -457,6 +309,188 @@ func (rq *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) erro
 		}
 
 		i += 1
+	}
+
+	if err := r.afterExec(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *RunQ) beforeExec(ctx context.Context) error {
+	// exec 'rewrite variable' statement of global
+	for _, stm := range r.g.List() {
+		if err := r.g.rewriteVar(stm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *RunQ) afterExec(ctx context.Context) error {
+	return nil
+}
+
+func (r *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
+	loc, ok := r.locations[fname]
+	if !ok {
+		return nil, GeneratorErrorf(ErrFunctionNotLoaded, "'%s'", fname)
+	}
+	l := loc.dname + ":" + loc.path
+	driver := functiondriver.New(l)
+	if driver == nil {
+		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", l)
+	}
+	node := &FuncNode{
+		name:   nodename,
+		driver: driver,
+	}
+	return node, nil
+}
+
+func (r *RunQ) convertLoad(ast *AST) error {
+	return ast.Foreach(func(b *Block) error {
+		if !b.IsLoad() {
+			return nil
+		}
+		s := b.target1.String()
+		fields := strings.Split(s, ":")
+		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
+		if _, ok := r.locations[fname]; ok {
+			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", fname)
+		}
+		r.locations[fname] = location{
+			dname: dname,
+			path:  p,
+			fname: fname,
+		}
+		return nil
+	})
+}
+
+func (r *RunQ) convertFn(ast *AST) error {
+	return ast.Foreach(func(b *Block) error {
+		if !b.IsFn() {
+			return nil
+		}
+		nodename, fname := b.target1.String(), b.target2.String()
+		if nodename == fname {
+			return GeneratorErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
+		}
+		node, err := r.createFuncNode(nodename, fname)
+		if err != nil {
+			return err
+		}
+		node.fn = b
+		if _, ok := r.configuredNodes[node.name]; ok {
+			return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s', function name '%s'", node.name, fname)
+		}
+		r.configuredNodes[node.name] = node
+		return nil
+	})
+}
+
+func (r *RunQ) convertCoAndFor(ast *AST) error {
+	err := ast.Foreach(func(b *Block) error {
+		if !b.IsCo() && !b.IsFor() {
+			return nil
+		}
+
+		// Here is the for statement
+		//
+		if b.IsFor() {
+			if r.processingForNode != nil {
+				// It means that a 'for' loop already exists
+				// Before a new 'for' starts, it should mark the end of the previous 'for'
+				node := &BtfNode{
+					idx:    len(r.stages),
+					forIdx: r.processingForNode.idx,
+				}
+				r.processingForNode.btfIdx = node.idx
+				r.stages = append(r.stages, node)
+			}
+
+			node := &ForNode{
+				idx: len(r.stages), // save the runq's index of 'ForNode'
+				b:   b,
+			}
+			r.stages = append(r.stages, node)
+			r.processingForNode = node
+
+			if !b.target1.IsEmpty() && !b.target2.IsEmpty() {
+				stm := newstm("var").Append(&b.target1).Append(&b.target2)
+				node.condition = stm
+				if err := b.initVar(stm); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		if r.processingForNode != nil && !b.parent.IsFor() {
+			// It means that a 'for' loop already exists
+			// The current 'co' statement is outside the 'for' loop, means that the 'for' loop has ended
+			node := &BtfNode{
+				idx:    len(r.stages),
+				forIdx: r.processingForNode.idx,
+			}
+			r.processingForNode.btfIdx = node.idx
+			r.stages = append(r.stages, node)
+			r.processingForNode = nil
+		}
+
+		// Here is the serial run function
+		//
+		if name := b.target1.String(); name != "" {
+			node, ok := r.configuredNodes[name]
+			if !ok {
+				// Not configured function, so run directly with default function name
+				var err error
+				if node, err = r.createFuncNode(name, name); err != nil {
+					return GeneratorErrorf(err, "in serial run function")
+				}
+			}
+			node.co = b
+			node.retVarName = b.target2.String()
+			r.stages = append(r.stages, node)
+			return nil
+		}
+
+		// Here is the parallel run function
+		//
+		var last *FuncNode
+		names := b.bbody.(*FList).ToSlice()
+		for _, name := range names {
+			node, ok := r.configuredNodes[name]
+			if !ok {
+				// Not configured function, so run directly with default function name
+				var err error
+				if node, err = r.createFuncNode(name, name); err != nil {
+					return GeneratorErrorf(err, "in parallel run function")
+				}
+			}
+			node.co = b
+			node.retVarName = b.target2.String()
+			if last == nil {
+				r.stages = append(r.stages, node)
+			} else {
+				last.parallel = node
+			}
+			last = node
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if r.processingForNode != nil {
+		node := &BtfNode{
+			idx:    len(r.stages),
+			forIdx: r.processingForNode.idx,
+		}
+		r.processingForNode.btfIdx = node.idx
+		r.stages = append(r.stages, node)
+		r.processingForNode = nil
 	}
 	return nil
 }

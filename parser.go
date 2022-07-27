@@ -513,7 +513,7 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 			nb.target1 = Token{
 				ln:  ln,
 				_b:  b,
-				str: "for_condition_expr__",
+				str: _condition_expr_var,
 				typ: _varname_t,
 			}
 			nb.target2 = Token{
