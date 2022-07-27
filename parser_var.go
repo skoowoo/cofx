@@ -10,6 +10,10 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/eval"
 )
 
+const (
+	_condition_expr_var = "x0f1f2f3__"
+)
+
 type _var struct {
 	sync.Mutex
 	v        string
@@ -117,6 +121,10 @@ func (vs *vsys) debug(tab ...string) {
 	if !enabled.Debug() {
 		return
 	}
+
+	vs.Lock()
+	defer vs.Unlock()
+
 	indent := strings.Join(tab, "")
 	fmt.Println(indent + "variables in block:")
 	for k, v := range vs.vars {

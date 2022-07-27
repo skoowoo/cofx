@@ -395,6 +395,11 @@ func (b *Block) CalcVar(name string) (string, bool) {
 	panic("not found variable: " + name)
 }
 
+func (b *Block) CalcConditionTrue() bool {
+	s, _ := b.CalcVar(_condition_expr_var)
+	return s == "true"
+}
+
 func (b *Block) validate() error {
 	ts := []*Token{
 		&b.kind,
@@ -448,14 +453,12 @@ func (b *Block) rewriteVar(stm *Statement) error {
 	name := stm.tokens[0].String()
 
 	// Eliminate the circular dependency of the variable itself to itself
-	if name != "for_condition_expr__" {
-		s, _ := b.CalcVar(name)
-		segments := stm.tokens[1].Segments()
-		for i, seg := range segments {
-			if seg.isvar && seg.str == name {
-				segments[i].str = s
-				segments[i].isvar = false
-			}
+	s, _ := b.CalcVar(name)
+	segments := stm.tokens[1].Segments()
+	for i, seg := range segments {
+		if seg.isvar && seg.str == name {
+			segments[i].str = s
+			segments[i].isvar = false
 		}
 	}
 
@@ -468,10 +471,7 @@ func (b *Block) rewriteVar(stm *Statement) error {
 			return StatementTokensErrorf(err, stm.tokens)
 		}
 	} else {
-		// WARNING:
-		if err := b.UpdateVar(name, v); err != nil {
-			return StatementTokensErrorf(err, stm.tokens)
-		}
+		return fmt.Errorf("%w: rewrite var '%s'", ErrVariableNotDefined, name)
 	}
 
 	if err := b.variables.cyclecheck(name); err != nil {
@@ -513,11 +513,29 @@ func (b *Block) IsFor() bool {
 }
 
 func (b *Block) String() string {
-	if b.bbody != nil {
-		return fmt.Sprintf("%s %s %s %s {}", &b.kind, &b.target1, &b.operator, &b.target2)
-	} else {
-		return fmt.Sprintf("%s %s %s %s", &b.kind, &b.target1, &b.operator, &b.target2)
+	var builder strings.Builder
+
+	builder.WriteString(b.kind.String())
+
+	if !b.target1.IsEmpty() {
+		builder.WriteString(" ")
+		builder.WriteString(b.target1.String())
 	}
+
+	if !b.operator.IsEmpty() {
+		builder.WriteString(" ")
+		builder.WriteString(b.operator.String())
+	}
+
+	if !b.target2.IsEmpty() {
+		builder.WriteString(" ")
+		builder.WriteString(b.target2.String())
+	}
+
+	if b.bbody != nil {
+		builder.WriteString("{}")
+	}
+	return builder.String()
 }
 
 func (b *Block) debug() {
@@ -525,7 +543,7 @@ func (b *Block) debug() {
 		return
 	}
 
-	fmt.Printf("block: '%s'\n", b.String())
+	fmt.Printf("---> block: '%s'\n", b.String())
 	if b.parent != nil {
 		fmt.Printf("\tparent: '%s'\n", b.parent.String())
 	} else {
