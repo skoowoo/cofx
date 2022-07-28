@@ -512,6 +512,24 @@ func (b *Block) IsFor() bool {
 	return b.Iskind(_kw_for)
 }
 
+func (b *Block) IsIf() bool {
+	return b.Iskind(_kw_if)
+}
+
+func (b *Block) InFor() bool {
+	var p *Block
+	for p = b.parent; p != nil; p = p.parent {
+		if p.IsFor() {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *Block) InIf() bool {
+	return b.parent.IsIf()
+}
+
 func (b *Block) String() string {
 	var builder strings.Builder
 

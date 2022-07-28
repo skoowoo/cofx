@@ -161,6 +161,11 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *Func
 }
 
 func (n *FuncNode) ConditionExec(ctx context.Context) error {
+	if n.co.InIf() {
+		if !n.co.CalcConditionTrue() {
+			return ErrConditionIsFalse
+		}
+	}
 	return nil
 }
 
@@ -300,6 +305,12 @@ func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error
 		if n, ok := e.(*FuncNode); ok {
 			var batch []Node
 			for p := n; p != nil; p = p.parallel {
+				if err := p.ConditionExec(ctx); err != nil {
+					if err == ErrConditionIsFalse {
+						continue
+					}
+					return err
+				}
 				batch = append(batch, p)
 			}
 			if err := exec(stage, batch); err != nil {
@@ -427,7 +438,7 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 			return nil
 		}
 
-		if r.processingForNode != nil && !b.parent.IsFor() {
+		if r.processingForNode != nil && !b.InFor() {
 			// It means that a 'for' loop already exists
 			// The current 'co' statement is outside the 'for' loop, means that the 'for' loop has ended
 			node := &BtfNode{
@@ -437,6 +448,13 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 			r.processingForNode.btfIdx = node.idx
 			r.stages = append(r.stages, node)
 			r.processingForNode = nil
+		}
+
+		if b.IsCo() && b.parent.IsIf() {
+			stm := newstm("var").Append(&b.parent.target1).Append(&b.parent.target2)
+			if err := b.initVar(stm); err != nil {
+				return err
+			}
 		}
 
 		// Here is the serial run function
