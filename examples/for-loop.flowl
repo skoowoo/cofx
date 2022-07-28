@@ -13,4 +13,10 @@ for $(counter) < 10 {
         "Time": "$(t.now) / $(t.year) / $(t.month) / $(t.day) $(counter)"
     }
     co sleep
+
+    if $(counter) % 2 == 0 {
+        co print {
+            "Even Num": "$(counter)"
+        }
+    }
 }

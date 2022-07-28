@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 
 	co "github.com/cofunclabs/cofunc"
@@ -11,7 +11,7 @@ import (
 
 func runFlowl(name string) error {
 	if !co.IsFlowl(name) {
-		return errors.New("file is not a flowl: " + name)
+		return fmt.Errorf("not '.flowl': file '%s'", name)
 	}
 	f, err := os.Open(name)
 	if err != nil {

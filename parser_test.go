@@ -35,12 +35,22 @@ func TestParseBlocksFull(t *testing.T) {
 	var c
 	var d="hello word"
 
-	co f1
-	co	f2
-	co	function3
-	co function4
-
 	c <- "test"
+
+	co f1
+	co f2
+	co function3
+
+	if "a" > "b" {
+		co function4
+	}
+
+	for {
+		if 2 > 1 {
+			co f1
+		}
+		co f2
+	}
 
 	fn f1 = function1 {
 		args = {
