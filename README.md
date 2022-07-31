@@ -2,7 +2,7 @@
 CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
 
 ## :rocket: FlowL
-Flowl 是一门小语言，专用于函数编织； 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义、字符串嵌入变量、for 循环、if 语句等。
+Flowl 是一门小语言，专用于函数编织； 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义、字符串嵌入变量、for 循环、switch 条件语句等。
 
 ### Hello World
 helloworld.flowl 代码内容：
@@ -22,7 +22,7 @@ co print {
 运行代码：
 
 ```
-➜ flowl run examples/helloworld.flowl
+➜ cofunc run examples/helloworld.flowl
 hello world!!!
 ```
 
