@@ -516,6 +516,18 @@ func (b *Block) IsIf() bool {
 	return b.Iskind(_kw_if)
 }
 
+func (b *Block) IsSwitch() bool {
+	return b.Iskind(_kw_switch)
+}
+
+func (b *Block) IsCase() bool {
+	return b.Iskind(_kw_case)
+}
+
+func (b *Block) IsDefault() bool {
+	return b.Iskind(_kw_default)
+}
+
 func (b *Block) InFor() bool {
 	var p *Block
 	for p = b.parent; p != nil; p = p.parent {
@@ -526,8 +538,8 @@ func (b *Block) InFor() bool {
 	return false
 }
 
-func (b *Block) InIf() bool {
-	return b.parent.IsIf()
+func (b *Block) InSwitch() bool {
+	return b.parent.IsCase() || b.parent.IsDefault()
 }
 
 func (b *Block) String() string {

@@ -25,6 +25,9 @@ const (
 	_kw_args    = "args"
 	_kw_for     = "for"
 	_kw_if      = "if"
+	_kw_switch  = "switch"
+	_kw_case    = "case"
+	_kw_default = "default"
 )
 
 type aststate int
@@ -38,6 +41,9 @@ const (
 	_ast_args_body
 	_ast_for_body
 	_ast_if_body
+	_ast_switch_body
+	_ast_case_body
+	_ast_default_body
 )
 
 var statementPatterns = map[string]struct {
@@ -126,10 +132,31 @@ var statementPatterns = map[string]struct {
 		func() bbody { return &plainbody{} },
 	},
 	"if": {
-		1, 3,
+		3, 3,
 		[]TokenType{_ident_t, _expr_t, _symbol_t},
 		[]string{_kw_if, "", "{"},
 		[]TokenType{_keyword_t, _expr_t, _symbol_t},
+		func() bbody { return &plainbody{} },
+	},
+	"switch": {
+		2, 2,
+		[]TokenType{_ident_t, _symbol_t},
+		[]string{_kw_switch, "{"},
+		[]TokenType{_keyword_t, _symbol_t},
+		func() bbody { return &plainbody{} },
+	},
+	"case": {
+		3, 3,
+		[]TokenType{_ident_t, _expr_t, _symbol_t},
+		[]string{_kw_case, "", "{"},
+		[]TokenType{_keyword_t, _expr_t, _symbol_t},
+		func() bbody { return &plainbody{} },
+	},
+	"default": {
+		2, 2,
+		[]TokenType{_ident_t, _symbol_t},
+		[]string{_kw_default, "{"},
+		[]TokenType{_keyword_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"closed": {
@@ -605,6 +632,85 @@ func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
 	return nb, nil
 }
 
+func (ast *AST) parseSwitch(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("switch", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+	nb.kind = *line[0]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
+func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
+	var (
+		builder  strings.Builder
+		composed []*Token
+	)
+	if l := len(line); l > 3 {
+		// first
+		composed = append(composed, line[0])
+		// Compose all intermediate tokens
+		for _, t := range line[1 : l-1] {
+			builder.WriteString(t.String())
+		}
+		composed = append(composed, &Token{
+			str: builder.String(),
+			typ: _expr_t,
+		})
+		// last
+		composed = append(composed, line[l-1])
+	} else {
+		composed = line
+	}
+
+	nb := &Block{
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("case", composed, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+	nb.kind = *composed[0]
+	nb.target1 = Token{
+		ln:  ln,
+		_b:  nb,
+		str: _condition_expr_var,
+		typ: _varname_t,
+	}
+	nb.target2 = *composed[1]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
+func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		child:     []*Block{},
+		parent:    b,
+		variables: vsys{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("default", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.bbody = body
+	nb.kind = *line[0]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
 func (ast *AST) scan(lx *lexer) error {
 	var parsingblock = &ast.global
 
@@ -624,37 +730,46 @@ func (ast *AST) scan(lx *lexer) error {
 			case _kw_load:
 				return ast.parseLoad(line, ln, parsingblock)
 			case _kw_fn:
-				fnblock, err := ast.parseFn(line, ln, parsingblock)
+				block, err := ast.parseFn(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				parsingblock = fnblock
+				parsingblock = block
 				ast._goto(_ast_fn_body)
 			case _kw_co:
-				coblock, err := ast.parseCo(line, ln, parsingblock)
+				block, err := ast.parseCo(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				if coblock.bbody != nil {
-					parsingblock = coblock
+				if block.bbody != nil {
+					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
 			case _kw_var:
 				return ast.parseVar(line, ln, parsingblock)
 			case _kw_for:
-				forblock, err := ast.parseFor(line, ln, parsingblock)
+				block, err := ast.parseFor(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				parsingblock = forblock
+				parsingblock = block
 				ast._goto(_ast_for_body)
-			case _kw_if:
-				ifblock, err := ast.parseIf(line, ln, parsingblock)
+				/*
+					case _kw_if:
+						ifblock, err := ast.parseIf(line, ln, parsingblock)
+						if err != nil {
+							return err
+						}
+						parsingblock = ifblock
+						ast._goto(_ast_if_body)
+				*/
+			case _kw_switch:
+				block, err := ast.parseSwitch(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				parsingblock = ifblock
-				ast._goto(_ast_if_body)
+				parsingblock = block
+				ast._goto(_ast_switch_body)
 			default:
 				if _parse, err := _lookupInferTree(infertree, line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
@@ -674,11 +789,11 @@ func (ast *AST) scan(lx *lexer) error {
 			kind := line[0]
 			switch kind.String() {
 			case _kw_args:
-				argsblock, err := ast.parseArgs(line, ln, parsingblock)
+				block, err := ast.parseArgs(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				parsingblock = argsblock
+				parsingblock = block
 				ast._goto(_ast_args_body)
 			case _kw_var:
 				return ast.parseVar(line, ln, parsingblock)
@@ -714,6 +829,10 @@ func (ast *AST) scan(lx *lexer) error {
 					ast._goto(_ast_for_body)
 				} else if parent.IsIf() {
 					ast._goto(_ast_if_body)
+				} else if parent.IsCase() {
+					ast._goto(_ast_case_body)
+				} else if parent.IsDefault() {
+					ast._goto(_ast_default_body)
 				} else {
 					ast._goto(_ast_global)
 				}
@@ -741,21 +860,30 @@ func (ast *AST) scan(lx *lexer) error {
 			kind := line[0]
 			switch kind.String() {
 			case _kw_co:
-				coblock, err := ast.parseCo(line, ln, parsingblock)
+				block, err := ast.parseCo(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				if coblock.bbody != nil {
-					parsingblock = coblock
+				if block.bbody != nil {
+					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
-			case _kw_if:
-				ifblock, err := ast.parseIf(line, ln, parsingblock)
+				/*
+					case _kw_if:
+						ifblock, err := ast.parseIf(line, ln, parsingblock)
+						if err != nil {
+							return err
+						}
+						parsingblock = ifblock
+						ast._goto(_ast_if_body)
+				*/
+			case _kw_switch:
+				block, err := ast.parseSwitch(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				parsingblock = ifblock
-				ast._goto(_ast_if_body)
+				parsingblock = block
+				ast._goto(_ast_switch_body)
 			default:
 				if _parse, err := _lookupInferTree(infertree, line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
@@ -775,22 +903,73 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 				break
 			}
+
 			kind := line[0]
 			switch kind.String() {
 			case _kw_co:
-				coblock, err := ast.parseCo(line, ln, parsingblock)
+				block, err := ast.parseCo(line, ln, parsingblock)
 				if err != nil {
 					return err
 				}
-				if coblock.bbody != nil {
-					parsingblock = coblock
+				if block.bbody != nil {
+					parsingblock = block
+					ast._goto(_ast_co_body)
+				}
+			default:
+				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_switch_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				if parsingblock.IsFor() {
+					ast._goto(_ast_for_body)
+				} else {
+					ast._goto(_ast_global)
+				}
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_case:
+				block, err := ast.parseCase(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_case_body)
+			case _kw_default:
+				block, err := ast.parseDefault(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_case_body)
+			default:
+				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_case_body, _ast_default_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_ast_switch_body)
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_co:
+				block, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if block.bbody != nil {
+					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
 			default:
 				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		}
-
 		return nil
 	})
 }

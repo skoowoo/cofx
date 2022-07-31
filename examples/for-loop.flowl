@@ -14,15 +14,19 @@ for $(counter) < 10 {
     co print {
         "Time": "$(t.now) / $(t.year) / $(t.month) / $(t.day) $(counter)"
     }
-    if $(counter) % 2 == 0 {
-        co print {
-            "Even Num": "$(counter)"
+
+    switch {
+        case $(counter) % 2 == 0 {
+            co print {
+                "Even Num": "$(counter)"
+            }
+        }
+        case $(t.timestamp) % 2 == 0 {
+            co print {
+                "Even Timestamp": "$(t.timestamp)"
+            }
         }
     }
-    if $(t.timestamp) % 2 == 0 {
-        co print {
-            "Even Timestamp": "$(t.timestamp)"
-        }
-    }
+
     co sleep
 }

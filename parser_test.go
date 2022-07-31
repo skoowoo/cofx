@@ -41,13 +41,17 @@ func TestParseBlocksFull(t *testing.T) {
 	co f2
 	co function3
 
-	if "a" > "b" {
-		co function4
+	switch {
+		case "a" > "b" {
+			co function4
+		}
 	}
 
 	for {
-		if 2 > 1 {
-			co f1
+		switch {
+			case 2 > 1 {
+				co f1
+			}
 		}
 		co f2
 	}
