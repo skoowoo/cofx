@@ -8,15 +8,21 @@ var counter = 0
 for $(counter) < 10 {
     counter <- $(counter) + 1
 
-    co time -> t
+    co time -> t {
+        "get_timestamp": "true"
+    }
     co print {
         "Time": "$(t.now) / $(t.year) / $(t.month) / $(t.day) $(counter)"
     }
-    co sleep
-
     if $(counter) % 2 == 0 {
         co print {
             "Even Num": "$(counter)"
         }
     }
+    if $(t.timestamp) % 2 == 0 {
+        co print {
+            "Even Timestamp": "$(t.timestamp)"
+        }
+    }
+    co sleep
 }

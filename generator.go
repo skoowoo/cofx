@@ -208,7 +208,7 @@ func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bo
 		if filter != nil && !filter(field) {
 			continue
 		}
-		if err := b.CreateFieldVar(name, field, val); err != nil {
+		if err := b.addField2Var(name, field, val); err != nil {
 			logrus.Errorln(err)
 		}
 	}
