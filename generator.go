@@ -161,7 +161,7 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *Func
 }
 
 func (n *FuncNode) ConditionExec(ctx context.Context) error {
-	if n.co.InIf() {
+	if n.co.InSwitch() {
 		if !n.co.CalcConditionTrue() {
 			return ErrConditionIsFalse
 		}
@@ -450,11 +450,14 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 			r.processingForNode = nil
 		}
 
-		if b.IsCo() && b.parent.IsIf() {
+		if b.IsCo() && b.parent.IsCase() {
 			stm := newstm("var").Append(&b.parent.target1).Append(&b.parent.target2)
 			if err := b.initVar(stm); err != nil {
 				return err
 			}
+		}
+		if b.IsCo() && b.parent.IsDefault() {
+			// TODO:
 		}
 
 		// Here is the serial run function
