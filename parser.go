@@ -770,15 +770,13 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 				parsingblock = block
 				ast._goto(_ast_for_body)
-				/*
-					case _kw_if:
-						ifblock, err := ast.parseIf(line, ln, parsingblock)
-						if err != nil {
-							return err
-						}
-						parsingblock = ifblock
-						ast._goto(_ast_if_body)
-				*/
+			case _kw_if:
+				block, err := ast.parseIf(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_if_body)
 			case _kw_switch:
 				block, err := ast.parseSwitch(line, ln, parsingblock)
 				if err != nil {
@@ -884,15 +882,13 @@ func (ast *AST) scan(lx *lexer) error {
 					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
-				/*
-					case _kw_if:
-						ifblock, err := ast.parseIf(line, ln, parsingblock)
-						if err != nil {
-							return err
-						}
-						parsingblock = ifblock
-						ast._goto(_ast_if_body)
-				*/
+			case _kw_if:
+				block, err := ast.parseIf(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_if_body)
 			case _kw_switch:
 				block, err := ast.parseSwitch(line, ln, parsingblock)
 				if err != nil {
