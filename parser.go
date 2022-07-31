@@ -111,11 +111,18 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
 		func() bbody { return &FMap{} },
 	},
-	"for": {
+	"for1": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_for, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
+		func() bbody { return &plainbody{} },
+	},
+	"for2": {
+		3, 3,
+		[]TokenType{_ident_t, _expr_t, _symbol_t},
+		[]string{_kw_for, "", "{"},
+		[]TokenType{_keyword_t, _expr_t, _symbol_t},
 		func() bbody { return &plainbody{} },
 	},
 	"if": {
@@ -499,51 +506,54 @@ func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 }
 
 func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
+	var (
+		builder  strings.Builder
+		composed []*Token
+	)
+	l := len(line)
+	if l > 2 {
+		// first
+		composed = append(composed, line[0])
+		// Compose all intermediate tokens
+		for _, t := range line[1 : l-1] {
+			builder.WriteString(t.String())
+		}
+		composed = append(composed, &Token{
+			str: builder.String(),
+			typ: _expr_t,
+		})
+		// last
+		composed = append(composed, line[l-1])
+	} else {
+		composed = line
+	}
+
 	nb := &Block{
 		child:     []*Block{},
 		parent:    b,
 		variables: vsys{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("for", line, ln, nb)
-	if err != nil {
-		l := len(line)
-		// for $(i) < 10 {
-		if l > 2 && line[l-1].String() == "{" && line[l-1].typ == _symbol_t {
-			var builder strings.Builder
-			for _, t := range line[1 : l-1] {
-				if t.typ == _string_t {
-					builder.WriteString("\"" + t.String() + "\"")
-				} else {
-					builder.WriteString(t.String())
-				}
-			}
-
-			nb.kind = *line[0]
-			nb.target1 = Token{
-				ln:  ln,
-				_b:  nb,
-				str: _condition_expr_var,
-				typ: _varname_t,
-			}
-			nb.target2 = Token{
-				ln:  ln,
-				_b:  nb,
-				str: builder.String(),
-				typ: _expr_t,
-			}
-			if err := nb.target1.extractVar(); err != nil {
-				return nil, err
-			}
-			if err := nb.target2.extractVar(); err != nil {
-				return nil, err
-			}
-			nb.bbody = &plainbody{}
-		} else {
+	if len(composed) == 2 {
+		body, err := ast.preparse("for1", composed, ln, nb)
+		if err != nil {
 			return nil, err
 		}
-	} else {
 		nb.bbody = body
-		nb.kind = *line[0]
+		nb.kind = *composed[0]
+	} else {
+		body, err := ast.preparse("for2", composed, ln, nb)
+		if err != nil {
+			return nil, err
+		}
+		nb.bbody = body
+		nb.kind = *composed[0]
+		nb.target1 = Token{
+			ln:  ln,
+			_b:  nb,
+			str: _condition_expr_var,
+			typ: _varname_t,
+		}
+		nb.target2 = *composed[1]
 	}
 
 	b.child = append(b.child, nb)

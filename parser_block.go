@@ -353,25 +353,21 @@ func (b *Block) UpdateVar(name string, v *_var) error {
 	return b.variables.putOrUpdate(name, v)
 }
 
-// CreateFieldVar TODO:
-func (b *Block) CreateFieldVar(name, field, val string) error {
-	s := name + "." + field
-	v := &_var{
-		v:      val,
-		cached: false,
-		segments: []struct {
-			str   string
-			isvar bool
-		}{{val, false}},
-	}
-	return b.UpdateVar(s, v)
-}
-
 // CalcVar calcuate the variable's value
 func (b *Block) CalcVar(name string) (string, bool) {
 	if b == nil {
 		panic(fmt.Sprintf("var name '%s': block is nil", name))
 	}
+
+	main, field, ok := isFieldVar(name)
+	if ok {
+		v, _ := b.GetVar(main)
+		if v == nil {
+			return "", false
+		}
+		return v.readField(field), false
+	}
+
 	var _debug_ strings.Builder
 	for p := b; p != nil; p = p.parent {
 		if enabled.Debug() {
@@ -384,14 +380,9 @@ func (b *Block) CalcVar(name string) (string, bool) {
 		if v == nil {
 			continue
 		}
-		// debug.Log("*Block.CalcVar()", "calcute variable succeed: '%s', query path:\n%s\n", name, _debug_.String())
 		return v.(string), cached
 	}
 
-	// debug.Log("*Block.CalcVar()", "calcute variable failed: '%s', query path:\n%s\n", name, _debug_.String())
-	if strings.Contains(name, ".") {
-		return "", false
-	}
 	panic("not found variable: " + name)
 }
 
@@ -477,6 +468,15 @@ func (b *Block) rewriteVar(stm *Statement) error {
 	if err := b.variables.cyclecheck(name); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (b *Block) addField2Var(name, field, val string) error {
+	v, _ := b.GetVar(name)
+	if v == nil {
+		return fmt.Errorf("%w: variable '%s'", ErrVariableNotDefined, name)
+	}
+	v.addField(field, val)
 	return nil
 }
 

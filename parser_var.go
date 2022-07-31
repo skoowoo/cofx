@@ -24,6 +24,11 @@ type _var struct {
 	child  []*_var
 	cached bool
 	asexp  bool
+	fields map[string]string
+
+	// for $(v.key)
+	field string
+	mainv *_var
 }
 
 func (v *_var) updateval(nv *_var) {
@@ -41,9 +46,14 @@ func (v *_var) calcvarval() (string, bool) {
 	v.Lock()
 	defer v.Unlock()
 
+	if v.mainv != nil && v.field != "" {
+		return v.mainv.fields[v.field], false
+	}
+
 	if v.cached && !v.asexp {
 		return v.v, v.cached
 	}
+
 	var (
 		vals      []string
 		cacheable = true
@@ -109,6 +119,21 @@ func (v *_var) dfscycle(stack *list.List) error {
 
 	stack.Remove(stack.Back())
 	return nil
+}
+
+func (v *_var) addField(key, val string) {
+	v.Lock()
+	defer v.Unlock()
+	if v.fields == nil {
+		v.fields = make(map[string]string)
+	}
+	v.fields[key] = val
+}
+
+func (v *_var) readField(f string) string {
+	v.Lock()
+	defer v.Unlock()
+	return v.fields[f]
 }
 
 // vsys defined var table for each block
@@ -215,12 +240,26 @@ func token2var(t *Token) (*_var, error) {
 		if !seg.isvar {
 			continue
 		}
-		vname := seg.str
-		chld, _ := t._b.GetVar(vname)
+		var chld *_var
+		name := seg.str
+		main, field, ok := isFieldVar(name)
+		if ok {
+			mv, _ := t._b.GetVar(main)
+			if mv == nil {
+				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
+			}
+			chld = &_var{
+				field: field,
+				mainv: mv,
+			}
+		} else {
+			chld, _ = t._b.GetVar(name)
+		}
+
 		if chld != nil {
 			v.child = append(v.child, chld)
 		} else {
-			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, vname)
+			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, name)
 		}
 	}
 	return v, nil
@@ -246,4 +285,12 @@ func statement2var(stm *Statement) (*_var, error) {
 		}
 	}
 	return v, nil
+}
+
+func isFieldVar(name string) (string, string, bool) {
+	fields := strings.Split(name, ".")
+	if len(fields) != 2 {
+		return "", "", false
+	}
+	return fields[0], fields[1], true
 }
