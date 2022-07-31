@@ -3,6 +3,7 @@ package cofunc
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"math"
 	"strings"
@@ -714,6 +715,14 @@ func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
 	nb.bbody = body
 	nb.kind = *line[0]
 
+	nb.target1 = Token{
+		ln:  ln,
+		_b:  nb,
+		str: _condition_expr_var,
+		typ: _varname_t,
+	}
+	// nb.target2 = ? (handle target2 at 'switch body' closed)
+
 	b.child = append(b.child, nb)
 	return nb, nil
 }
@@ -927,6 +936,35 @@ func (ast *AST) scan(lx *lexer) error {
 			}
 		case _ast_switch_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				// generate condition expression of the 'default'
+				swb := parsingblock
+				var deft *Block
+				for _, c := range swb.child {
+					if c.IsDefault() {
+						deft = c
+					}
+				}
+
+				if deft != nil {
+					var cases []string
+					for _, c := range swb.child {
+						if c.IsCase() {
+							cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
+						}
+					}
+					s := strings.Join(cases, "&&")
+					deft.target2 = Token{
+						ln:  deft.target1.ln,
+						_b:  deft.target1._b,
+						str: s,
+						typ: _expr_t,
+					}
+					if err := deft.target2.extractVar(); err != nil {
+						return err
+					}
+				}
+
+				// goto
 				parsingblock = parsingblock.parent
 				if parsingblock.IsFor() {
 					ast._goto(_ast_for_body)

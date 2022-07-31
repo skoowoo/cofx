@@ -41,7 +41,7 @@ func BackSlash(x rune) bool {
 func Symbol(x rune) bool {
 	symbols := []rune{
 		'{', '}',
-		'>', '<', '=',
+		'>', '<', '=', '!', '|', '&',
 		':',
 		'+', '-', '*', '/', '%',
 		'(', ')',

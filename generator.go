@@ -450,14 +450,11 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 			r.processingForNode = nil
 		}
 
-		if b.IsCo() && b.parent.IsCase() {
+		if b.IsCo() && (b.parent.IsCase() || b.parent.IsDefault()) {
 			stm := newstm("var").Append(&b.parent.target1).Append(&b.parent.target2)
 			if err := b.initVar(stm); err != nil {
 				return err
 			}
-		}
-		if b.IsCo() && b.parent.IsDefault() {
-			// TODO:
 		}
 
 		// Here is the serial run function
