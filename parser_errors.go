@@ -48,6 +48,7 @@ var (
 	ErrMapKVIllegal         error = errors.New("map kv format illegal")
 	ErrListElemIllegal      error = errors.New("list element format illegal")
 	ErrStatementInferFailed error = errors.New("statement infer failed")
+	ErrStatementTooMany     error = errors.New("statement too many")
 )
 
 func StatementErrorf(ln int, err error, format string, args ...interface{}) error {

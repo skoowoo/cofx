@@ -695,6 +695,13 @@ func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
 }
 
 func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
+	// Only one defaul statement inside a switch, so check it
+	for _, c := range b.child {
+		if c.IsDefault() {
+			return nil, StatementErrorf(ln, ErrStatementTooMany, "default in swith")
+		}
+	}
+
 	nb := &Block{
 		child:     []*Block{},
 		parent:    b,
@@ -944,7 +951,7 @@ func (ast *AST) scan(lx *lexer) error {
 					return err
 				}
 				parsingblock = block
-				ast._goto(_ast_case_body)
+				ast._goto(_ast_default_body)
 			default:
 				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
