@@ -7,8 +7,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/pkg/textline"
 )
 
 var _manifest = manifest.Manifest{
@@ -46,18 +48,26 @@ func New() *manifest.Manifest {
 }
 
 func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+	bindir := args["bindir"]
 	prefix, ok := args["prefix"]
 	if !ok {
-		// TODO:
-		_ = ok
+		var err error
+		if prefix, err = textline.FindFileLine("go.mod", splitSpace, getPrefix); err != nil {
+			return nil, err
+		}
 	}
-	bindir := args["bindir"]
-	mainpkg_path, ok := args["mainpkg_path"]
+	mainpkgPath, ok := args["mainpkg_path"]
 	if !ok {
 		// TODO:
 		_ = ok
 	}
-	paths := strings.Split(mainpkg_path, ",")
+
+	// print args
+	fmt.Printf("===> prefix      : %s\n", prefix)
+	fmt.Printf("===> mainpkg_path: %s\n", mainpkgPath)
+	fmt.Printf("===> bindir      : %s\n", bindir)
+
+	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
 		cmd, err := buildCommands(ctx, prefix, bindir, path)
 		if err != nil {
@@ -86,4 +96,21 @@ func buildCommands(ctx context.Context, prefix, binpath, mainpath string) (*exec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd, nil
+}
+
+func splitSpace(c rune) bool {
+	return unicode.IsSpace(c)
+}
+
+// getPrefix read 'module' field from go.mod file
+func getPrefix(fields []string) (string, bool) {
+	if len(fields) == 2 && fields[0] == "module" {
+		return fields[1], true
+	}
+	return "", false
+}
+
+// getMainpkgPath search the main package
+func getMainpkgPath(fields []string) (string, bool) {
+	return "", false
 }
