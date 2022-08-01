@@ -17,9 +17,7 @@ func runFlowl(name string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		f.Close()
-	}()
+	defer f.Close()
 
 	sched := co.New()
 

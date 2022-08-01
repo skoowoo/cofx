@@ -28,7 +28,6 @@ co print {
 
 fn build = go_build {
 	args = {
-		"prefix"      : "github.com/cofunclabs/cofunc"
 		"mainpkg_path": "cmd/cofunc"
 	}
 }
