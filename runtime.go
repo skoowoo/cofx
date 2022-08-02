@@ -49,7 +49,7 @@ func (sd *Sched) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		if body.status == _flow_ready || body.status == _flow_running {
 			return nil
 		}
-		body.total = body.GetRunQ().NodeNum()
+		body.total = body.GetRunQ().FuncNodeNum()
 		body.results = make(map[string]*FunctionResult)
 
 		err := body.GetRunQ().ForfuncNode(func(stage int, n Node) error {

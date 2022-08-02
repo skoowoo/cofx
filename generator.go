@@ -10,15 +10,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ParseFlowl(rd io.Reader) (rq *RunQ, ast *AST, err error) {
-	if ast, err = ParseAST(rd); err != nil {
-		return
-	}
-	rq, err = NewRunQ(ast)
+func ParseFlowl(rd io.Reader) (*RunQ, *AST, error) {
+	ast, err := ParseAST(rd)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
-	return
+	r, err := NewRunQ(ast)
+	if err != nil {
+		return nil, nil, err
+	}
+	return r, ast, nil
 }
 
 // location
@@ -27,196 +28,6 @@ type location struct {
 	dname string
 	fname string
 	path  string
-}
-
-// Node
-//
-type Node interface {
-	String() string
-	Name() string
-	Init(context.Context, ...func(context.Context, *FuncNode) error) error
-	ConditionExec(context.Context) error
-	Exec(context.Context) error
-}
-
-// ForNode stands for the starting of 'for' loop statement
-type ForNode struct {
-	idx       int
-	btfIdx    int
-	b         *Block
-	condition *Statement
-}
-
-func (n *ForNode) String() string {
-	return "for loop"
-}
-
-func (n *ForNode) Name() string {
-	return "FOR"
-}
-
-func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
-	return nil
-}
-
-func (n *ForNode) ConditionExec(ctx context.Context) error {
-	// exec 'for condition' expression
-	if n.condition != nil {
-		if !n.b.CalcConditionTrue() {
-			return ErrConditionIsFalse
-		}
-	}
-	return nil
-}
-
-func (n *ForNode) Exec(ctx context.Context) error {
-	// exec 'rewrite variable' statement of for block
-	for _, stm := range n.b.List() {
-		if err := n.b.rewriteVar(stm); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// btf is an abbreviation for 'back to for'
-// BtfNode back to the starting of 'for' statement, start a new cycle
-type BtfNode struct {
-	idx    int
-	forIdx int
-}
-
-func (n *BtfNode) String() string {
-	return "back to for"
-}
-
-func (n *BtfNode) Name() string {
-	return "BTF"
-}
-func (n *BtfNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
-	return nil
-}
-
-func (n *BtfNode) ConditionExec(ctx context.Context) error {
-	return nil
-}
-
-func (n *BtfNode) Exec(ctx context.Context) error {
-	return nil
-}
-
-// FuncNode
-type FuncNode struct {
-	name       string
-	driver     functiondriver.Driver
-	parallel   *FuncNode
-	co         *Block
-	fn         *Block
-	args       *FMap
-	retVarName string
-}
-
-func (n *FuncNode) String() string {
-	return n.name + "->" + n.driver.FunctionName()
-}
-
-func (n *FuncNode) Name() string {
-	return n.name
-}
-
-func withArgs(ctx context.Context, n *FuncNode) error {
-	if n.co.bbody != nil {
-		m, ok := n.co.bbody.(*FMap)
-		if ok {
-			n.args = m
-			return nil
-		}
-	}
-
-	if n.fn != nil {
-		for _, b := range n.fn.child {
-			if b.IsArgs() {
-				n.args = b.bbody.(*FMap)
-				return nil
-			}
-		}
-	}
-	return nil
-}
-
-func withLoad(ctx context.Context, n *FuncNode) error {
-	return n.driver.Load(ctx)
-}
-
-func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, *FuncNode) error) error {
-	if len(with) == 0 {
-		with = append(with, withArgs, withLoad)
-	}
-	for _, f := range with {
-		if err := f(ctx, n); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (n *FuncNode) ConditionExec(ctx context.Context) error {
-	if n.co.InSwitch() {
-		if !n.co.CalcConditionTrue() {
-			return ErrConditionIsFalse
-		}
-	}
-	return nil
-}
-
-func (n *FuncNode) Exec(ctx context.Context) error {
-	// exec 'rewrite variable' statement of fn block
-	if n.fn != nil {
-		for _, stm := range n.fn.List() {
-			if err := n.fn.rewriteVar(stm); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err := n.driver.MergeArgs(n._args()); err != nil {
-		return err
-	}
-	rets, err := n.driver.Run(ctx)
-	if err != nil {
-		return err
-	}
-	if n.needSaveReturns() {
-		n._saveReturns(rets, nil)
-	}
-	return nil
-}
-
-func (n *FuncNode) _args() map[string]string {
-	if n.args == nil {
-		return map[string]string{}
-	}
-	return n.args.ToMap()
-}
-
-// _saveReturns will create some field var
-// Field Var are dynamic var
-func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bool) bool {
-	name := n.retVarName
-	_, b := n.co.GetVar(name)
-	for field, val := range retkvs {
-		if filter != nil && !filter(field) {
-			continue
-		}
-		if err := b.addField2Var(name, field, val); err != nil {
-			logrus.Errorln(err)
-		}
-	}
-	return true
-}
-
-func (n *FuncNode) needSaveReturns() bool {
-	return n.retVarName != ""
 }
 
 // RunQ
@@ -248,7 +59,7 @@ func NewRunQ(ast *AST) (*RunQ, error) {
 	return r, nil
 }
 
-func (r *RunQ) NodeNum() int {
+func (r *RunQ) FuncNodeNum() int {
 	var n int
 	for _, e := range r.stages {
 		if fe, ok := e.(*FuncNode); ok {
@@ -511,4 +322,202 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 		r.processingForNode = nil
 	}
 	return nil
+}
+
+// Node
+//
+type Node interface {
+	String() string
+	Name() string
+	Init(context.Context, ...func(context.Context, Node) error) error
+	ConditionExec(context.Context) error
+	Exec(context.Context) error
+}
+
+// ForNode stands for the starting of 'for' loop statement
+type ForNode struct {
+	idx       int
+	btfIdx    int
+	b         *Block
+	condition *Statement
+}
+
+func (n *ForNode) String() string {
+	return "for loop"
+}
+
+func (n *ForNode) Name() string {
+	return "FOR"
+}
+
+func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
+	return nil
+}
+
+func (n *ForNode) ConditionExec(ctx context.Context) error {
+	// exec 'for condition' expression
+	if n.condition != nil {
+		if !n.b.CalcConditionTrue() {
+			return ErrConditionIsFalse
+		}
+	}
+	return nil
+}
+
+func (n *ForNode) Exec(ctx context.Context) error {
+	// exec 'rewrite variable' statement of for block
+	for _, stm := range n.b.List() {
+		if err := n.b.rewriteVar(stm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// btf is an abbreviation for 'back to for'
+// BtfNode back to the starting of 'for' statement, start a new cycle
+type BtfNode struct {
+	idx    int
+	forIdx int
+}
+
+func (n *BtfNode) String() string {
+	return "back to for"
+}
+
+func (n *BtfNode) Name() string {
+	return "BTF"
+}
+func (n *BtfNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
+	return nil
+}
+
+func (n *BtfNode) ConditionExec(ctx context.Context) error {
+	return nil
+}
+
+func (n *BtfNode) Exec(ctx context.Context) error {
+	return nil
+}
+
+// FuncNode
+type FuncNode struct {
+	name       string
+	driver     functiondriver.Driver
+	parallel   *FuncNode
+	co         *Block
+	fn         *Block
+	args       *FMap
+	retVarName string
+}
+
+func (n *FuncNode) String() string {
+	return n.name + "->" + n.driver.FunctionName()
+}
+
+func (n *FuncNode) Name() string {
+	return n.name
+}
+
+func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
+	if len(with) == 0 {
+		with = append(with, withArgs, withLoad)
+	}
+	for _, f := range with {
+		if err := f(ctx, n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *FuncNode) ConditionExec(ctx context.Context) error {
+	if n.co.InSwitch() {
+		if !n.co.CalcConditionTrue() {
+			return ErrConditionIsFalse
+		}
+	}
+	return nil
+}
+
+func (n *FuncNode) Exec(ctx context.Context) error {
+	// exec 'rewrite variable' statement of fn block
+	if n.fn != nil {
+		for _, stm := range n.fn.List() {
+			if err := n.fn.rewriteVar(stm); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := n.driver.MergeArgs(n._args()); err != nil {
+		return err
+	}
+	rets, err := n.driver.Run(ctx)
+	if err != nil {
+		return err
+	}
+	if n.needSaveReturns() {
+		n._saveReturns(rets, nil)
+	}
+	return nil
+}
+
+func (n *FuncNode) _args() map[string]string {
+	if n.args == nil {
+		return map[string]string{}
+	}
+	return n.args.ToMap()
+}
+
+// _saveReturns will create some field var
+// Field Var are dynamic var
+func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bool) bool {
+	name := n.retVarName
+	_, b := n.co.GetVar(name)
+	for field, val := range retkvs {
+		if filter != nil && !filter(field) {
+			continue
+		}
+		if err := b.addField2Var(name, field, val); err != nil {
+			logrus.Errorln(err)
+		}
+	}
+	return true
+}
+
+func (n *FuncNode) needSaveReturns() bool {
+	return n.retVarName != ""
+}
+
+func withArgs(ctx context.Context, n Node) error {
+	funcnode, ok := n.(*FuncNode)
+	if !ok {
+		return nil
+	}
+	if funcnode.co.bbody != nil {
+		m, ok := funcnode.co.bbody.(*FMap)
+		if ok {
+			funcnode.args = m
+			return nil
+		}
+	}
+
+	if funcnode.fn != nil {
+		for _, b := range funcnode.fn.child {
+			if b.IsArgs() {
+				funcnode.args = b.bbody.(*FMap)
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func withLoad(ctx context.Context, n Node) error {
+	funcnode, ok := n.(*FuncNode)
+	if !ok {
+		return nil
+	}
+	return funcnode.driver.Load(ctx)
 }
