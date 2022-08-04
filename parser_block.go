@@ -250,6 +250,15 @@ func newstm(desc string) *Statement {
 	return stm
 }
 
+func (s *Statement) FormatString() string {
+	var builder strings.Builder
+	for _, t := range s.tokens {
+		builder.WriteString(t.String())
+		builder.WriteString(" ")
+	}
+	return builder.String()
+}
+
 func (s *Statement) LastToken() *Token {
 	l := len(s.tokens)
 	if l == 0 {
@@ -359,23 +368,7 @@ func (b *Block) CalcVar(name string) (string, bool) {
 		panic(fmt.Sprintf("var name '%s': block is nil", name))
 	}
 
-	main, field, ok := isFieldVar(name)
-	if ok {
-		v, _ := b.GetVar(main)
-		if v == nil {
-			return "", false
-		}
-		return v.readField(field), false
-	}
-
-	var _debug_ strings.Builder
 	for p := b; p != nil; p = p.parent {
-		if enabled.Debug() {
-			_debug_.WriteByte('\t')
-			_debug_.WriteString(p.String())
-			_debug_.WriteByte('\n')
-		}
-
 		v, cached := p.variables.calc(name)
 		if v == nil {
 			continue
@@ -423,7 +416,7 @@ func (b *Block) initVar(stm *Statement) error {
 		return nil
 	}
 	name := stm.tokens[0].String()
-	v, err := statement2var(stm)
+	v, err := newVarFromStm(stm)
 	if err != nil {
 		return err
 	}
@@ -453,7 +446,7 @@ func (b *Block) rewriteVar(stm *Statement) error {
 		}
 	}
 
-	v, err := statement2var(stm)
+	v, err := newVarFromStm(stm)
 	if err != nil {
 		return err
 	}

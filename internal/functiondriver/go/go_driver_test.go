@@ -8,36 +8,31 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	dr := New("go:print")
+	dr := New("print", "print")
 	if dr == nil {
 		t.FailNow()
 	}
 	assert.Equal(t, "print", dr.fname)
 	assert.Equal(t, "print", dr.path)
 	err := dr.Load(context.Background())
-	dr.MergeArgs(map[string]string{
+	args := dr.MergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
 		"k3": "v3",
 	})
 	assert.NoError(t, err)
 	assert.Len(t, dr.manifest.Args, 0)
-	assert.Len(t, dr.mergedArgs, 3)
+	assert.Len(t, args, 3)
 }
 
 func TestRun(t *testing.T) {
-	dr := New("go:print")
+	dr := New("print", "print")
 	if dr == nil {
 		t.FailNow()
 	}
 	err := dr.Load(context.Background())
-	dr.MergeArgs(map[string]string{
-		"k1": "v1",
-		"k2": "v2",
-		"k3": "v3",
-	})
 	assert.NoError(t, err)
-	out, err := dr.Run(context.Background())
+	out, err := dr.Run(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", out["status"])
 }

@@ -3,7 +3,6 @@ package godriver
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/std"
 	"github.com/cofunclabs/cofunc/pkg/manifest"
@@ -11,20 +10,15 @@ import (
 
 // GoDriver
 type GoDriver struct {
-	path       string
-	fname      string
-	manifest   *manifest.Manifest
-	mergedArgs map[string]string
+	path     string
+	fname    string
+	manifest *manifest.Manifest
 }
 
-func New(loc string) *GoDriver {
-	if !strings.HasPrefix(loc, "go:") {
-		return nil
-	}
-	name := strings.TrimPrefix(loc, "go:")
+func New(fname, fpath string) *GoDriver {
 	return &GoDriver{
-		path:  name,
-		fname: name,
+		path:  fpath,
+		fname: fname,
 	}
 }
 
@@ -38,17 +32,16 @@ func (d *GoDriver) Load(ctx context.Context) error {
 	return nil
 }
 
-func (d *GoDriver) MergeArgs(args map[string]string) error {
-	d.mergedArgs = mergeArgs(d.manifest.Args, args)
-	return nil
+func (d *GoDriver) MergeArgs(args map[string]string) map[string]string {
+	return mergeArgs(d.manifest.Args, args)
 }
 
-func (d *GoDriver) Run(ctx context.Context) (map[string]string, error) {
+func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	entrypoint := d.manifest.EntrypointFunc
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.path)
 	}
-	out, err := entrypoint(ctx, d.mergedArgs)
+	out, err := entrypoint(ctx, args)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/enabled"
@@ -105,7 +104,7 @@ var statementPatterns = map[string]struct {
 		func() bbody { return &FList{etype: _functionname_t} },
 	},
 	"var": {
-		2, math.MaxInt,
+		2, 4,
 		[]TokenType{_ident_t, _ident_t, _symbol_t},
 		[]string{_kw_var, "", "="},
 		[]TokenType{_keyword_t, _varname_t, _operator_t},
@@ -234,7 +233,7 @@ func newAST() *AST {
 			target2:   Token{},
 			child:     make([]*Block, 0),
 			parent:    nil,
-			variables: vsys{vars: make(map[string]*_var)},
+			variables: vsys{vars: map[string]*_var{"env": newEnvVar()}},
 			bbody:     &plainbody{},
 		},
 		_FA: _FA{
@@ -308,45 +307,36 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 }
 
 func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
-	if _, err := ast.preparse("var", line, ln, b); err != nil {
+	var composed []*Token
+	if l := len(line); l > 4 {
+		composed = append(composed, line[0:3]...)
+		// Compose all intermediate tokens to expresssion
+		composed = append(composed, newExpression(line[3:]).ToToken())
+	} else {
+		composed = line
+	}
+	if _, err := ast.preparse("var", composed, ln, b); err != nil {
 		return err
 	}
-	name := line[1]
 
-	var val *Token
-	if len(line) == 4 {
+	var (
+		name = composed[1]
+		val  *Token
+	)
+	if len(composed) == 4 {
 		// e.g.:
 		// 		var v = "foo"
 		// 		var v = 100
 		// 		var v = $(a)
-		val = line[3]
-		if val.typ != _string_t && val.typ != _number_t && val.typ != _refvar_t {
-			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
-		}
-	} else if len(line) > 4 {
-		// e.g.:
+
 		// 		var v = 1 + 1
 		// 		var v = -1
 		// 		var v = 1 + $(foo)
 		// 		var v = "a" > "b"
 		// the value is a expression
-		var builder strings.Builder
-		for _, t := range line[3:] {
-			if t.typ == _string_t {
-				builder.WriteString("\"" + t.String() + "\"")
-			} else {
-				builder.WriteString(t.String())
-			}
-		}
-		expr := builder.String()
-		val = &Token{
-			str: expr,
-			typ: _expr_t,
-			ln:  ln,
-			_b:  b,
-		}
-		if err := val.extractVar(); err != nil {
-			return err
+		val = composed[3]
+		if val.typ != _string_t && val.typ != _number_t && val.typ != _refvar_t && val.typ != _expr_t {
+			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
 		}
 	}
 
@@ -388,26 +378,13 @@ func _parseRewriteVar(b *Block, line []*Token, ln int) error {
 
 func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
 	t1 := line[0]
-
 	t1.typ = _varname_t
-	t1._b = b
 	t1.ln = ln
+	t1._b = b
 
-	var builder strings.Builder
-	for _, t := range line[2:] {
-		if t.typ == _string_t {
-			builder.WriteString("\"" + t.String() + "\"")
-		} else {
-			builder.WriteString(t.String())
-		}
-	}
-	exp := builder.String()
-	t2 := &Token{
-		str: exp,
-		typ: _expr_t,
-		ln:  ln,
-		_b:  b,
-	}
+	t2 := newExpression(line[2:]).ToToken()
+	t2.ln = ln
+	t2._b = b
 	if err := t2.extractVar(); err != nil {
 		return err
 	}
@@ -590,20 +567,13 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
 	var (
-		builder  strings.Builder
 		composed []*Token
 	)
 	if l := len(line); l > 3 {
 		// first
 		composed = append(composed, line[0])
-		// Compose all intermediate tokens
-		for _, t := range line[1 : l-1] {
-			builder.WriteString(t.String())
-		}
-		composed = append(composed, &Token{
-			str: builder.String(),
-			typ: _expr_t,
-		})
+		// Compose all intermediate tokens to expression
+		composed = append(composed, newExpression(line[1:l-1]).ToToken())
 		// last
 		composed = append(composed, line[l-1])
 	} else {
@@ -652,20 +622,13 @@ func (ast *AST) parseSwitch(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
 	var (
-		builder  strings.Builder
 		composed []*Token
 	)
 	if l := len(line); l > 3 {
 		// first
 		composed = append(composed, line[0])
-		// Compose all intermediate tokens
-		for _, t := range line[1 : l-1] {
-			builder.WriteString(t.String())
-		}
-		composed = append(composed, &Token{
-			str: builder.String(),
-			typ: _expr_t,
-		})
+		// Compose all intermediate tokens to expresssion
+		composed = append(composed, newExpression(line[1:l-1]).ToToken())
 		// last
 		composed = append(composed, line[l-1])
 	} else {

@@ -12,6 +12,7 @@ var (
 	ErrDriverNotFound             error = errors.New("driver not found")
 	ErrNameConflict               error = errors.New("name conflict")
 	ErrConditionIsFalse           error = errors.New("condition is false")
+	ErrNodeReused                 error = errors.New("node reused")
 )
 
 func GeneratorErrorf(err error, format string, args ...interface{}) error {

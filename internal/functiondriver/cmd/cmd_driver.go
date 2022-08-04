@@ -2,25 +2,18 @@ package cmddriver
 
 import (
 	"context"
-	"path"
-	"strings"
 )
 
 // Cmd
 type CmdDriver struct {
-	location string
-	funcName string
+	fpath string
+	fname string
 }
 
-func New(loc string) *CmdDriver {
-	if !strings.HasPrefix(loc, "cmd:") {
-		return nil
-	}
-	p := strings.TrimPrefix(loc, "cmd:")
-	name := path.Base(p)
+func New(fname, fpath string) *CmdDriver {
 	return &CmdDriver{
-		funcName: name,
-		location: p,
+		fname: fname,
+		fpath: fpath,
 	}
 }
 
@@ -29,14 +22,14 @@ func (d *CmdDriver) Load(ctx context.Context) error {
 	return nil
 }
 
-func (d *CmdDriver) MergeArgs(args map[string]string) error {
+func (d *CmdDriver) MergeArgs(args map[string]string) map[string]string {
 	return nil
 }
 
-func (d *CmdDriver) Run(ctx context.Context) (map[string]string, error) {
+func (d *CmdDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	return nil, nil
 }
 
 func (d *CmdDriver) FunctionName() string {
-	return d.funcName
+	return d.fname
 }

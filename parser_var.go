@@ -3,11 +3,13 @@ package cofunc
 import (
 	"container/list"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
 	"github.com/cofunclabs/cofunc/pkg/enabled"
 	"github.com/cofunclabs/cofunc/pkg/eval"
+	"github.com/cofunclabs/cofunc/pkg/is"
 )
 
 const (
@@ -29,6 +31,9 @@ type _var struct {
 	// for $(v.key)
 	field string
 	mainv *_var
+
+	// for env
+	isenv bool
 }
 
 func (v *_var) updateval(nv *_var) {
@@ -47,7 +52,11 @@ func (v *_var) calcvarval() (string, bool) {
 	defer v.Unlock()
 
 	if v.mainv != nil && v.field != "" {
-		return v.mainv.fields[v.field], false
+		if v.mainv.isenv {
+			return os.Getenv(v.field), true
+		} else {
+			return v.mainv.fields[v.field], false
+		}
 	}
 
 	if v.cached && !v.asexp {
@@ -136,6 +145,80 @@ func (v *_var) readField(f string) string {
 	return v.fields[f]
 }
 
+func newVarFromToken(t *Token) (*_var, error) {
+	v := &_var{
+		v:        t.String(),
+		segments: t.Segments(),
+		asexp:    t.typ == _expr_t,
+	}
+	if !t.HasVar() {
+		v.cached = true
+	}
+	for _, seg := range v.segments {
+		if !seg.isvar {
+			continue
+		}
+		var chld *_var
+		name := seg.str
+		main, field, ok := isFieldVar(name)
+		if ok {
+			mv, _ := t._b.GetVar(main)
+			if mv == nil {
+				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
+			}
+			chld = &_var{
+				field: field,
+				mainv: mv,
+			}
+		} else {
+			chld, _ = t._b.GetVar(name)
+		}
+
+		if chld != nil {
+			v.child = append(v.child, chld)
+		} else {
+			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, name)
+		}
+	}
+	return v, nil
+}
+
+func newVarFromStm(stm *Statement) (*_var, error) {
+	var (
+		v   *_var
+		err error
+	)
+	if len(stm.tokens) == 2 {
+		vt := stm.tokens[1]
+		if v, err = newVarFromToken(vt); err != nil {
+			return nil, err
+		}
+	} else {
+		v = &_var{
+			segments: []struct {
+				str   string
+				isvar bool
+			}{},
+			child: []*_var{},
+		}
+	}
+	return v, nil
+}
+
+func newEnvVar() *_var {
+	return &_var{
+		isenv: true,
+	}
+}
+
+func isFieldVar(name string) (string, string, bool) {
+	fields := strings.Split(name, ".")
+	if len(fields) != 2 {
+		return "", "", false
+	}
+	return fields[0], fields[1], true
+}
+
 // vsys defined var table for each block
 type vsys struct {
 	sync.Mutex
@@ -194,6 +277,18 @@ func (vs *vsys) get(name string) (*_var, bool) {
 }
 
 func (vs *vsys) calc(name string) (_v interface{}, cached bool) {
+	main, field, ok := isFieldVar(name)
+	if ok {
+		if main == "env" {
+			return os.Getenv(field), true
+		}
+		v, ok := vs.get(main)
+		if !ok {
+			return nil, false
+		}
+		return v.readField(field), false
+	}
+
 	v, ok := vs.get(name)
 	if !ok {
 		return nil, false
@@ -227,70 +322,70 @@ func (vs *vsys) cyclecheck(names ...string) error {
 	return nil
 }
 
-func token2var(t *Token) (*_var, error) {
-	v := &_var{
-		v:        t.String(),
-		segments: t.Segments(),
-		asexp:    t.typ == _expr_t,
+type expression struct {
+	s string
+}
+
+func newExpression(tokens []*Token) *expression {
+	var (
+		hasString bool
+		hasArith  bool
+		builder   strings.Builder
+		subtokens []*Token
+	)
+
+	convert := func() {
+		for _, t := range subtokens {
+			switch t.typ {
+			case _string_t:
+				builder.WriteString("\"")
+				builder.WriteString(t.String())
+				builder.WriteString("\"")
+			case _refvar_t:
+				if hasString || !hasArith {
+					builder.WriteString("\"")
+					builder.WriteString(t.String())
+					builder.WriteString("\"")
+				} else {
+					builder.WriteString(t.String())
+				}
+			default:
+				builder.WriteString(t.String())
+			}
+		}
+
 	}
-	if !t.HasVar() {
-		v.cached = true
-	}
-	for _, seg := range v.segments {
-		if !seg.isvar {
+
+	for _, t := range tokens {
+		subtokens = append(subtokens, t)
+
+		if t.String() == "||" || t.String() == "&&" {
+			convert()
+			hasArith = false
+			hasString = false
+			subtokens = nil
 			continue
 		}
-		var chld *_var
-		name := seg.str
-		main, field, ok := isFieldVar(name)
-		if ok {
-			mv, _ := t._b.GetVar(main)
-			if mv == nil {
-				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
-			}
-			chld = &_var{
-				field: field,
-				mainv: mv,
-			}
-		} else {
-			chld, _ = t._b.GetVar(name)
-		}
 
-		if chld != nil {
-			v.child = append(v.child, chld)
-		} else {
-			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, name)
+		if is.Arithmetic(t.String()) {
+			hasArith = true
+		}
+		if t.typ == _string_t {
+			hasString = true
 		}
 	}
-	return v, nil
+	if subtokens != nil {
+		convert()
+	}
+
+	return &expression{
+		s: builder.String(),
+	}
 }
 
-func statement2var(stm *Statement) (*_var, error) {
-	var (
-		v   *_var
-		err error
-	)
-	if len(stm.tokens) == 2 {
-		vt := stm.tokens[1]
-		if v, err = token2var(vt); err != nil {
-			return nil, err
-		}
-	} else {
-		v = &_var{
-			segments: []struct {
-				str   string
-				isvar bool
-			}{},
-			child: []*_var{},
-		}
+func (e *expression) ToToken() *Token {
+	return &Token{
+		str: e.s,
+		typ: _expr_t,
 	}
-	return v, nil
-}
-
-func isFieldVar(name string) (string, string, bool) {
-	fields := strings.Split(name, ".")
-	if len(fields) != 2 {
-		return "", "", false
-	}
-	return fields[0], fields[1], true
 }
