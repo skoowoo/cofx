@@ -1,4 +1,4 @@
-package cofunc
+package parser
 
 import (
 	"container/list"
@@ -164,7 +164,7 @@ func newVarFromToken(t *Token) (*_var, error) {
 		if ok {
 			mv, _ := t._b.GetVar(main)
 			if mv == nil {
-				return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
+				return nil, tokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
 			}
 			chld = &_var{
 				field: field,
@@ -177,7 +177,7 @@ func newVarFromToken(t *Token) (*_var, error) {
 		if chld != nil {
 			v.child = append(v.child, chld)
 		} else {
-			return nil, TokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, name)
+			return nil, tokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, name)
 		}
 	}
 	return v, nil
@@ -217,109 +217,6 @@ func isFieldVar(name string) (string, string, bool) {
 		return "", "", false
 	}
 	return fields[0], fields[1], true
-}
-
-// vsys defined var table for each block
-type vsys struct {
-	sync.Mutex
-	vars map[string]*_var
-}
-
-func (vs *vsys) debug(tab ...string) {
-	if !enabled.Debug() {
-		return
-	}
-
-	vs.Lock()
-	defer vs.Unlock()
-
-	indent := strings.Join(tab, "")
-	fmt.Println(indent + "variables in block:")
-	for k, v := range vs.vars {
-		fmt.Printf(indent+"\tname:'%s', value:'%s', exp:'%t', addr:%p, segments:'%+v'\n", k, v.v, v.asexp, v, v.segments)
-		for _, c := range v.child {
-			fmt.Printf(indent+"\t\taddr:'%p', value:'%s', exp:'%t'\n", c, c.v, c.asexp)
-		}
-	}
-}
-
-func (vs *vsys) putOrUpdate(name string, v *_var) error {
-	vs.Lock()
-	defer vs.Unlock()
-
-	old, ok := vs.vars[name]
-	if ok {
-		old.updateval(v)
-	} else {
-		vs.vars[name] = v
-	}
-	return nil
-}
-
-func (vs *vsys) put(name string, v *_var) error {
-	vs.Lock()
-	defer vs.Unlock()
-
-	_, ok := vs.vars[name]
-	if ok {
-		return fmt.Errorf("'%s': %w", name, ErrVariableNameDuplicated)
-	}
-	vs.vars[name] = v
-	return nil
-}
-
-func (vs *vsys) get(name string) (*_var, bool) {
-	vs.Lock()
-	defer vs.Unlock()
-
-	v, ok := vs.vars[name]
-	return v, ok
-}
-
-func (vs *vsys) calc(name string) (_v interface{}, cached bool) {
-	main, field, ok := isFieldVar(name)
-	if ok {
-		if main == "env" {
-			return os.Getenv(field), true
-		}
-		v, ok := vs.get(main)
-		if !ok {
-			return nil, false
-		}
-		return v.readField(field), false
-	}
-
-	v, ok := vs.get(name)
-	if !ok {
-		return nil, false
-	}
-	return v.calcvarval()
-}
-
-func (vs *vsys) cyclecheck(names ...string) error {
-	vs.Lock()
-	defer vs.Unlock()
-
-	stack := list.New()
-
-	if len(names) != 0 {
-		for _, name := range names {
-			v, ok := vs.vars[name]
-			if ok {
-				if err := v.dfscycle(stack); err != nil {
-					return fmt.Errorf("%w: start variable '%s'", err, name)
-				}
-			}
-		}
-		return nil
-	}
-
-	for name, v := range vs.vars {
-		if err := v.dfscycle(stack); err != nil {
-			return fmt.Errorf("%w: start variable '%s'", err, name)
-		}
-	}
-	return nil
 }
 
 type expression struct {
@@ -388,4 +285,107 @@ func (e *expression) ToToken() *Token {
 		str: e.s,
 		typ: _expr_t,
 	}
+}
+
+// vartable defined var table for each block
+type vartable struct {
+	sync.Mutex
+	vars map[string]*_var
+}
+
+func (vs *vartable) debug(tab ...string) {
+	if !enabled.Debug() {
+		return
+	}
+
+	vs.Lock()
+	defer vs.Unlock()
+
+	indent := strings.Join(tab, "")
+	fmt.Println(indent + "variables in block:")
+	for k, v := range vs.vars {
+		fmt.Printf(indent+"\tname:'%s', value:'%s', exp:'%t', addr:%p, segments:'%+v'\n", k, v.v, v.asexp, v, v.segments)
+		for _, c := range v.child {
+			fmt.Printf(indent+"\t\taddr:'%p', value:'%s', exp:'%t'\n", c, c.v, c.asexp)
+		}
+	}
+}
+
+func (vs *vartable) putOrUpdate(name string, v *_var) error {
+	vs.Lock()
+	defer vs.Unlock()
+
+	old, ok := vs.vars[name]
+	if ok {
+		old.updateval(v)
+	} else {
+		vs.vars[name] = v
+	}
+	return nil
+}
+
+func (vs *vartable) put(name string, v *_var) error {
+	vs.Lock()
+	defer vs.Unlock()
+
+	_, ok := vs.vars[name]
+	if ok {
+		return fmt.Errorf("'%s': %w", name, ErrVariableNameDuplicated)
+	}
+	vs.vars[name] = v
+	return nil
+}
+
+func (vs *vartable) get(name string) (*_var, bool) {
+	vs.Lock()
+	defer vs.Unlock()
+
+	v, ok := vs.vars[name]
+	return v, ok
+}
+
+func (vs *vartable) calc(name string) (_v interface{}, cached bool) {
+	main, field, ok := isFieldVar(name)
+	if ok {
+		if main == "env" {
+			return os.Getenv(field), true
+		}
+		v, ok := vs.get(main)
+		if !ok {
+			return nil, false
+		}
+		return v.readField(field), false
+	}
+
+	v, ok := vs.get(name)
+	if !ok {
+		return nil, false
+	}
+	return v.calcvarval()
+}
+
+func (vs *vartable) cyclecheck(names ...string) error {
+	vs.Lock()
+	defer vs.Unlock()
+
+	stack := list.New()
+
+	if len(names) != 0 {
+		for _, name := range names {
+			v, ok := vs.vars[name]
+			if ok {
+				if err := v.dfscycle(stack); err != nil {
+					return fmt.Errorf("%w: start variable '%s'", err, name)
+				}
+			}
+		}
+		return nil
+	}
+
+	for name, v := range vs.vars {
+		if err := v.dfscycle(stack); err != nil {
+			return fmt.Errorf("%w: start variable '%s'", err, name)
+		}
+	}
+	return nil
 }

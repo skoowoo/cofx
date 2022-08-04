@@ -5,10 +5,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cofunclabs/cofunc/parser"
 	"github.com/stretchr/testify/assert"
 )
 
-func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
+func loadTestingdata2(data string) ([]*parser.Block, *parser.AST, *RunQ, error) {
 	rd := strings.NewReader(data)
 	rq, bl, err := ParseFlowl(rd)
 	if err != nil {
@@ -20,8 +21,8 @@ func loadTestingdata2(data string) ([]*Block, *AST, *RunQ, error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	var blocks []*Block
-	bl.Foreach(func(b *Block) error {
+	var blocks []*parser.Block
+	bl.Foreach(func(b *parser.Block) error {
 		blocks = append(blocks, b)
 		return nil
 	})

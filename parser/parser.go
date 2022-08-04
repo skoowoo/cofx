@@ -1,5 +1,5 @@
 //go:generate stringer -type aststate
-package cofunc
+package parser
 
 import (
 	"bufio"
@@ -52,7 +52,7 @@ var statementPatterns = map[string]struct {
 	types   []TokenType
 	values  []string
 	uptypes []TokenType
-	newbody func() bbody
+	newbody func() body
 }{
 	"load": {
 		2, 2,
@@ -66,7 +66,7 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
 		[]string{_kw_fn, "", "=", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _functionname_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"co1": {
 		2, 2,
@@ -87,21 +87,21 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _ident_t, _symbol_t},
 		[]string{_kw_co, "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
-		func() bbody { return &FMap{} },
+		func() body { return &FMap{} },
 	},
 	"co1+->": {
 		5, 5,
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
 		[]string{_kw_co, "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
-		func() bbody { return &FMap{} },
+		func() body { return &FMap{} },
 	},
 	"co2": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_co, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		func() bbody { return &FList{etype: _functionname_t} },
+		func() body { return &FList{etype: _functionname_t} },
 	},
 	"var": {
 		2, 4,
@@ -115,49 +115,49 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _symbol_t, _symbol_t},
 		[]string{_kw_args, "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
-		func() bbody { return &FMap{} },
+		func() body { return &FMap{} },
 	},
 	"for1": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_for, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"for2": {
 		3, 3,
 		[]TokenType{_ident_t, _expr_t, _symbol_t},
 		[]string{_kw_for, "", "{"},
 		[]TokenType{_keyword_t, _expr_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"if": {
 		3, 3,
 		[]TokenType{_ident_t, _expr_t, _symbol_t},
 		[]string{_kw_if, "", "{"},
 		[]TokenType{_keyword_t, _expr_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"switch": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_switch, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"case": {
 		3, 3,
 		[]TokenType{_ident_t, _expr_t, _symbol_t},
 		[]string{_kw_case, "", "{"},
 		[]TokenType{_keyword_t, _expr_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"default": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_default, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		func() bbody { return &plainbody{} },
+		func() body { return &plainbody{} },
 	},
 	"closed": {
 		1, 1,
@@ -198,7 +198,7 @@ func ParseAST(rd io.Reader) (*AST, error) {
 
 	if enabled.Debug() {
 		ast.Foreach(func(b *Block) error {
-			b.debug()
+			b.Debug()
 			return nil
 		})
 	}
@@ -207,7 +207,7 @@ func ParseAST(rd io.Reader) (*AST, error) {
 		if err := b.validate(); err != nil {
 			return err
 		}
-		if err := b.variables.cyclecheck(); err != nil {
+		if err := b.vtbl.cyclecheck(); err != nil {
 			return err
 		}
 		return nil
@@ -228,19 +228,23 @@ func newAST() *AST {
 			kind: Token{
 				str: "global",
 			},
-			target1:   Token{},
-			operator:  Token{},
-			target2:   Token{},
-			child:     make([]*Block, 0),
-			parent:    nil,
-			variables: vsys{vars: map[string]*_var{"env": newEnvVar()}},
-			bbody:     &plainbody{},
+			target1:  Token{},
+			operator: Token{},
+			target2:  Token{},
+			child:    make([]*Block, 0),
+			parent:   nil,
+			vtbl:     vartable{vars: map[string]*_var{"env": newEnvVar()}},
+			body:     &plainbody{},
 		},
 		_FA: _FA{
 			state: _ast_global,
 		},
 	}
 	return ast
+}
+
+func (a *AST) Global() *Block {
+	return &a.global
 }
 
 func (a *AST) Foreach(do func(*Block) error) error {
@@ -259,11 +263,11 @@ func deepwalk(b *Block, do func(*Block) error) error {
 	return nil
 }
 
-func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, error) {
+func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (body, error) {
 	pattern := statementPatterns[k]
 
 	if l := len(line); l < pattern.min || l > pattern.max {
-		return nil, TokenErrorf(ln, ErrTokenNumInLine, "actual %d, expect [%d,%d]", l, pattern.min, pattern.max)
+		return nil, tokenErrorf(ln, ErrTokenNumInLine, "actual %d, expect [%d,%d]", l, pattern.min, pattern.max)
 	}
 
 	min := len(line)
@@ -277,10 +281,10 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 		expectVal := pattern.values[i]
 
 		if expectTyp != t.typ {
-			return nil, TokenTypeErrorf(t, expectTyp)
+			return nil, tokenTypeErrorf(t, expectTyp)
 		}
 		if expectVal != "" && expectVal != t.String() {
-			return nil, TokenValueErrorf(t, expectVal)
+			return nil, tokenValueErrorf(t, expectVal)
 		}
 	}
 
@@ -298,7 +302,7 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (bbody, erro
 		}
 	}
 
-	var body bbody
+	var body body
 	if pattern.newbody != nil {
 		body = pattern.newbody()
 	}
@@ -336,15 +340,15 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		// the value is a expression
 		val = composed[3]
 		if val.typ != _string_t && val.typ != _number_t && val.typ != _refvar_t && val.typ != _expr_t {
-			return VarErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
+			return varErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
 		}
 	}
 
 	var stm *Statement
 	if val != nil {
-		stm = newstm("var").Append(name).Append(val)
+		stm = NewStatement("var").Append(name).Append(val)
 	} else {
-		stm = newstm("var").Append(name)
+		stm = NewStatement("var").Append(name)
 	}
 	if err := b.initVar(stm); err != nil {
 		return err
@@ -367,13 +371,13 @@ func _parseRewriteVar(b *Block, line []*Token, ln int) error {
 
 	name := t1.String()
 	if v, _ := b.GetVar(name); v == nil {
-		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
-	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
 	// if err := b.rewriteVar(stm); err != nil {
 	// 	return err
 	// }
-	return b.bbody.Append(stm)
+	return b.body.Append(stm)
 }
 
 func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
@@ -391,26 +395,26 @@ func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
 
 	name := t1.String()
 	if v, _ := b.GetVar(name); v == nil {
-		return WrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
-	stm := newstm("rewrite_var").Append(t1).Append(t2)
+	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
 	//if err := b.rewriteVar(stm); err != nil {
 	//	return err
 	//}
-	return b.bbody.Append(stm)
+	return b.body.Append(stm)
 }
 
 func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("load", line, ln, nb)
 	if err != nil {
 		return err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *line[0]
 	nb.target1 = *line[1]
 
@@ -420,16 +424,16 @@ func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
 
 func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
-		bbody:     &plainbody{},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
+		body:   &plainbody{},
 	}
 	body, err := ast.preparse("fn", line, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 
 	kind, target, op, tv := line[0], line[1], line[2], line[3]
 
@@ -444,14 +448,14 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
-		bbody:     nil,
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
+		body:   nil,
 	}
 
 	var (
-		body bbody
+		body body
 		err  error
 	)
 	keys := []string{"co1", "co1+", "co2", "co1->", "co1+->"}
@@ -459,7 +463,7 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		body, err = ast.preparse(k, line, ln, nb)
 		if err == nil {
 			nb.kind = *line[0]
-			nb.bbody = body
+			nb.body = body
 			switch k {
 			case "co1": // co sleep
 				nb.target1 = *line[1]
@@ -482,10 +486,19 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		return nil, err
 	}
 
+	// check return value variable
 	if !nb.target2.IsEmpty() {
 		name := nb.target2.String()
 		if v, _ := nb.GetVar(name); v == nil {
-			return nil, VarErrorf(nb.target2.ln, ErrVariableNotDefined, "'%s'", name)
+			return nil, varErrorf(nb.target2.ln, ErrVariableNotDefined, "'%s'", name)
+		}
+	}
+
+	// when co is in switch, add the condition var statement
+	if nb.IsCo() && (nb.Parent().IsCase() || nb.Parent().IsDefault()) {
+		stm := NewStatement("var").Append(nb.Parent().Target1()).Append(nb.Parent().Target2())
+		if err := nb.initVar(stm); err != nil {
+			return nil, err
 		}
 	}
 
@@ -495,15 +508,15 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("args", line, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *line[0]
 
 	b.child = append(b.child, nb)
@@ -534,23 +547,23 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 	}
 
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	if len(composed) == 2 {
 		body, err := ast.preparse("for1", composed, ln, nb)
 		if err != nil {
 			return nil, err
 		}
-		nb.bbody = body
+		nb.body = body
 		nb.kind = *composed[0]
 	} else {
 		body, err := ast.preparse("for2", composed, ln, nb)
 		if err != nil {
 			return nil, err
 		}
-		nb.bbody = body
+		nb.body = body
 		nb.kind = *composed[0]
 		nb.target1 = Token{
 			ln:  ln,
@@ -559,6 +572,14 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 			typ: _varname_t,
 		}
 		nb.target2 = *composed[1]
+
+		// add the condition var statement
+		if !nb.Target1().IsEmpty() && !nb.Target2().IsEmpty() {
+			stm := NewStatement("var").Append(nb.Target1()).Append(nb.Target2())
+			if err := nb.initVar(stm); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	b.child = append(b.child, nb)
@@ -581,15 +602,15 @@ func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
 	}
 
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("if", composed, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *composed[0]
 	nb.target1 = Token{
 		ln:  ln,
@@ -605,15 +626,15 @@ func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseSwitch(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("switch", line, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *line[0]
 
 	b.child = append(b.child, nb)
@@ -621,9 +642,7 @@ func (ast *AST) parseSwitch(line []*Token, ln int, b *Block) (*Block, error) {
 }
 
 func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
-	var (
-		composed []*Token
-	)
+	var composed []*Token
 	if l := len(line); l > 3 {
 		// first
 		composed = append(composed, line[0])
@@ -636,15 +655,15 @@ func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
 	}
 
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("case", composed, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *composed[0]
 	nb.target1 = Token{
 		ln:  ln,
@@ -662,20 +681,20 @@ func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
 	// Only one defaul statement inside a switch, so check it
 	for _, c := range b.child {
 		if c.IsDefault() {
-			return nil, StatementErrorf(ln, ErrStatementTooMany, "default in swith")
+			return nil, statementErrorf(ln, ErrStatementTooMany, "default in swith")
 		}
 	}
 
 	nb := &Block{
-		child:     []*Block{},
-		parent:    b,
-		variables: vsys{vars: make(map[string]*_var)},
+		child:  []*Block{},
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	body, err := ast.preparse("default", line, ln, nb)
 	if err != nil {
 		return nil, err
 	}
-	nb.bbody = body
+	nb.body = body
 	nb.kind = *line[0]
 
 	nb.target1 = Token{
@@ -720,7 +739,7 @@ func (ast *AST) scan(lx *lexer) error {
 				if err != nil {
 					return err
 				}
-				if block.bbody != nil {
+				if block.body != nil {
 					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
@@ -750,11 +769,11 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				if _parse, err := _lookupInferTree(infertree, line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
-						return StatementTokensErrorf(err, line)
+						return statementTokensErrorf(err, line)
 					}
 					return nil
 				}
-				return StatementTokensErrorf(ErrStatementUnknow, line)
+				return statementTokensErrorf(ErrStatementUnknow, line)
 			}
 		case _ast_fn_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -777,11 +796,11 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				if _parse, err := _lookupInferTree(infertree, line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
-						return StatementTokensErrorf(err, line)
+						return statementTokensErrorf(err, line)
 					}
 					return nil
 				}
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_args_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -793,10 +812,10 @@ func (ast *AST) scan(lx *lexer) error {
 				t.ln = ln
 				t._b = parsingblock
 				if err := t.extractVar(); err != nil {
-					return StatementTokensErrorf(err, line)
+					return statementTokensErrorf(err, line)
 				}
 			}
-			if err := parsingblock.bbody.Append(line); err != nil {
+			if err := parsingblock.body.Append(line); err != nil {
 				return err
 			}
 		case _ast_co_body:
@@ -821,10 +840,10 @@ func (ast *AST) scan(lx *lexer) error {
 				t.ln = ln
 				t._b = parsingblock
 				if err := t.extractVar(); err != nil {
-					return StatementTokensErrorf(err, line)
+					return statementTokensErrorf(err, line)
 				}
 			}
-			if err := parsingblock.bbody.Append(line); err != nil {
+			if err := parsingblock.body.Append(line); err != nil {
 				return err
 			}
 		case _ast_for_body:
@@ -841,7 +860,7 @@ func (ast *AST) scan(lx *lexer) error {
 				if err != nil {
 					return err
 				}
-				if block.bbody != nil {
+				if block.body != nil {
 					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
@@ -862,11 +881,11 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				if _parse, err := _lookupInferTree(infertree, line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
-						return StatementTokensErrorf(err, line)
+						return statementTokensErrorf(err, line)
 					}
 					return nil
 				}
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_if_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -886,12 +905,12 @@ func (ast *AST) scan(lx *lexer) error {
 				if err != nil {
 					return err
 				}
-				if block.bbody != nil {
+				if block.body != nil {
 					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
 			default:
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_switch_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -950,7 +969,7 @@ func (ast *AST) scan(lx *lexer) error {
 				parsingblock = block
 				ast._goto(_ast_default_body)
 			default:
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		case _ast_case_body, _ast_default_body:
 			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
@@ -966,12 +985,12 @@ func (ast *AST) scan(lx *lexer) error {
 				if err != nil {
 					return err
 				}
-				if block.bbody != nil {
+				if block.body != nil {
 					parsingblock = block
 					ast._goto(_ast_co_body)
 				}
 			default:
-				return StatementErrorf(ln, ErrStatementUnknow, "%s", kind)
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
 		}
 		return nil
@@ -1024,7 +1043,7 @@ func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, i
 		if found {
 			found = false
 		} else {
-			return nil, StatementTokensErrorf(ErrStatementInferFailed, line)
+			return nil, statementTokensErrorf(ErrStatementInferFailed, line)
 		}
 	}
 	return p._parse, nil

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
@@ -49,18 +50,18 @@ type flowBody struct {
 	results map[string]*FunctionResult
 
 	runq *RunQ
-	ast  *AST
+	ast  *parser.AST
 }
 
 func (b *flowBody) GetRunQ() *RunQ {
 	return b.runq
 }
 
-func (b *flowBody) GetAST() *AST {
+func (b *flowBody) GetAST() *parser.AST {
 	return b.ast
 }
 
-func newflow(id feedbackid.ID, runq *RunQ, ast *AST) *Flow {
+func newflow(id feedbackid.ID, runq *RunQ, ast *parser.AST) *Flow {
 	return &Flow{
 		flowBody: flowBody{
 			id:   id,
