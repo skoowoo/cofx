@@ -1,4 +1,4 @@
-package cofunc
+package parser
 
 import (
 	"errors"
@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-func WrapErrorf(err error, format string, args ...interface{}) error {
+func wrapErrorf(err error, format string, args ...interface{}) error {
 	var builder strings.Builder
 	builder.WriteString(err.Error())
 	builder.WriteString(": ")
 	return fmt.Errorf(builder.String()+format, args...)
 }
 
-func ParseErrorf(ln int, err error, format string, args ...interface{}) error {
+func parseErrorf(ln int, err error, format string, args ...interface{}) error {
 	var builder strings.Builder
 	builder.WriteString(strconv.Itoa(ln))
 	builder.WriteString(": ")
@@ -31,16 +31,16 @@ var (
 	ErrTokenCharacterIllegal error = errors.New("token character illegal")
 )
 
-func TokenErrorf(ln int, err error, format string, args ...interface{}) error {
-	return ParseErrorf(ln, err, format, args...)
+func tokenErrorf(ln int, err error, format string, args ...interface{}) error {
+	return parseErrorf(ln, err, format, args...)
 }
 
-func TokenTypeErrorf(t *Token, expect TokenType) error {
-	return TokenErrorf(t.ln, ErrTokenType, "'%s', actual '%s', expect '%s'", t, t.typ, expect)
+func tokenTypeErrorf(t *Token, expect TokenType) error {
+	return tokenErrorf(t.ln, ErrTokenType, "'%s', actual '%s', expect '%s'", t, t.typ, expect)
 }
 
-func TokenValueErrorf(t *Token, expect string) error {
-	return TokenErrorf(t.ln, ErrTokenValue, "actual '%s', expect '%s'", t, expect)
+func tokenValueErrorf(t *Token, expect string) error {
+	return tokenErrorf(t.ln, ErrTokenValue, "actual '%s', expect '%s'", t, expect)
 }
 
 var (
@@ -51,11 +51,11 @@ var (
 	ErrStatementTooMany     error = errors.New("statement too many")
 )
 
-func StatementErrorf(ln int, err error, format string, args ...interface{}) error {
-	return ParseErrorf(ln, err, format, args...)
+func statementErrorf(ln int, err error, format string, args ...interface{}) error {
+	return parseErrorf(ln, err, format, args...)
 }
 
-func StatementTokensErrorf(err error, tokens []*Token) error {
+func statementTokensErrorf(err error, tokens []*Token) error {
 	if len(tokens) == 0 {
 		return err
 	}
@@ -66,7 +66,7 @@ func StatementTokensErrorf(err error, tokens []*Token) error {
 		builder.WriteString("'" + t.String() + "'")
 		builder.WriteString(" ")
 	}
-	return ParseErrorf(ln, err, "%s", builder.String())
+	return parseErrorf(ln, err, "%s", builder.String())
 }
 
 var (
@@ -78,6 +78,6 @@ var (
 	ErrVariableValueType      error = errors.New("variable's value type illegal")
 )
 
-func VarErrorf(ln int, err error, format string, args ...interface{}) error {
-	return ParseErrorf(ln, err, format, args...)
+func varErrorf(ln int, err error, format string, args ...interface{}) error {
+	return parseErrorf(ln, err, format, args...)
 }

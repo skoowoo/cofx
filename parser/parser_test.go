@@ -1,4 +1,4 @@
-package cofunc
+package parser
 
 import (
 	"strings"
@@ -73,34 +73,34 @@ func TestParseBlocksFull(t *testing.T) {
 	}
 	for _, b := range blocks {
 		{
-			val, cached := b.CalcVar("a")
+			val, cached := b.calcVar("a")
 			assert.True(t, cached)
 			assert.Equal(t, "1", val)
 		}
 		{
-			val, cached := b.CalcVar("b")
+			val, cached := b.calcVar("b")
 			assert.True(t, cached)
 			assert.Equal(t, "100", val)
 		}
 		{
-			val, cached := b.CalcVar("c")
+			val, cached := b.calcVar("c")
 			assert.True(t, cached)
 			assert.Equal(t, "", val)
 		}
 		{
-			val, cached := b.CalcVar("d")
+			val, cached := b.calcVar("d")
 			assert.True(t, cached)
 			assert.Equal(t, "hello word", val)
 		}
 
 		if b.IsFn() && b.target1.String() == "f1" {
 			{
-				val, cached := b.CalcVar("fa")
+				val, cached := b.calcVar("fa")
 				assert.True(t, cached)
 				assert.Equal(t, "f1", val)
 			}
 			{
-				val, cached := b.CalcVar("fb")
+				val, cached := b.calcVar("fb")
 				assert.True(t, cached)
 				assert.Equal(t, "f1", val)
 			}
@@ -229,11 +229,11 @@ hello2"
 		assert.Equal(t, obj, b.target1.String())
 
 		if obj == "function2" {
-			kvs := b.bbody.(*FMap).ToMap()
+			kvs := b.body.(*FMap).ToMap()
 			assert.Len(t, kvs, 2)
 		}
 		if obj == "function3" {
-			kvs := b.bbody.(*FMap).ToMap()
+			kvs := b.body.(*FMap).ToMap()
 			assert.Len(t, kvs, 4)
 			assert.Equal(t, "{(1+2+3)}", kvs["k"])
 			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
@@ -272,7 +272,7 @@ co {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.target2.IsEmpty())
 
-		slice := b.bbody.(*FList).ToSlice()
+		slice := b.body.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -302,7 +302,7 @@ co {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.target2.IsEmpty())
 
-		slice := b.bbody.(*FList).ToSlice()
+		slice := b.body.(*FList).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -548,19 +548,19 @@ func TestVarExpression(t *testing.T) {
 			t.FailNow()
 		}
 		for _, b := range blocks {
-			v, _ := b.CalcVar("a")
+			v, _ := b.calcVar("a")
 			assert.Equal(t, "100", v)
 
-			v, _ = b.CalcVar("b")
+			v, _ = b.calcVar("b")
 			assert.Equal(t, "101", v)
 
-			v, _ = b.CalcVar("c")
+			v, _ = b.calcVar("c")
 			assert.Equal(t, "3", v)
 
-			v, _ = b.CalcVar("d")
+			v, _ = b.calcVar("d")
 			assert.Equal(t, "true", v)
 
-			v, _ = b.CalcVar("e")
+			v, _ = b.calcVar("e")
 			assert.Equal(t, "false", v)
 		}
 	}

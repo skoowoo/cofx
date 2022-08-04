@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	co "github.com/cofunclabs/cofunc"
+	"github.com/cofunclabs/cofunc/parser"
 )
 
 func parseFlowl(name string, all bool) error {
@@ -33,9 +34,9 @@ func parseFlowl(name string, all bool) error {
 	return nil
 }
 
-func printAST(ast *co.AST, name string) {
+func printAST(ast *parser.AST, name string) {
 	fmt.Printf("blocks in %s:\n", name)
-	ast.Foreach(func(b *co.Block) error {
+	ast.Foreach(func(b *parser.Block) error {
 		fmt.Printf("  %s\n", b.String())
 		return nil
 	})

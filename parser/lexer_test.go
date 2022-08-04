@@ -1,4 +1,4 @@
-package cofunc
+package parser
 
 import (
 	"bufio"
