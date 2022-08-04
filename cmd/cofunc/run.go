@@ -7,9 +7,10 @@ import (
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/runtime"
 )
 
-func runFlowl(name string) error {
+func runflowl(name string) error {
 	if !co.IsFlowl(name) {
 		return fmt.Errorf("not '.flowl': file '%s'", name)
 	}
@@ -19,7 +20,7 @@ func runFlowl(name string) error {
 	}
 	defer f.Close()
 
-	sched := co.New()
+	sched := runtime.New()
 
 	fid := feedbackid.NewDefaultID(name)
 	ctx, cancel := context.WithCancel(context.Background())

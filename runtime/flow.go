@@ -1,11 +1,12 @@
 //go:generate stringer -type=FlowStatus
-package cofunc
+package runtime
 
 import (
 	"errors"
 	"sync"
 	"time"
 
+	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
@@ -26,7 +27,7 @@ const (
 
 type FunctionResult struct {
 	fid     feedbackid.ID
-	node    Node
+	node    generator.Node
 	returns map[string]string
 	begin   time.Time
 	end     time.Time
@@ -49,11 +50,11 @@ type flowBody struct {
 	ready   int
 	results map[string]*FunctionResult
 
-	runq *RunQ
+	runq *generator.RunQueue
 	ast  *parser.AST
 }
 
-func (b *flowBody) GetRunQ() *RunQ {
+func (b *flowBody) GetRunQ() *generator.RunQueue {
 	return b.runq
 }
 
@@ -61,7 +62,7 @@ func (b *flowBody) GetAST() *parser.AST {
 	return b.ast
 }
 
-func newflow(id feedbackid.ID, runq *RunQ, ast *parser.AST) *Flow {
+func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow {
 	return &Flow{
 		flowBody: flowBody{
 			id:   id,

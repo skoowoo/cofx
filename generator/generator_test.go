@@ -1,4 +1,4 @@
-package cofunc
+package generator
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func loadTestingdata2(data string) ([]*parser.Block, *parser.AST, *RunQ, error) {
+func loadTestingdata2(data string) ([]*parser.Block, *parser.AST, *RunQueue, error) {
 	rd := strings.NewReader(data)
-	rq, bl, err := ParseFlowl(rd)
+	rq, bl, err := New(rd)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -117,19 +117,19 @@ func TestParseFullWithRunq(t *testing.T) {
 			if stage == 1 {
 				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "f1", node.name)
-				assert.Len(t, node._args(), 2)
-				assert.Equal(t, "v1", node._args()["k"])
+				assert.Len(t, node.args(), 2)
+				assert.Equal(t, "v1", node.args()["k"])
 			}
 			if stage == 2 {
 				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function2", node.name)
-				assert.Len(t, node._args(), 1)
-				assert.Equal(t, "v2", node._args()["k"])
+				assert.Len(t, node.args(), 1)
+				assert.Equal(t, "v2", node.args()["k"])
 			}
 			if stage == 3 {
 				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node._args(), 0)
+				assert.Len(t, node.args(), 0)
 			}
 			if stage == 4 {
 				node := nodes[0].(*FuncNode)
@@ -140,8 +140,8 @@ func TestParseFullWithRunq(t *testing.T) {
 			if stage == 5 {
 				node := nodes[0].(*FuncNode)
 				assert.Equal(t, "function3", node.name)
-				assert.Len(t, node._args(), 1)
-				assert.Equal(t, "v3", node._args()["k"])
+				assert.Len(t, node.args(), 1)
+				assert.Equal(t, "v3", node.args()["k"])
 			}
 			return nil
 		})
