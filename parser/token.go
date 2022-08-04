@@ -53,30 +53,6 @@ type Token struct {
 	_get func(*Block, string) (string, bool)
 }
 
-func _lookupVar(b *Block, name string) (string, bool) {
-	return b.calcVar(name)
-}
-
-func (t *Token) Segments() []struct {
-	str   string
-	isvar bool
-} {
-	return t._segments
-}
-
-func (t *Token) CopySegments() []struct {
-	str   string
-	isvar bool
-} {
-	var segments []struct {
-		str   string
-		isvar bool
-	}
-
-	segments = append(segments, t._segments...)
-	return segments
-}
-
 func (t *Token) IsEmpty() bool {
 	return len(t.str) == 0
 }
@@ -87,6 +63,23 @@ func (t *Token) String() string {
 
 func (t *Token) FormatString() string {
 	return fmt.Sprintf("['%s','%s']", t.str, t.typ)
+}
+
+func _lookupVar(b *Block, name string) (string, bool) {
+	return b.calcVar(name)
+}
+
+func (t *Token) copySegments() []struct {
+	str   string
+	isvar bool
+} {
+	var segments []struct {
+		str   string
+		isvar bool
+	}
+
+	segments = append(segments, t._segments...)
+	return segments
 }
 
 func (t *Token) validate() error {
@@ -113,16 +106,16 @@ func (t *Token) validate() error {
 			}
 			name = f1
 		}
-		if v, _ := t._b.GetVar(name); v == nil {
+		if v, _ := t._b.getVar(name); v == nil {
 			return varErrorf(t.ln, ErrVariableNotDefined, "'%s' in token '%s'", name, t)
 		}
 	}
 	return nil
 }
 
-// Value will calcuate the variable's value, if the token contain some variables
-func (t *Token) Value() string {
-	if !t.HasVar() {
+// value will calcuate the variable's value, if the token contain some variables
+func (t *Token) value() string {
+	if !t.hasVar() {
 		return t.str
 	}
 	if t._get == nil {
@@ -140,7 +133,7 @@ func (t *Token) Value() string {
 	return bd.String()
 }
 
-func (t *Token) HasVar() bool {
+func (t *Token) hasVar() bool {
 	for _, seg := range t._segments {
 		if seg.isvar {
 			return true

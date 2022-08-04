@@ -44,7 +44,7 @@ func (s *Statement) Copy() *Statement {
 			typ:       t.typ,
 			ln:        t.ln,
 			_b:        t._b,
-			_segments: t.CopySegments(),
+			_segments: t.copySegments(),
 			_get:      t._get,
 		}
 		stm.tokens = append(stm.tokens, nt)

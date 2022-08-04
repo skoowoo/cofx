@@ -168,7 +168,15 @@ var statementPatterns = map[string]struct {
 	},
 }
 
-func ParseAST(rd io.Reader) (*AST, error) {
+// AST store all blocks in the flowl
+type AST struct {
+	global Block
+
+	// for parsing
+	_FA
+}
+
+func New(rd io.Reader) (*AST, error) {
 	lx := newLexer()
 	buff := bufio.NewReader(rd)
 	for n := 1; ; n += 1 {
@@ -191,7 +199,7 @@ func ParseAST(rd io.Reader) (*AST, error) {
 
 	lx.debug()
 
-	ast := newAST()
+	ast := newast()
 	if err := ast.scan(lx); err != nil {
 		return nil, err
 	}
@@ -214,15 +222,7 @@ func ParseAST(rd io.Reader) (*AST, error) {
 	})
 }
 
-// AST store all blocks in the flowl
-type AST struct {
-	global Block
-
-	// for parsing
-	_FA
-}
-
-func newAST() *AST {
+func newast() *AST {
 	ast := &AST{
 		global: Block{
 			kind: Token{
@@ -370,7 +370,7 @@ func _parseRewriteVar(b *Block, line []*Token, ln int) error {
 	}
 
 	name := t1.String()
-	if v, _ := b.GetVar(name); v == nil {
+	if v, _ := b.getVar(name); v == nil {
 		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
 	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
@@ -394,7 +394,7 @@ func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
 	}
 
 	name := t1.String()
-	if v, _ := b.GetVar(name); v == nil {
+	if v, _ := b.getVar(name); v == nil {
 		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
 	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
@@ -489,7 +489,7 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	// check return value variable
 	if !nb.target2.IsEmpty() {
 		name := nb.target2.String()
-		if v, _ := nb.GetVar(name); v == nil {
+		if v, _ := nb.getVar(name); v == nil {
 			return nil, varErrorf(nb.target2.ln, ErrVariableNotDefined, "'%s'", name)
 		}
 	}
