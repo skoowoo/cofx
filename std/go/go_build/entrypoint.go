@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/pkg/textline"
 )
 

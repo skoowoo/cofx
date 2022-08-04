@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/sirupsen/logrus"
 )
 

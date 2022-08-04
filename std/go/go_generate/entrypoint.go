@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
 )
 
 var _manifest = manifest.Manifest{
