@@ -11,7 +11,7 @@ import (
 )
 
 func ParseFlowl(rd io.Reader) (*RunQ, *parser.AST, error) {
-	ast, err := parser.ParseAST(rd)
+	ast, err := parser.New(rd)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -221,16 +221,6 @@ func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
 			}
 			r.stages = append(r.stages, node)
 			r.processingForNode = node
-
-			/*
-				if !b.Target1().IsEmpty() && !b.Target2().IsEmpty() {
-					stm := parser.NewStatement("var").Append(b.Target1()).Append(b.Target2())
-					node.condition = stm
-					if err := b.InitVar(stm); err != nil {
-						return err
-					}
-				}
-			*/
 			return nil
 		}
 
@@ -245,15 +235,6 @@ func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
 			r.stages = append(r.stages, node)
 			r.processingForNode = nil
 		}
-
-		/*
-			if b.IsCo() && (b.Parent().IsCase() || b.Parent().IsDefault()) {
-				stm := parser.NewStatement("var").Append(b.Parent().Target1()).Append(b.Parent().Target2())
-				if err := b.InitVar(stm); err != nil {
-					return err
-				}
-			}
-		*/
 
 		// Here is the serial run function
 		//
@@ -368,7 +349,7 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, Node) 
 
 func (n *ForNode) ConditionExec(ctx context.Context) error {
 	// exec 'for condition' expression
-	if !n.b.CalcConditionTrue() {
+	if !n.b.ExecCondition() {
 		return ErrConditionIsFalse
 	}
 	return nil
@@ -443,7 +424,7 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node)
 
 func (n *FuncNode) ConditionExec(ctx context.Context) error {
 	if n.co.InSwitch() {
-		if !n.co.CalcConditionTrue() {
+		if !n.co.ExecCondition() {
 			return ErrConditionIsFalse
 		}
 	}
@@ -481,12 +462,11 @@ func (n *FuncNode) _args() map[string]string {
 // Field Var are dynamic var
 func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bool) bool {
 	name := n.retVarName
-	_, b := n.co.GetVar(name)
 	for field, val := range retkvs {
 		if filter != nil && !filter(field) {
 			continue
 		}
-		if err := b.AddField2Var(name, field, val); err != nil {
+		if err := n.co.AddField2Var(name, field, val); err != nil {
 			logrus.Errorln(err)
 		}
 	}

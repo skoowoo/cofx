@@ -9,7 +9,7 @@ import (
 
 func loadTestingdata(data string) ([]*Block, error) {
 	rd := strings.NewReader(data)
-	ast, err := ParseAST(rd)
+	ast, err := New(rd)
 	if err != nil {
 		return nil, err
 	}

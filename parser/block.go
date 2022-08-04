@@ -38,99 +38,6 @@ func (b *Block) Target2() *Token {
 	return &b.target2
 }
 
-// Getvar lookup variable by name in map
-func (b *Block) GetVar(name string) (*_var, *Block) {
-	for p := b; p != nil; p = p.parent {
-		v, ok := p.vtbl.get(name)
-		if !ok {
-			continue
-		}
-		return v, p
-	}
-	return nil, nil
-}
-
-// putVar insert a variable into map
-func (b *Block) putVar(name string, v *_var) error {
-	return b.vtbl.put(name, v)
-}
-
-// updateVar insert or update a variable into map
-func (b *Block) updateVar(name string, v *_var) error {
-	return b.vtbl.putOrUpdate(name, v)
-}
-
-// calcVar calcuate the variable's value
-func (b *Block) calcVar(name string) (string, bool) {
-	if b == nil {
-		panic(fmt.Sprintf("var name '%s': block is nil", name))
-	}
-
-	for p := b; p != nil; p = p.parent {
-		v, cached := p.vtbl.calc(name)
-		if v == nil {
-			continue
-		}
-		return v.(string), cached
-	}
-
-	panic("not found variable: " + name)
-}
-
-func (b *Block) CalcConditionTrue() bool {
-	_, ok := b.vtbl.get(_condition_expr_var)
-	if !ok {
-		return true
-	}
-	s, _ := b.calcVar(_condition_expr_var)
-	return s == "true"
-}
-
-func (b *Block) validate() error {
-	ts := []*Token{
-		&b.kind,
-		&b.target1,
-		&b.operator,
-		&b.target2,
-	}
-	for _, t := range ts {
-		if err := t.validate(); err != nil {
-			return err
-		}
-	}
-	if b.body == nil {
-		return nil
-	}
-	lines := b.body.List()
-	for _, l := range lines {
-		// handle tokens
-		for _, t := range l.tokens {
-			if err := t.validate(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (b *Block) initVar(stm *Statement) error {
-	if stm.desc != "var" {
-		return nil
-	}
-	name := stm.tokens[0].String()
-	v, err := newVarFromStm(stm)
-	if err != nil {
-		return err
-	}
-	if err := b.putVar(name, v); err != nil {
-		return statementTokensErrorf(err, stm.tokens)
-	}
-	if err := b.vtbl.cyclecheck(name); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (b *Block) RewriteVar(stm *Statement) error {
 	stm = stm.Copy()
 	if stm.desc != "rewrite_var" {
@@ -140,7 +47,7 @@ func (b *Block) RewriteVar(stm *Statement) error {
 
 	// Eliminate the circular dependency of the variable itself to itself
 	s, _ := b.calcVar(name)
-	segments := stm.tokens[1].Segments()
+	segments := stm.tokens[1]._segments
 	for i, seg := range segments {
 		if seg.isvar && seg.str == name {
 			segments[i].str = s
@@ -152,7 +59,7 @@ func (b *Block) RewriteVar(stm *Statement) error {
 	if err != nil {
 		return err
 	}
-	if _, inblock := b.GetVar(name); inblock != nil {
+	if _, inblock := b.getVar(name); inblock != nil {
 		if err := inblock.updateVar(name, v); err != nil {
 			return statementTokensErrorf(err, stm.tokens)
 		}
@@ -167,12 +74,22 @@ func (b *Block) RewriteVar(stm *Statement) error {
 }
 
 func (b *Block) AddField2Var(name, field, val string) error {
-	v, _ := b.GetVar(name)
+	v, _ := b.getVar(name)
 	if v == nil {
 		return fmt.Errorf("%w: variable '%s'", ErrVariableNotDefined, name)
 	}
 	v.addField(field, val)
 	return nil
+}
+
+func (b *Block) ExecCondition() bool {
+	_, ok := b.vtbl.get(_condition_expr_var)
+	if !ok {
+		// not found condition var in the block
+		return true
+	}
+	s, _ := b.calcVar(_condition_expr_var)
+	return s == "true"
 }
 
 func (b *Block) Iskind(s string) bool {
@@ -283,6 +200,90 @@ func (b *Block) Debug() {
 	b.vtbl.debug("\t")
 }
 
+// Getvar lookup variable by name in map
+func (b *Block) getVar(name string) (*_var, *Block) {
+	for p := b; p != nil; p = p.parent {
+		v, ok := p.vtbl.get(name)
+		if !ok {
+			continue
+		}
+		return v, p
+	}
+	return nil, nil
+}
+
+// putVar insert a variable into map
+func (b *Block) putVar(name string, v *_var) error {
+	return b.vtbl.put(name, v)
+}
+
+// updateVar insert or update a variable into map
+func (b *Block) updateVar(name string, v *_var) error {
+	return b.vtbl.putOrUpdate(name, v)
+}
+
+// calcVar calcuate the variable's value
+func (b *Block) calcVar(name string) (string, bool) {
+	if b == nil {
+		panic(fmt.Sprintf("var name '%s': block is nil", name))
+	}
+
+	for p := b; p != nil; p = p.parent {
+		v, cached := p.vtbl.calc(name)
+		if v == nil {
+			continue
+		}
+		return v.(string), cached
+	}
+
+	panic("not found variable: " + name)
+}
+
+func (b *Block) validate() error {
+	ts := []*Token{
+		&b.kind,
+		&b.target1,
+		&b.operator,
+		&b.target2,
+	}
+	for _, t := range ts {
+		if err := t.validate(); err != nil {
+			return err
+		}
+	}
+	if b.body == nil {
+		return nil
+	}
+	lines := b.body.List()
+	for _, l := range lines {
+		// handle tokens
+		for _, t := range l.tokens {
+			if err := t.validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (b *Block) initVar(stm *Statement) error {
+	if stm.desc != "var" {
+		return nil
+	}
+	name := stm.tokens[0].String()
+	v, err := newVarFromStm(stm)
+	if err != nil {
+		return err
+	}
+	if err := b.putVar(name, v); err != nil {
+		return statementTokensErrorf(err, stm.tokens)
+	}
+	if err := b.vtbl.cyclecheck(name); err != nil {
+		return err
+	}
+	return nil
+}
+
 type body interface {
 	Append(o interface{}) error
 	List() []*Statement
@@ -318,7 +319,7 @@ type FMap struct {
 func (m *FMap) ToMap() map[string]string {
 	ret := make(map[string]string)
 	for _, ln := range m.lines {
-		k, v := ln.tokens[0].Value(), ln.tokens[1].Value()
+		k, v := ln.tokens[0].value(), ln.tokens[1].value()
 		ret[k] = v
 	}
 	return ret
@@ -355,7 +356,7 @@ type FList struct {
 func (l *FList) ToSlice() []string {
 	var ret []string
 	for _, ln := range l.lines {
-		v := ln.tokens[0].Value()
+		v := ln.tokens[0].value()
 		ret = append(ret, v)
 	}
 	return ret

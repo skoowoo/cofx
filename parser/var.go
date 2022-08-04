@@ -148,10 +148,10 @@ func (v *_var) readField(f string) string {
 func newVarFromToken(t *Token) (*_var, error) {
 	v := &_var{
 		v:        t.String(),
-		segments: t.Segments(),
+		segments: t._segments,
 		asexp:    t.typ == _expr_t,
 	}
-	if !t.HasVar() {
+	if !t.hasVar() {
 		v.cached = true
 	}
 	for _, seg := range v.segments {
@@ -162,7 +162,7 @@ func newVarFromToken(t *Token) (*_var, error) {
 		name := seg.str
 		main, field, ok := isFieldVar(name)
 		if ok {
-			mv, _ := t._b.GetVar(main)
+			mv, _ := t._b.getVar(main)
 			if mv == nil {
 				return nil, tokenErrorf(t.ln, ErrVariableNotDefined, "'%s', variable name '%s'", t, main)
 			}
@@ -171,7 +171,7 @@ func newVarFromToken(t *Token) (*_var, error) {
 				mainv: mv,
 			}
 		} else {
-			chld, _ = t._b.GetVar(name)
+			chld, _ = t._b.getVar(name)
 		}
 
 		if chld != nil {

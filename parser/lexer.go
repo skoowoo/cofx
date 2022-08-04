@@ -37,11 +37,11 @@ func newLexer() *lexer {
 	}
 }
 
-func (l *lexer) saveRune(r rune) {
+func (l *lexer) save(r rune) {
 	l.buf.WriteRune(r)
 }
 
-func (l *lexer) exportString() string {
+func (l *lexer) export() string {
 	s := l.buf.String()
 	l.buf.Reset()
 	return s
@@ -77,12 +77,12 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			if is.Ident(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_ident)
 				break
 			}
 			if is.Symbol(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_symbol)
 				break
 			}
@@ -94,18 +94,18 @@ func (l *lexer) split(line string, ln int) error {
 			}
 			// var direct use
 			if is.Dollar(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_var_directuse1)
 				break
 			}
 			return parseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_symbol:
 			if is.Symbol(c) {
-				l.saveRune(c)
+				l.save(c)
 				break
 			}
 			l.insert(ln, &Token{
-				str: l.exportString(),
+				str: l.export(),
 				typ: _symbol_t,
 			})
 			// Here is special handling of comments, because one comment can contain unicode character
@@ -123,7 +123,7 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			if is.Ident(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_ident)
 				break
 			}
@@ -133,17 +133,17 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			if is.Dollar(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_var_directuse1)
 				break
 			}
 			return parseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_ident:
 			if is.Ident(c) {
-				l.saveRune(c)
+				l.save(c)
 				break
 			}
-			s := l.exportString()
+			s := l.export()
 			typ := _ident_t
 			if _, err := strconv.ParseFloat(s, 64); err == nil {
 				// An identifier is considered a number if it can be converted to float64
@@ -159,7 +159,7 @@ func (l *lexer) split(line string, ln int) error {
 				break
 			}
 			if is.Symbol(c) {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_symbol)
 				break
 			}
@@ -172,35 +172,35 @@ func (l *lexer) split(line string, ln int) error {
 			if is.Quotation(c) {
 				// use l.stringNum to replace num, aim to support multi line string
 				l.insert(l.stringNum, &Token{
-					str: l.exportString(),
+					str: l.export(),
 					typ: _string_t,
 				})
 				l._goto(_lx_unknow)
 				break
 			}
-			l.saveRune(c)
+			l.save(c)
 		case _lx_string_backslash:
 			if !is.Quotation(c) {
-				l.saveRune('\\')
+				l.save('\\')
 			}
-			l.saveRune(c)
+			l.save(c)
 			l._goto(_lx_string)
 		case _lx_var_directuse1:
 			if c == '(' {
-				l.saveRune(c)
+				l.save(c)
 				l._goto(_lx_var_directuse2)
 				break
 			}
 			return parseErrorf(ln, ErrTokenCharacterIllegal, "character '%c', state '%s'", c, l.state)
 		case _lx_var_directuse2:
 			if is.Ident(c) {
-				l.saveRune(c)
+				l.save(c)
 				break
 			}
 			if c == ')' {
-				l.saveRune(c)
+				l.save(c)
 				l.insert(ln, &Token{
-					str: l.exportString(),
+					str: l.export(),
 					typ: _refvar_t,
 				})
 				l._goto(_lx_unknow)
