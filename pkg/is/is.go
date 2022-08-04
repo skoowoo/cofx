@@ -54,6 +54,18 @@ func Symbol(x rune) bool {
 	return false
 }
 
+func Arithmetic(s string) bool {
+	symbols := []string{
+		"+", "-", "*", "/", "%",
+	}
+	for _, c := range symbols {
+		if c == s {
+			return true
+		}
+	}
+	return false
+}
+
 func Ident(x rune) bool {
 	if x >= 'a' && x <= 'z' {
 		return true

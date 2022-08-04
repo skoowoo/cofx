@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -36,5 +37,6 @@ func Entrypoint(ctx context.Context, args map[string]string) (map[string]string,
 	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
+	fmt.Printf("---> %s\n", cmd.String())
 	return nil, nil
 }

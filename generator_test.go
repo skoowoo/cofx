@@ -109,8 +109,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.NotNil(t, bl)
 		assert.NotNil(t, rq)
 
-		assert.Len(t, rq.configuredNodes, 1)
-		assert.Equal(t, "function1", rq.configuredNodes["f1"].driver.FunctionName())
+		assert.Len(t, rq.configured, 1)
 		assert.Len(t, rq.stages, 5)
 
 		rq.ForstageAndExec(context.Background(), func(stage int, nodes []Node) error {

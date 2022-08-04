@@ -2,9 +2,8 @@ package cofunc
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"path"
-	"strings"
 
 	"github.com/cofunclabs/cofunc/internal/functiondriver"
 	"github.com/sirupsen/logrus"
@@ -22,19 +21,11 @@ func ParseFlowl(rd io.Reader) (*RunQ, *AST, error) {
 	return r, ast, nil
 }
 
-// location
-//
-type location struct {
-	dname string
-	fname string
-	path  string
-}
-
 // RunQ
 //
 type RunQ struct {
-	locations         map[string]location
-	configuredNodes   map[string]*FuncNode
+	locations         functiondriver.LocationStore
+	configured        map[string]*FuncNode
 	stages            []Node
 	g                 *Block
 	processingForNode *ForNode
@@ -42,10 +33,10 @@ type RunQ struct {
 
 func NewRunQ(ast *AST) (*RunQ, error) {
 	r := &RunQ{
-		locations:       make(map[string]location),
-		configuredNodes: make(map[string]*FuncNode),
-		stages:          make([]Node, 0),
-		g:               &ast.global,
+		locations:  functiondriver.NewLocationStore(),
+		configured: make(map[string]*FuncNode),
+		stages:     make([]Node, 0),
+		g:          &ast.global,
 	}
 	if err := r.convertLoad(ast); err != nil {
 		return nil, err
@@ -154,14 +145,13 @@ func (r *RunQ) afterExec(ctx context.Context) error {
 }
 
 func (r *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
-	loc, ok := r.locations[fname]
+	location, ok := r.locations.Get(fname)
 	if !ok {
 		return nil, GeneratorErrorf(ErrFunctionNotLoaded, "'%s'", fname)
 	}
-	l := loc.dname + ":" + loc.path
-	driver := functiondriver.New(l)
+	driver := functiondriver.New(location)
 	if driver == nil {
-		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", l)
+		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", location)
 	}
 	node := &FuncNode{
 		name:   nodename,
@@ -176,15 +166,8 @@ func (r *RunQ) convertLoad(ast *AST) error {
 			return nil
 		}
 		s := b.target1.String()
-		fields := strings.Split(s, ":")
-		dname, p, fname := fields[0], fields[1], path.Base(fields[1])
-		if _, ok := r.locations[fname]; ok {
-			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", fname)
-		}
-		r.locations[fname] = location{
-			dname: dname,
-			path:  p,
-			fname: fname,
+		if location, err := r.locations.Add(s); err != nil {
+			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", location.FuncName)
 		}
 		return nil
 	})
@@ -204,10 +187,9 @@ func (r *RunQ) convertFn(ast *AST) error {
 			return err
 		}
 		node.fn = b
-		if _, ok := r.configuredNodes[node.name]; ok {
-			return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s', function name '%s'", node.name, fname)
+		if err := r.putConfigured(node); err != nil {
+			return err
 		}
-		r.configuredNodes[node.name] = node
 		return nil
 	})
 }
@@ -271,8 +253,11 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 		// Here is the serial run function
 		//
 		if name := b.target1.String(); name != "" {
-			node, ok := r.configuredNodes[name]
-			if !ok {
+			node, err := r.getConfigured(name)
+			if err != nil {
+				return err
+			}
+			if node == nil {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = r.createFuncNode(name, name); err != nil {
@@ -290,8 +275,11 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 		var last *FuncNode
 		names := b.bbody.(*FList).ToSlice()
 		for _, name := range names {
-			node, ok := r.configuredNodes[name]
-			if !ok {
+			node, err := r.getConfigured(name)
+			if err != nil {
+				return err
+			}
+			if node == nil {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = r.createFuncNode(name, name); err != nil {
@@ -324,10 +312,30 @@ func (r *RunQ) convertCoAndFor(ast *AST) error {
 	return nil
 }
 
+func (r *RunQ) putConfigured(node *FuncNode) error {
+	if _, ok := r.configured[node.name]; ok {
+		return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s'", node.name)
+	}
+	r.configured[node.name] = node
+	return nil
+}
+
+func (r *RunQ) getConfigured(nodename string) (*FuncNode, error) {
+	node, ok := r.configured[nodename]
+	if !ok {
+		return nil, nil
+	}
+	if node == nil {
+		return nil, GeneratorErrorf(ErrNodeReused, "node name '%s'", nodename)
+	}
+	r.configured[nodename] = nil
+	return node, nil
+}
+
 // Node
 //
 type Node interface {
-	String() string
+	FormatString() string
 	Name() string
 	Init(context.Context, ...func(context.Context, Node) error) error
 	ConditionExec(context.Context) error
@@ -342,8 +350,8 @@ type ForNode struct {
 	condition *Statement
 }
 
-func (n *ForNode) String() string {
-	return "for loop"
+func (n *ForNode) FormatString() string {
+	return fmt.Sprintf("for: %d,%d '%s'", n.idx, n.btfIdx, n.condition.FormatString())
 }
 
 func (n *ForNode) Name() string {
@@ -381,8 +389,8 @@ type BtfNode struct {
 	forIdx int
 }
 
-func (n *BtfNode) String() string {
-	return "back to for"
+func (n *BtfNode) FormatString() string {
+	return fmt.Sprintf("btf: %d,%d", n.idx, n.forIdx)
 }
 
 func (n *BtfNode) Name() string {
@@ -404,15 +412,15 @@ func (n *BtfNode) Exec(ctx context.Context) error {
 type FuncNode struct {
 	name       string
 	driver     functiondriver.Driver
+	fn         *Block
 	parallel   *FuncNode
 	co         *Block
-	fn         *Block
 	args       *FMap
 	retVarName string
 }
 
-func (n *FuncNode) String() string {
-	return n.name + "->" + n.driver.FunctionName()
+func (n *FuncNode) FormatString() string {
+	return fmt.Sprintf("%s->%s", n.name, n.driver.FunctionName())
 }
 
 func (n *FuncNode) Name() string {
@@ -450,10 +458,7 @@ func (n *FuncNode) Exec(ctx context.Context) error {
 		}
 	}
 
-	if err := n.driver.MergeArgs(n._args()); err != nil {
-		return err
-	}
-	rets, err := n.driver.Run(ctx)
+	rets, err := n.driver.Run(ctx, n.driver.MergeArgs(n._args()))
 	if err != nil {
 		return err
 	}

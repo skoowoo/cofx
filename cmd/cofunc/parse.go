@@ -51,7 +51,7 @@ func printRunQ(rq *co.RunQ, name string) {
 		buf.WriteString(strconv.Itoa(i))
 		buf.WriteString(": ")
 		for _, node := range nodes {
-			buf.WriteString(node.String())
+			buf.WriteString(node.FormatString())
 			buf.WriteString(" ")
 		}
 		fmt.Printf("  %s\n", buf.String())
