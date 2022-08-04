@@ -1,4 +1,4 @@
-package cofunc
+package runtime
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
@@ -24,7 +25,7 @@ func New() *Sched {
 }
 
 func (sd *Sched) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
-	rq, ast, err := ParseFlowl(rd)
+	rq, ast, err := generator.New(rd)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func (sd *Sched) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.total = body.GetRunQ().FuncNodeNum()
 		body.results = make(map[string]*FunctionResult)
 
-		err := body.GetRunQ().ForfuncNode(func(stage int, n Node) error {
+		err := body.GetRunQ().ForfuncNode(func(stage int, n generator.Node) error {
 			if err := n.Init(ctx); err != nil {
 				return err
 			}
@@ -85,11 +86,11 @@ func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		return err
 	}
 
-	fw.GetRunQ().ForstageAndExec(ctx, func(stage int, batch []Node) error {
+	fw.GetRunQ().ForstageAndExec(ctx, func(stage int, batch []generator.Node) error {
 		ch := make(chan *FunctionResult, len(batch))
 		// parallel run functions at the stage
 		for _, node := range batch {
-			go func(n Node, fr *FunctionResult) {
+			go func(n generator.Node, fr *FunctionResult) {
 				fr.begin = time.Now()
 				fr.err = n.Exec(ctx)
 				fr.end = time.Now()

@@ -1,4 +1,4 @@
-package cofunc
+package runtime
 
 import (
 	"errors"

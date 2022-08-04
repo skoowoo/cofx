@@ -9,13 +9,15 @@ import (
 	"strconv"
 
 	co "github.com/cofunclabs/cofunc"
+	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
 )
 
-func parseFlowl(name string, all bool) error {
+func parseflowl(name string, all bool) error {
 	if !co.IsFlowl(name) {
 		return errors.New("file is not a flowl: " + name)
 	}
+
 	f, err := os.Open(name)
 	if err != nil {
 		return err
@@ -23,7 +25,7 @@ func parseFlowl(name string, all bool) error {
 	defer func() {
 		f.Close()
 	}()
-	rq, ast, err := co.ParseFlowl(f)
+	rq, ast, err := generator.New(f)
 	if err != nil {
 		return err
 	}
@@ -42,10 +44,10 @@ func printAST(ast *parser.AST, name string) {
 	})
 }
 
-func printRunQ(rq *co.RunQ, name string) {
+func printRunQ(rq *generator.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.ForstageAndExec(context.Background(), func(stage int, nodes []co.Node) error {
+	rq.ForstageAndExec(context.Background(), func(stage int, nodes []generator.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")

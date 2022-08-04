@@ -1,4 +1,4 @@
-package cofunc
+package generator
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ var (
 	ErrNodeReused                 error = errors.New("node reused")
 )
 
-func GeneratorErrorf(err error, format string, args ...interface{}) error {
+func wrapErrorf(err error, format string, args ...interface{}) error {
 	args = append(args, err)
 	return fmt.Errorf(format+": %w", args)
 }

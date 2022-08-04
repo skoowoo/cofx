@@ -1,4 +1,4 @@
-package cofunc
+package generator
 
 import (
 	"context"
@@ -10,21 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ParseFlowl(rd io.Reader) (*RunQ, *parser.AST, error) {
-	ast, err := parser.New(rd)
-	if err != nil {
-		return nil, nil, err
-	}
-	r, err := NewRunQ(ast)
-	if err != nil {
-		return nil, nil, err
-	}
-	return r, ast, nil
-}
-
-// RunQ
+// RunQueue
 //
-type RunQ struct {
+type RunQueue struct {
 	locations         functiondriver.LocationStore
 	configured        map[string]*FuncNode
 	stages            []Node
@@ -32,8 +20,20 @@ type RunQ struct {
 	processingForNode *ForNode
 }
 
-func NewRunQ(ast *parser.AST) (*RunQ, error) {
-	r := &RunQ{
+func New(rd io.Reader) (*RunQueue, *parser.AST, error) {
+	ast, err := parser.New(rd)
+	if err != nil {
+		return nil, nil, err
+	}
+	r, err := newRunQueue(ast)
+	if err != nil {
+		return nil, nil, err
+	}
+	return r, ast, nil
+}
+
+func newRunQueue(ast *parser.AST) (*RunQueue, error) {
+	r := &RunQueue{
 		locations:  functiondriver.NewLocationStore(),
 		configured: make(map[string]*FuncNode),
 		stages:     make([]Node, 0),
@@ -51,7 +51,7 @@ func NewRunQ(ast *parser.AST) (*RunQ, error) {
 	return r, nil
 }
 
-func (r *RunQ) FuncNodeNum() int {
+func (r *RunQueue) FuncNodeNum() int {
 	var n int
 	for _, e := range r.stages {
 		if fe, ok := e.(*FuncNode); ok {
@@ -63,7 +63,7 @@ func (r *RunQ) FuncNodeNum() int {
 	return n
 }
 
-func (r *RunQ) ForfuncNode(do func(int, Node) error) error {
+func (r *RunQueue) ForfuncNode(do func(int, Node) error) error {
 	for i, e := range r.stages {
 		if fe, ok := e.(*FuncNode); ok {
 			for p := fe; p != nil; p = p.parallel {
@@ -77,7 +77,7 @@ func (r *RunQ) ForfuncNode(do func(int, Node) error) error {
 }
 
 // ForstageAndExec is the entry and main program for executing the run queue
-func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+func (r *RunQueue) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
 	if err := r.beforeExec(ctx); err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error
 		e := r.stages[i]
 
 		if n, ok := e.(*ForNode); ok {
-			if err := n.ConditionExec(ctx); err != nil {
+			if err := n.execCondition(ctx); err != nil {
 				if err == ErrConditionIsFalse {
 					i = n.btfIdx + 1
 					continue
@@ -108,7 +108,7 @@ func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error
 		if n, ok := e.(*FuncNode); ok {
 			var batch []Node
 			for p := n; p != nil; p = p.parallel {
-				if err := p.ConditionExec(ctx); err != nil {
+				if err := p.execCondition(ctx); err != nil {
 					if err == ErrConditionIsFalse {
 						continue
 					}
@@ -131,7 +131,7 @@ func (r *RunQ) ForstageAndExec(ctx context.Context, exec func(int, []Node) error
 	return nil
 }
 
-func (r *RunQ) beforeExec(ctx context.Context) error {
+func (r *RunQueue) beforeExec(ctx context.Context) error {
 	// exec 'rewrite variable' statement of global
 	for _, stm := range r.global.List() {
 		if err := r.global.RewriteVar(stm); err != nil {
@@ -141,18 +141,18 @@ func (r *RunQ) beforeExec(ctx context.Context) error {
 	return nil
 }
 
-func (r *RunQ) afterExec(ctx context.Context) error {
+func (r *RunQueue) afterExec(ctx context.Context) error {
 	return nil
 }
 
-func (r *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
+func (r *RunQueue) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	location, ok := r.locations.Get(fname)
 	if !ok {
-		return nil, GeneratorErrorf(ErrFunctionNotLoaded, "'%s'", fname)
+		return nil, wrapErrorf(ErrFunctionNotLoaded, "'%s'", fname)
 	}
 	driver := functiondriver.New(location)
 	if driver == nil {
-		return nil, GeneratorErrorf(ErrDriverNotFound, "'%s'", location)
+		return nil, wrapErrorf(ErrDriverNotFound, "'%s'", location)
 	}
 	node := &FuncNode{
 		name:   nodename,
@@ -161,27 +161,27 @@ func (r *RunQ) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	return node, nil
 }
 
-func (r *RunQ) convertLoad(ast *parser.AST) error {
+func (r *RunQueue) convertLoad(ast *parser.AST) error {
 	return ast.Foreach(func(b *parser.Block) error {
 		if !b.IsLoad() {
 			return nil
 		}
 		s := b.Target1().String()
 		if l, err := r.locations.Add(s); err != nil {
-			return GeneratorErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", l.FuncName)
+			return wrapErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", l.FuncName)
 		}
 		return nil
 	})
 }
 
-func (r *RunQ) convertFn(ast *parser.AST) error {
+func (r *RunQueue) convertFn(ast *parser.AST) error {
 	return ast.Foreach(func(b *parser.Block) error {
 		if !b.IsFn() {
 			return nil
 		}
 		nodename, fname := b.Target1().String(), b.Target2().String()
 		if nodename == fname {
-			return GeneratorErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
+			return wrapErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
 		}
 		node, err := r.createFuncNode(nodename, fname)
 		if err != nil {
@@ -195,7 +195,7 @@ func (r *RunQ) convertFn(ast *parser.AST) error {
 	})
 }
 
-func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
+func (r *RunQueue) convertCoAndFor(ast *parser.AST) error {
 	err := ast.Foreach(func(b *parser.Block) error {
 		if !b.IsCo() && !b.IsFor() {
 			return nil
@@ -247,7 +247,7 @@ func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = r.createFuncNode(name, name); err != nil {
-					return GeneratorErrorf(err, "in serial run function")
+					return wrapErrorf(err, "in serial run function")
 				}
 			}
 			node.co = b
@@ -269,7 +269,7 @@ func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = r.createFuncNode(name, name); err != nil {
-					return GeneratorErrorf(err, "in parallel run function")
+					return wrapErrorf(err, "in parallel run function")
 				}
 			}
 			node.co = b
@@ -298,21 +298,21 @@ func (r *RunQ) convertCoAndFor(ast *parser.AST) error {
 	return nil
 }
 
-func (r *RunQ) putConfigured(node *FuncNode) error {
+func (r *RunQueue) putConfigured(node *FuncNode) error {
 	if _, ok := r.configured[node.name]; ok {
-		return GeneratorErrorf(ErrConfigedFunctionDuplicated, "node name '%s'", node.name)
+		return wrapErrorf(ErrConfigedFunctionDuplicated, "node name '%s'", node.name)
 	}
 	r.configured[node.name] = node
 	return nil
 }
 
-func (r *RunQ) getConfigured(nodename string) (*FuncNode, error) {
+func (r *RunQueue) getConfigured(nodename string) (*FuncNode, error) {
 	node, ok := r.configured[nodename]
 	if !ok {
 		return nil, nil
 	}
 	if node == nil {
-		return nil, GeneratorErrorf(ErrNodeReused, "node name '%s'", nodename)
+		return nil, wrapErrorf(ErrNodeReused, "node name '%s'", nodename)
 	}
 	r.configured[nodename] = nil
 	return node, nil
@@ -324,7 +324,6 @@ type Node interface {
 	FormatString() string
 	Name() string
 	Init(context.Context, ...func(context.Context, Node) error) error
-	ConditionExec(context.Context) error
 	Exec(context.Context) error
 }
 
@@ -347,20 +346,20 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, Node) 
 	return nil
 }
 
-func (n *ForNode) ConditionExec(ctx context.Context) error {
-	// exec 'for condition' expression
-	if !n.b.ExecCondition() {
-		return ErrConditionIsFalse
-	}
-	return nil
-}
-
 func (n *ForNode) Exec(ctx context.Context) error {
 	// exec 'rewrite variable' statement of for block
 	for _, stm := range n.b.List() {
 		if err := n.b.RewriteVar(stm); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (n *ForNode) execCondition(ctx context.Context) error {
+	// exec 'for condition' expression
+	if !n.b.ExecCondition() {
+		return ErrConditionIsFalse
 	}
 	return nil
 }
@@ -383,10 +382,6 @@ func (n *BtfNode) Init(ctx context.Context, with ...func(context.Context, Node) 
 	return nil
 }
 
-func (n *BtfNode) ConditionExec(ctx context.Context) error {
-	return nil
-}
-
 func (n *BtfNode) Exec(ctx context.Context) error {
 	return nil
 }
@@ -398,7 +393,7 @@ type FuncNode struct {
 	parallel   *FuncNode
 	fn         *parser.Block
 	co         *parser.Block
-	args       *parser.FMap
+	_args      *parser.FMap
 	retVarName string
 }
 
@@ -422,15 +417,6 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node)
 	return nil
 }
 
-func (n *FuncNode) ConditionExec(ctx context.Context) error {
-	if n.co.InSwitch() {
-		if !n.co.ExecCondition() {
-			return ErrConditionIsFalse
-		}
-	}
-	return nil
-}
-
 func (n *FuncNode) Exec(ctx context.Context) error {
 	// exec 'rewrite variable' statement of fn block
 	if n.fn != nil {
@@ -441,26 +427,35 @@ func (n *FuncNode) Exec(ctx context.Context) error {
 		}
 	}
 
-	rets, err := n.driver.Run(ctx, n.driver.MergeArgs(n._args()))
+	rets, err := n.driver.Run(ctx, n.driver.MergeArgs(n.args()))
 	if err != nil {
 		return err
 	}
 	if n.needSaveReturns() {
-		n._saveReturns(rets, nil)
+		n.saveReturns(rets, nil)
 	}
 	return nil
 }
 
-func (n *FuncNode) _args() map[string]string {
-	if n.args == nil {
-		return map[string]string{}
+func (n *FuncNode) execCondition(ctx context.Context) error {
+	if n.co.InSwitch() {
+		if !n.co.ExecCondition() {
+			return ErrConditionIsFalse
+		}
 	}
-	return n.args.ToMap()
+	return nil
 }
 
-// _saveReturns will create some field var
+func (n *FuncNode) args() map[string]string {
+	if n._args == nil {
+		return map[string]string{}
+	}
+	return n._args.ToMap()
+}
+
+// saveReturns will create some field var
 // Field Var are dynamic var
-func (n *FuncNode) _saveReturns(retkvs map[string]string, filter func(string) bool) bool {
+func (n *FuncNode) saveReturns(retkvs map[string]string, filter func(string) bool) bool {
 	name := n.retVarName
 	for field, val := range retkvs {
 		if filter != nil && !filter(field) {
@@ -485,7 +480,7 @@ func withArgs(ctx context.Context, n Node) error {
 	if funcnode.co.Body() != nil {
 		m, ok := funcnode.co.Body().(*parser.FMap)
 		if ok {
-			funcnode.args = m
+			funcnode._args = m
 			return nil
 		}
 	}
@@ -493,7 +488,7 @@ func withArgs(ctx context.Context, n Node) error {
 	if funcnode.fn != nil {
 		for _, b := range funcnode.fn.Child() {
 			if b.IsArgs() {
-				funcnode.args = b.Body().(*parser.FMap)
+				funcnode._args = b.Body().(*parser.FMap)
 				return nil
 			}
 		}
