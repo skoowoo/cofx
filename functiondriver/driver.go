@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
-	cmddriver "github.com/cofunclabs/cofunc/internal/functiondriver/cmd"
-	godriver "github.com/cofunclabs/cofunc/internal/functiondriver/go"
+	cmddriver "github.com/cofunclabs/cofunc/functiondriver/cmd"
+	godriver "github.com/cofunclabs/cofunc/functiondriver/go"
 )
 
 type Driver interface {

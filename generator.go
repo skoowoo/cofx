@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cofunclabs/cofunc/internal/functiondriver"
+	"github.com/cofunclabs/cofunc/functiondriver"
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/sirupsen/logrus"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/cofunclabs/cofunc/internal/std"
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/std"
 )
 
 // GoDriver

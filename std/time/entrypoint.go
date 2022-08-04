@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
 )
 
 var _manifest = manifest.Manifest{

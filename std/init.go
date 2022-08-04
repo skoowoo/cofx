@@ -3,13 +3,13 @@ package std
 import (
 	"errors"
 
-	"github.com/cofunclabs/cofunc/internal/std/command"
-	gobuild "github.com/cofunclabs/cofunc/internal/std/go/go_build"
-	gogenerate "github.com/cofunclabs/cofunc/internal/std/go/go_generate"
-	"github.com/cofunclabs/cofunc/internal/std/print"
-	"github.com/cofunclabs/cofunc/internal/std/sleep"
-	cotime "github.com/cofunclabs/cofunc/internal/std/time"
-	"github.com/cofunclabs/cofunc/pkg/manifest"
+	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/std/command"
+	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
+	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
+	"github.com/cofunclabs/cofunc/std/print"
+	"github.com/cofunclabs/cofunc/std/sleep"
+	cotime "github.com/cofunclabs/cofunc/std/time"
 )
 
 func Lookup(name string) *manifest.Manifest {
