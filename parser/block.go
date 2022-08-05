@@ -60,9 +60,7 @@ func (b *Block) RewriteVar(stm *Statement) error {
 		return err
 	}
 	if _, inblock := b.getVar(name); inblock != nil {
-		if err := inblock.updateVar(name, v); err != nil {
-			return statementTokensErrorf(err, stm.tokens)
-		}
+		inblock.putVar(name, v)
 	} else {
 		return fmt.Errorf("%w: rewrite var '%s'", ErrVariableNotDefined, name)
 	}
@@ -122,6 +120,10 @@ func (b *Block) IsGlobal() bool {
 
 func (b *Block) IsFor() bool {
 	return b.Iskind(_kw_for)
+}
+
+func (b *Block) IsBtf() bool {
+	return b.Iskind("btf")
 }
 
 func (b *Block) IsIf() bool {
@@ -212,14 +214,14 @@ func (b *Block) getVar(name string) (*_var, *Block) {
 	return nil, nil
 }
 
-// putVar insert a variable into map
-func (b *Block) putVar(name string, v *_var) error {
-	return b.vtbl.put(name, v)
+// addVar insert a variable into map
+func (b *Block) addVar(name string, v *_var) error {
+	return b.vtbl.add(name, v)
 }
 
-// updateVar insert or update a variable into map
-func (b *Block) updateVar(name string, v *_var) error {
-	return b.vtbl.putOrUpdate(name, v)
+// putVar insert or update a variable into map
+func (b *Block) putVar(name string, v *_var) {
+	b.vtbl.put(name, v)
 }
 
 // calcVar calcuate the variable's value
@@ -275,7 +277,7 @@ func (b *Block) initVar(stm *Statement) error {
 	if err != nil {
 		return err
 	}
-	if err := b.putVar(name, v); err != nil {
+	if err := b.addVar(name, v); err != nil {
 		return statementTokensErrorf(err, stm.tokens)
 	}
 	if err := b.vtbl.cyclecheck(name); err != nil {
@@ -312,11 +314,11 @@ func (r *plainbody) Append(o interface{}) error {
 	return nil
 }
 
-type FMap struct {
+type MapBody struct {
 	plainbody
 }
 
-func (m *FMap) ToMap() map[string]string {
+func (m *MapBody) ToMap() map[string]string {
 	ret := make(map[string]string)
 	for _, ln := range m.lines {
 		k, v := ln.tokens[0].value(), ln.tokens[1].value()
@@ -325,22 +327,22 @@ func (m *FMap) ToMap() map[string]string {
 	return ret
 }
 
-func (m *FMap) Append(o interface{}) error {
+func (m *MapBody) Append(o interface{}) error {
 	ts := o.([]*Token)
 	if len(ts) != 3 {
 		return statementTokensErrorf(ErrMapKVIllegal, ts)
 	}
 	k, delim, v := ts[0], ts[1], ts[2]
-	if k.typ != _string_t {
+	if !k.TypeEqual(_string_t) {
 		return tokenTypeErrorf(k, _string_t)
 	}
-	if delim.typ != _symbol_t {
+	if !delim.TypeEqual(_symbol_t) {
 		return tokenTypeErrorf(delim, _symbol_t)
 	}
 	if delim.String() != ":" {
 		return tokenValueErrorf(delim, ":")
 	}
-	if v.typ != _string_t {
+	if !v.TypeEqual(_string_t) {
 		return tokenTypeErrorf(k, _string_t)
 	}
 	m.lines = append(m.lines, NewStatement("kv").Append(k).Append(v))
@@ -348,12 +350,12 @@ func (m *FMap) Append(o interface{}) error {
 	return nil
 }
 
-type FList struct {
+type ListBody struct {
 	plainbody
 	etype TokenType
 }
 
-func (l *FList) ToSlice() []string {
+func (l *ListBody) ToSlice() []string {
 	var ret []string
 	for _, ln := range l.lines {
 		v := ln.tokens[0].value()
@@ -362,7 +364,7 @@ func (l *FList) ToSlice() []string {
 	return ret
 }
 
-func (l *FList) Append(o interface{}) error {
+func (l *ListBody) Append(o interface{}) error {
 	ts := o.([]*Token)
 	if len(ts) != 1 {
 		return statementTokensErrorf(ErrListElemIllegal, ts)

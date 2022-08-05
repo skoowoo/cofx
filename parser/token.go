@@ -9,7 +9,43 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/is"
 )
 
-type TokenType int
+const (
+	_kw_comment = "//"
+	_kw_load    = "load"
+	_kw_fn      = "fn"
+	_kw_co      = "co"
+	_kw_var     = "var"
+	_kw_args    = "args"
+	_kw_for     = "for"
+	_kw_if      = "if"
+	_kw_switch  = "switch"
+	_kw_case    = "case"
+	_kw_default = "default"
+)
+
+var keywordTable = map[string]struct{}{
+	_kw_args:    {},
+	_kw_case:    {},
+	_kw_co:      {},
+	_kw_comment: {},
+	_kw_default: {},
+	_kw_fn:      {},
+	_kw_for:     {},
+	_kw_if:      {},
+	_kw_load:    {},
+	_kw_switch:  {},
+	_kw_var:     {},
+}
+
+func iskeyword(ss ...string) (string, bool) {
+	for _, s := range ss {
+		_, ok := keywordTable[s]
+		if ok {
+			return s, true
+		}
+	}
+	return "", false
+}
 
 const (
 	_unknow_t TokenType = iota
@@ -26,6 +62,8 @@ const (
 	_varname_t
 	_expr_t
 )
+
+type TokenType int
 
 var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
@@ -57,6 +95,24 @@ func (t *Token) IsEmpty() bool {
 	return len(t.str) == 0
 }
 
+func (t *Token) StringEqual(t1 *Token) bool {
+	if !t.IsEmpty() && !t1.IsEmpty() {
+		if t.String() == t1.String() {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Token) TypeEqual(ts ...TokenType) bool {
+	for _, t1 := range ts {
+		if t.typ == t1 {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *Token) String() string {
 	return t.str
 }
@@ -86,6 +142,12 @@ func (t *Token) validate() error {
 	if pattern, ok := tokenPatterns[t.typ]; ok {
 		if !pattern.MatchString(t.str) {
 			return tokenErrorf(t.ln, ErrTokenRegex, "actual '%s', expect '%s'", t, pattern)
+		}
+	}
+
+	if t.TypeEqual(_functionname_t, _varname_t, _ident_t) {
+		if s, ok := iskeyword(t.String()); ok {
+			return tokenErrorf(t.ln, ErrIsKeyword, "'%s'", s)
 		}
 	}
 
@@ -144,7 +206,7 @@ func (t *Token) hasVar() bool {
 
 func (t *Token) extractVar() error {
 	// $(var)
-	if t.typ != _string_t && t.typ != _expr_t && t.typ != _refvar_t {
+	if !t.TypeEqual(_string_t, _expr_t, _refvar_t) {
 		return nil
 	}
 	// Avoid repeated to extract the variable

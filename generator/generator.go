@@ -39,13 +39,14 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 		stages:     make([]Node, 0),
 		global:     ast.Global(),
 	}
-	if err := r.convertLoad(ast); err != nil {
+	loads, fns, runs := ast.GetBlocks()
+	if err := r.convertLoad(loads); err != nil {
 		return nil, err
 	}
-	if err := r.convertFn(ast); err != nil {
+	if err := r.convertFn(fns); err != nil {
 		return nil, err
 	}
-	if err := r.convertCoAndFor(ast); err != nil {
+	if err := r.convertCoAndFor(runs); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -161,72 +162,41 @@ func (r *RunQueue) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	return node, nil
 }
 
-func (r *RunQueue) convertLoad(ast *parser.AST) error {
-	return ast.Foreach(func(b *parser.Block) error {
-		if !b.IsLoad() {
-			return nil
-		}
+func (r *RunQueue) convertLoad(blocks []*parser.Block) error {
+	for _, b := range blocks {
 		s := b.Target1().String()
 		if l, err := r.locations.Add(s); err != nil {
 			return wrapErrorf(ErrLoadedFunctionDuplicated, "'%s' in load list", l.FuncName)
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
-func (r *RunQueue) convertFn(ast *parser.AST) error {
-	return ast.Foreach(func(b *parser.Block) error {
-		if !b.IsFn() {
-			return nil
-		}
+func (r *RunQueue) convertFn(blocks []*parser.Block) error {
+	for _, b := range blocks {
 		nodename, fname := b.Target1().String(), b.Target2().String()
-		if nodename == fname {
-			return wrapErrorf(ErrNameConflict, "node and function name are the same '%s'", nodename)
-		}
 		node, err := r.createFuncNode(nodename, fname)
 		if err != nil {
 			return err
 		}
 		node.fn = b
-		if err := r.putConfigured(node); err != nil {
-			return err
-		}
-		return nil
-	})
+		r.putConfigured(node)
+	}
+	return nil
 }
 
-func (r *RunQueue) convertCoAndFor(ast *parser.AST) error {
-	err := ast.Foreach(func(b *parser.Block) error {
-		if !b.IsCo() && !b.IsFor() {
-			return nil
-		}
-
-		// Here is the for statement
-		//
+func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
+	for _, b := range blocks {
 		if b.IsFor() {
-			if r.processingForNode != nil {
-				// It means that a 'for' loop already exists
-				// Before a new 'for' starts, it should mark the end of the previous 'for'
-				node := &BtfNode{
-					idx:    len(r.stages),
-					forIdx: r.processingForNode.idx,
-				}
-				r.processingForNode.btfIdx = node.idx
-				r.stages = append(r.stages, node)
-			}
-
 			node := &ForNode{
 				idx: len(r.stages), // save the runq's index of 'ForNode'
 				b:   b,
 			}
-			r.stages = append(r.stages, node)
 			r.processingForNode = node
-			return nil
+			r.stages = append(r.stages, node)
+			continue
 		}
-
-		if r.processingForNode != nil && !b.InFor() {
-			// It means that a 'for' loop already exists
-			// The current 'co' statement is outside the 'for' loop, means that the 'for' loop has ended
+		if b.IsBtf() {
 			node := &BtfNode{
 				idx:    len(r.stages),
 				forIdx: r.processingForNode.idx,
@@ -234,37 +204,20 @@ func (r *RunQueue) convertCoAndFor(ast *parser.AST) error {
 			r.processingForNode.btfIdx = node.idx
 			r.stages = append(r.stages, node)
 			r.processingForNode = nil
+			continue
 		}
 
-		// Here is the serial run function
-		//
-		if name := b.Target1().String(); name != "" {
-			node, err := r.getConfigured(name)
-			if err != nil {
-				return err
-			}
-			if node == nil {
-				// Not configured function, so run directly with default function name
-				var err error
-				if node, err = r.createFuncNode(name, name); err != nil {
-					return wrapErrorf(err, "in serial run function")
-				}
-			}
-			node.co = b
-			node.retVarName = b.Target2().String()
-			r.stages = append(r.stages, node)
-			return nil
+		var (
+			names []string
+			last  *FuncNode
+		)
+		if !b.Target1().IsEmpty() {
+			names = append(names, b.Target1().String()) // only one
+		} else {
+			names = b.Body().(*parser.ListBody).ToSlice()
 		}
-
-		// Here is the parallel run function
-		//
-		var last *FuncNode
-		names := b.Body().(*parser.FList).ToSlice()
 		for _, name := range names {
-			node, err := r.getConfigured(name)
-			if err != nil {
-				return err
-			}
+			node := r.getConfigured(name)
 			if node == nil {
 				// Not configured function, so run directly with default function name
 				var err error
@@ -273,7 +226,7 @@ func (r *RunQueue) convertCoAndFor(ast *parser.AST) error {
 				}
 			}
 			node.co = b
-			node.retVarName = b.Target2().String()
+			node.returnVar = b.Target2().String()
 			if last == nil {
 				r.stages = append(r.stages, node)
 			} else {
@@ -281,41 +234,20 @@ func (r *RunQueue) convertCoAndFor(ast *parser.AST) error {
 			}
 			last = node
 		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if r.processingForNode != nil {
-		node := &BtfNode{
-			idx:    len(r.stages),
-			forIdx: r.processingForNode.idx,
-		}
-		r.processingForNode.btfIdx = node.idx
-		r.stages = append(r.stages, node)
-		r.processingForNode = nil
 	}
 	return nil
 }
 
-func (r *RunQueue) putConfigured(node *FuncNode) error {
-	if _, ok := r.configured[node.name]; ok {
-		return wrapErrorf(ErrConfigedFunctionDuplicated, "node name '%s'", node.name)
-	}
+func (r *RunQueue) putConfigured(node *FuncNode) {
 	r.configured[node.name] = node
-	return nil
 }
 
-func (r *RunQueue) getConfigured(nodename string) (*FuncNode, error) {
+func (r *RunQueue) getConfigured(nodename string) *FuncNode {
 	node, ok := r.configured[nodename]
 	if !ok {
-		return nil, nil
+		return nil
 	}
-	if node == nil {
-		return nil, wrapErrorf(ErrNodeReused, "node name '%s'", nodename)
-	}
-	r.configured[nodename] = nil
-	return node, nil
+	return node
 }
 
 // Node
@@ -388,13 +320,13 @@ func (n *BtfNode) Exec(ctx context.Context) error {
 
 // FuncNode
 type FuncNode struct {
-	name       string
-	driver     functiondriver.Driver
-	parallel   *FuncNode
-	fn         *parser.Block
-	co         *parser.Block
-	_args      *parser.FMap
-	retVarName string
+	name      string
+	driver    functiondriver.Driver
+	parallel  *FuncNode
+	fn        *parser.Block
+	co        *parser.Block
+	_args     *parser.MapBody
+	returnVar string
 }
 
 func (n *FuncNode) FormatString() string {
@@ -431,7 +363,7 @@ func (n *FuncNode) Exec(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if n.needSaveReturns() {
+	if n.needReturns() {
 		n.saveReturns(rets, nil)
 	}
 	return nil
@@ -456,7 +388,7 @@ func (n *FuncNode) args() map[string]string {
 // saveReturns will create some field var
 // Field Var are dynamic var
 func (n *FuncNode) saveReturns(retkvs map[string]string, filter func(string) bool) bool {
-	name := n.retVarName
+	name := n.returnVar
 	for field, val := range retkvs {
 		if filter != nil && !filter(field) {
 			continue
@@ -468,8 +400,8 @@ func (n *FuncNode) saveReturns(retkvs map[string]string, filter func(string) boo
 	return true
 }
 
-func (n *FuncNode) needSaveReturns() bool {
-	return n.retVarName != ""
+func (n *FuncNode) needReturns() bool {
+	return len(n.returnVar) != 0
 }
 
 func withArgs(ctx context.Context, n Node) error {
@@ -478,7 +410,7 @@ func withArgs(ctx context.Context, n Node) error {
 		return nil
 	}
 	if funcnode.co.Body() != nil {
-		m, ok := funcnode.co.Body().(*parser.FMap)
+		m, ok := funcnode.co.Body().(*parser.MapBody)
 		if ok {
 			funcnode._args = m
 			return nil
@@ -488,7 +420,7 @@ func withArgs(ctx context.Context, n Node) error {
 	if funcnode.fn != nil {
 		for _, b := range funcnode.fn.Child() {
 			if b.IsArgs() {
-				funcnode._args = b.Body().(*parser.FMap)
+				funcnode._args = b.Body().(*parser.MapBody)
 				return nil
 			}
 		}

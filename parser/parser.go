@@ -3,31 +3,12 @@ package parser
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/enabled"
-)
-
-func init() {
-	infertree = _buildInferTree()
-}
-
-var infertree *_InferNode
-
-const (
-	_kw_comment = "//"
-	_kw_load    = "load"
-	_kw_fn      = "fn"
-	_kw_co      = "co"
-	_kw_var     = "var"
-	_kw_args    = "args"
-	_kw_for     = "for"
-	_kw_if      = "if"
-	_kw_switch  = "switch"
-	_kw_case    = "case"
-	_kw_default = "default"
 )
 
 type aststate int
@@ -87,21 +68,21 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _ident_t, _symbol_t},
 		[]string{_kw_co, "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _symbol_t},
-		func() body { return &FMap{} },
+		func() body { return &MapBody{} },
 	},
 	"co1+->": {
 		5, 5,
 		[]TokenType{_ident_t, _ident_t, _symbol_t, _ident_t, _symbol_t},
 		[]string{_kw_co, "", "->", "", "{"},
 		[]TokenType{_keyword_t, _functionname_t, _operator_t, _varname_t, _symbol_t},
-		func() body { return &FMap{} },
+		func() body { return &MapBody{} },
 	},
 	"co2": {
 		2, 2,
 		[]TokenType{_ident_t, _symbol_t},
 		[]string{_kw_co, "{"},
 		[]TokenType{_keyword_t, _symbol_t},
-		func() body { return &FList{etype: _functionname_t} },
+		func() body { return &ListBody{etype: _functionname_t} },
 	},
 	"var": {
 		2, 4,
@@ -115,7 +96,7 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _symbol_t, _symbol_t},
 		[]string{_kw_args, "=", "{"},
 		[]TokenType{_keyword_t, _operator_t, _symbol_t},
-		func() body { return &FMap{} },
+		func() body { return &MapBody{} },
 	},
 	"for1": {
 		2, 2,
@@ -168,12 +149,27 @@ var statementPatterns = map[string]struct {
 	},
 }
 
+var statementInferRules map[string][]inferData = map[string][]inferData{
+	"rewrite_var1":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},                   // e.g.: v <- "foo"
+	"rewrite_var2":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},                   // e.g.: v <- 100
+	"rewrite_var3":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}},                   // e.g.: v <- $(foo)
+	"rewrite_var_exp1": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "-"}, {_number_t, ""}}, // e.g.: v <- -100
+	"rewrite_var_exp2": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "("}},                  // e.g.: v <- (1 + 2) * 3
+	"rewrite_var_exp3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}, {_symbol_t, ""}},  // e.g.: v <- "a" > "b"
+	"rewrite_var_exp4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}, {_symbol_t, ""}},  // e.g.: v <- 100 + 1
+	"rewrite_var_exp5": {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}, {_symbol_t, ""}},  // e.g.: v <- $(foo) + 1
+}
+
 // AST store all blocks in the flowl
 type AST struct {
 	global Block
 
 	// for parsing
+	_InferTree *inferNode
 	_FA
+	// for validating
+	fns map[string]bool
+	cos []string
 }
 
 func New(rd io.Reader) (*AST, error) {
@@ -183,7 +179,7 @@ func New(rd io.Reader) (*AST, error) {
 		line, err := buff.ReadString('\n')
 		if err == io.EOF {
 			if len(line) != 0 {
-				if err := lx.split(line, n); err != nil {
+				if err := lx.split(line, n, true); err != nil {
 					return nil, err
 				}
 			}
@@ -192,7 +188,7 @@ func New(rd io.Reader) (*AST, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := lx.split(line, n); err != nil {
+		if err := lx.split(line, n, false); err != nil {
 			return nil, err
 		}
 	}
@@ -211,15 +207,7 @@ func New(rd io.Reader) (*AST, error) {
 		})
 	}
 
-	return ast, ast.Foreach(func(b *Block) error {
-		if err := b.validate(); err != nil {
-			return err
-		}
-		if err := b.vtbl.cyclecheck(); err != nil {
-			return err
-		}
-		return nil
-	})
+	return ast, ast.validate()
 }
 
 func newast() *AST {
@@ -228,23 +216,36 @@ func newast() *AST {
 			kind: Token{
 				str: "global",
 			},
-			target1:  Token{},
-			operator: Token{},
-			target2:  Token{},
-			child:    make([]*Block, 0),
-			parent:   nil,
-			vtbl:     vartable{vars: map[string]*_var{"env": newEnvVar()}},
-			body:     &plainbody{},
+			vtbl: vartable{vars: map[string]*_var{"env": newEnvVar()}},
+			body: &plainbody{},
 		},
 		_FA: _FA{
 			state: _ast_global,
 		},
+		_InferTree: buildInferTree(),
+		fns:        make(map[string]bool),
 	}
 	return ast
 }
 
 func (a *AST) Global() *Block {
 	return &a.global
+}
+
+func (a *AST) GetBlocks() (loads []*Block, fns []*Block, runs []*Block) {
+	a.Foreach(func(b *Block) error {
+		if b.IsLoad() {
+			loads = append(loads, b)
+		}
+		if b.IsFn() {
+			fns = append(fns, b)
+		}
+		if b.IsFor() || b.IsBtf() || b.IsCo() {
+			runs = append(runs, b)
+		}
+		return nil
+	})
+	return
 }
 
 func (a *AST) Foreach(do func(*Block) error) error {
@@ -261,6 +262,343 @@ func deepwalk(b *Block, do func(*Block) error) error {
 		}
 	}
 	return nil
+}
+
+func (ast *AST) scan(lx *lexer) error {
+	var parsingblock = &ast.global
+
+	err := lx.foreachLine(func(ln int, line []*Token) error {
+		if len(line) == 0 {
+			return nil
+		}
+		// discard the commments
+		if line[0].String() == _kw_comment {
+			return nil
+		}
+
+		switch ast.phase() {
+		case _ast_global:
+			kind := line[0]
+			switch kind.String() {
+			case _kw_load:
+				return ast.parseLoad(line, ln, parsingblock)
+			case _kw_fn:
+				block, err := ast.parseFn(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_fn_body)
+			case _kw_co:
+				block, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if block.body != nil {
+					parsingblock = block
+					ast._goto(_ast_co_body)
+				}
+			case _kw_var:
+				return ast.parseVar(line, ln, parsingblock)
+			case _kw_for:
+				block, err := ast.parseFor(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_for_body)
+			case _kw_if:
+				block, err := ast.parseIf(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_if_body)
+			case _kw_switch:
+				block, err := ast.parseSwitch(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_switch_body)
+			default:
+				if _parse, err := ast._InferTree.lookup(line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return statementTokensErrorf(err, line)
+					}
+					return nil
+				}
+				return statementTokensErrorf(ErrStatementUnknow, line)
+			}
+		case _ast_fn_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_ast_global)
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_args:
+				block, err := ast.parseArgs(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_args_body)
+			case _kw_var:
+				return ast.parseVar(line, ln, parsingblock)
+			default:
+				if _parse, err := ast._InferTree.lookup(line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return statementTokensErrorf(err, line)
+					}
+					return nil
+				}
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_args_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_ast_fn_body)
+				break
+			}
+			for _, t := range line {
+				t.ln = ln
+				t._b = parsingblock
+				if err := t.extractVar(); err != nil {
+					return statementTokensErrorf(err, line)
+				}
+			}
+			if err := parsingblock.body.Append(line); err != nil {
+				return err
+			}
+		case _ast_co_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parent := parsingblock.parent
+				if parent.IsFor() {
+					ast._goto(_ast_for_body)
+				} else if parent.IsIf() {
+					ast._goto(_ast_if_body)
+				} else if parent.IsCase() {
+					ast._goto(_ast_case_body)
+				} else if parent.IsDefault() {
+					ast._goto(_ast_default_body)
+				} else {
+					ast._goto(_ast_global)
+				}
+				parsingblock = parent
+				break
+			}
+
+			for _, t := range line {
+				t.ln = ln
+				t._b = parsingblock
+				if err := t.extractVar(); err != nil {
+					return statementTokensErrorf(err, line)
+				}
+
+				if !t.IsEmpty() {
+					ast.cos = append(ast.cos, t.String())
+				}
+			}
+			if err := parsingblock.body.Append(line); err != nil {
+				return err
+			}
+		case _ast_for_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				// add a 'btf' block into the child of 'for', it represents the end of the loop
+				btf := &Block{
+					kind: Token{
+						str: "btf",
+						typ: _keyword_t,
+					},
+					parent: parsingblock,
+				}
+				parsingblock.child = append(parsingblock.child, btf)
+
+				// back to global
+				parsingblock = parsingblock.parent
+				ast._goto(_ast_global)
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_co:
+				block, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if block.body != nil {
+					parsingblock = block
+					ast._goto(_ast_co_body)
+				}
+			case _kw_if:
+				block, err := ast.parseIf(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_if_body)
+			case _kw_switch:
+				block, err := ast.parseSwitch(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_switch_body)
+			default:
+				if _parse, err := ast._InferTree.lookup(line); err == nil {
+					if err := _parse(parsingblock, line, ln); err != nil {
+						return statementTokensErrorf(err, line)
+					}
+					return nil
+				}
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_if_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				if parsingblock.IsFor() {
+					ast._goto(_ast_for_body)
+				} else {
+					ast._goto(_ast_global)
+				}
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_co:
+				block, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if block.body != nil {
+					parsingblock = block
+					ast._goto(_ast_co_body)
+				}
+			default:
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_switch_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				// generate condition expression of the 'default'
+				swb := parsingblock
+				var deft *Block
+				for _, c := range swb.child {
+					if c.IsDefault() {
+						deft = c
+						break
+					}
+				}
+
+				if deft != nil {
+					var cases []string
+					for _, c := range swb.child {
+						if c.IsCase() {
+							cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
+						}
+					}
+					s := strings.Join(cases, "&&")
+					deft.target2 = Token{
+						ln:  deft.target1.ln,
+						_b:  deft.target1._b,
+						str: s,
+						typ: _expr_t,
+					}
+					if err := deft.target2.extractVar(); err != nil {
+						return err
+					}
+				}
+
+				// goto
+				parsingblock = parsingblock.parent
+				if parsingblock.IsFor() {
+					ast._goto(_ast_for_body)
+				} else {
+					ast._goto(_ast_global)
+				}
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_case:
+				block, err := ast.parseCase(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_case_body)
+			case _kw_default:
+				block, err := ast.parseDefault(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_default_body)
+			default:
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		case _ast_case_body, _ast_default_body:
+			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
+				parsingblock = parsingblock.parent
+				ast._goto(_ast_switch_body)
+				break
+			}
+
+			kind := line[0]
+			switch kind.String() {
+			case _kw_co:
+				block, err := ast.parseCo(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				if block.body != nil {
+					parsingblock = block
+					ast._goto(_ast_co_body)
+				}
+			default:
+				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if ast.phase() != _ast_global {
+		return errors.New("incomplete source file, possible missing terminator")
+	}
+	return nil
+}
+
+func (ast *AST) validate() error {
+	for _, s := range ast.cos {
+		if ok, found := ast.fns[s]; !found {
+			continue
+		} else {
+			if ok {
+				ok = false
+				continue
+			}
+			return wrapErrorf(ErrIdentConflict, "duplicate calling the fn '%s'", s)
+		}
+	}
+	ast.cos = nil
+	ast.fns = nil
+
+	return ast.Foreach(func(b *Block) error {
+		if err := b.validate(); err != nil {
+			return err
+		}
+		if err := b.vtbl.cyclecheck(); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (body, error) {
@@ -280,7 +618,7 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (body, error
 		expectTyp := pattern.types[i]
 		expectVal := pattern.values[i]
 
-		if expectTyp != t.typ {
+		if !t.TypeEqual(expectTyp) {
 			return nil, tokenTypeErrorf(t, expectTyp)
 		}
 		if expectVal != "" && expectVal != t.String() {
@@ -339,7 +677,7 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		// 		var v = "a" > "b"
 		// the value is a expression
 		val = composed[3]
-		if val.typ != _string_t && val.typ != _number_t && val.typ != _refvar_t && val.typ != _expr_t {
+		if !val.TypeEqual(_string_t, _number_t, _refvar_t, _expr_t) {
 			return varErrorf(val.ln, ErrVariableValueType, "variable '%s' value '%s' type '%s'", name, val.String(), val.typ)
 		}
 	}
@@ -354,54 +692,6 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 		return err
 	}
 	return nil
-}
-
-func _parseRewriteVar(b *Block, line []*Token, ln int) error {
-	t1, t2 := line[0], line[2]
-
-	t1.typ = _varname_t
-	t1._b = b
-	t1.ln = ln
-
-	t2._b = b
-	t2.ln = ln
-	if err := t2.extractVar(); err != nil {
-		return err
-	}
-
-	name := t1.String()
-	if v, _ := b.getVar(name); v == nil {
-		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
-	}
-	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
-	// if err := b.rewriteVar(stm); err != nil {
-	// 	return err
-	// }
-	return b.body.Append(stm)
-}
-
-func _parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
-	t1 := line[0]
-	t1.typ = _varname_t
-	t1.ln = ln
-	t1._b = b
-
-	t2 := newExpression(line[2:]).ToToken()
-	t2.ln = ln
-	t2._b = b
-	if err := t2.extractVar(); err != nil {
-		return err
-	}
-
-	name := t1.String()
-	if v, _ := b.getVar(name); v == nil {
-		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
-	}
-	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
-	//if err := b.rewriteVar(stm); err != nil {
-	//	return err
-	//}
-	return b.body.Append(stm)
 }
 
 func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
@@ -442,6 +732,18 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 	nb.operator = *op
 	nb.target2 = *tv
 
+	// validate grammar
+	if nb.Target1().StringEqual(&nb.target2) {
+		s1 := nb.target1.String()
+		s2 := nb.target2.String()
+		return nil, parseErrorf(ln, ErrIdentConflict, "'%s', '%s'", s1, s2)
+	}
+
+	if s, ok := ast.fns[nb.Target1().String()]; ok {
+		return nil, parseErrorf(ln, ErrIdentConflict, "duplicate definition of fn '%s'", s)
+	} else {
+		ast.fns[nb.Target1().String()] = true
+	}
 	b.child = append(b.child, nb)
 	return nb, nil
 }
@@ -486,6 +788,13 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		return nil, err
 	}
 
+	// check grammar
+	if nb.Target1().StringEqual(&nb.target2) {
+		s1 := nb.target1.String()
+		s2 := nb.target2.String()
+		return nil, parseErrorf(ln, ErrIdentConflict, "'%s','%s'", s1, s2)
+	}
+
 	// check return value variable
 	if !nb.target2.IsEmpty() {
 		name := nb.target2.String()
@@ -500,6 +809,10 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 		if err := nb.initVar(stm); err != nil {
 			return nil, err
 		}
+	}
+
+	if !nb.Target1().IsEmpty() {
+		ast.cos = append(ast.cos, nb.Target1().String())
 	}
 
 	b.child = append(b.child, nb)
@@ -524,22 +837,13 @@ func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
 }
 
 func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
-	var (
-		builder  strings.Builder
-		composed []*Token
-	)
+	var composed []*Token
 	l := len(line)
 	if l > 2 {
 		// first
 		composed = append(composed, line[0])
-		// Compose all intermediate tokens
-		for _, t := range line[1 : l-1] {
-			builder.WriteString(t.String())
-		}
-		composed = append(composed, &Token{
-			str: builder.String(),
-			typ: _expr_t,
-		})
+		// Compose all intermediate tokens into a condition expression
+		composed = append(composed, newExpression(line[1:l-1]).ToToken())
 		// last
 		composed = append(composed, line[l-1])
 	} else {
@@ -709,294 +1013,6 @@ func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
 	return nb, nil
 }
 
-func (ast *AST) scan(lx *lexer) error {
-	var parsingblock = &ast.global
-
-	return lx.foreachLine(func(ln int, line []*Token) error {
-		if len(line) == 0 {
-			return nil
-		}
-		// discard the commments
-		if line[0].String() == _kw_comment {
-			return nil
-		}
-
-		switch ast.phase() {
-		case _ast_global:
-			kind := line[0]
-			switch kind.String() {
-			case _kw_load:
-				return ast.parseLoad(line, ln, parsingblock)
-			case _kw_fn:
-				block, err := ast.parseFn(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_fn_body)
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			case _kw_var:
-				return ast.parseVar(line, ln, parsingblock)
-			case _kw_for:
-				block, err := ast.parseFor(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_for_body)
-			case _kw_if:
-				block, err := ast.parseIf(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_if_body)
-			case _kw_switch:
-				block, err := ast.parseSwitch(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_switch_body)
-			default:
-				if _parse, err := _lookupInferTree(infertree, line); err == nil {
-					if err := _parse(parsingblock, line, ln); err != nil {
-						return statementTokensErrorf(err, line)
-					}
-					return nil
-				}
-				return statementTokensErrorf(ErrStatementUnknow, line)
-			}
-		case _ast_fn_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_global)
-				break
-			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_args:
-				block, err := ast.parseArgs(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_args_body)
-			case _kw_var:
-				return ast.parseVar(line, ln, parsingblock)
-			default:
-				if _parse, err := _lookupInferTree(infertree, line); err == nil {
-					if err := _parse(parsingblock, line, ln); err != nil {
-						return statementTokensErrorf(err, line)
-					}
-					return nil
-				}
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
-			}
-		case _ast_args_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_fn_body)
-				break
-			}
-			for _, t := range line {
-				t.ln = ln
-				t._b = parsingblock
-				if err := t.extractVar(); err != nil {
-					return statementTokensErrorf(err, line)
-				}
-			}
-			if err := parsingblock.body.Append(line); err != nil {
-				return err
-			}
-		case _ast_co_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parent := parsingblock.parent
-				if parent.IsFor() {
-					ast._goto(_ast_for_body)
-				} else if parent.IsIf() {
-					ast._goto(_ast_if_body)
-				} else if parent.IsCase() {
-					ast._goto(_ast_case_body)
-				} else if parent.IsDefault() {
-					ast._goto(_ast_default_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				parsingblock = parent
-				break
-			}
-
-			for _, t := range line {
-				t.ln = ln
-				t._b = parsingblock
-				if err := t.extractVar(); err != nil {
-					return statementTokensErrorf(err, line)
-				}
-			}
-			if err := parsingblock.body.Append(line); err != nil {
-				return err
-			}
-		case _ast_for_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_global)
-				break
-			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			case _kw_if:
-				block, err := ast.parseIf(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_if_body)
-			case _kw_switch:
-				block, err := ast.parseSwitch(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_switch_body)
-			default:
-				if _parse, err := _lookupInferTree(infertree, line); err == nil {
-					if err := _parse(parsingblock, line, ln); err != nil {
-						return statementTokensErrorf(err, line)
-					}
-					return nil
-				}
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
-			}
-		case _ast_if_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				if parsingblock.IsFor() {
-					ast._goto(_ast_for_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				break
-			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
-			}
-		case _ast_switch_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				// generate condition expression of the 'default'
-				swb := parsingblock
-				var deft *Block
-				for _, c := range swb.child {
-					if c.IsDefault() {
-						deft = c
-					}
-				}
-
-				if deft != nil {
-					var cases []string
-					for _, c := range swb.child {
-						if c.IsCase() {
-							cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
-						}
-					}
-					s := strings.Join(cases, "&&")
-					deft.target2 = Token{
-						ln:  deft.target1.ln,
-						_b:  deft.target1._b,
-						str: s,
-						typ: _expr_t,
-					}
-					if err := deft.target2.extractVar(); err != nil {
-						return err
-					}
-				}
-
-				// goto
-				parsingblock = parsingblock.parent
-				if parsingblock.IsFor() {
-					ast._goto(_ast_for_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				break
-			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_case:
-				block, err := ast.parseCase(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_case_body)
-			case _kw_default:
-				block, err := ast.parseDefault(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_default_body)
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
-			}
-		case _ast_case_body, _ast_default_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_switch_body)
-				break
-			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
-			}
-		}
-		return nil
-	})
-}
-
 type _FA struct {
 	state aststate
 }
@@ -1009,29 +1025,59 @@ func (f *_FA) phase() aststate {
 	return f.state
 }
 
-//
-//
-type _InferData struct {
+type inferNode struct {
+	data   inferData
+	childs []inferNode
+	parse  func(*Block, []*Token, int) error
+}
+
+type inferData struct {
 	tt TokenType
 	tv string
 }
 
-type _InferNode struct {
-	data   _InferData
-	childs []_InferNode
-	_parse func(*Block, []*Token, int) error
+func buildInferTree() *inferNode {
+	root := &inferNode{}
+	p := root
+	for k, rule := range statementInferRules {
+		for _, e := range rule {
+			p = p.insert(e)
+		}
+		if strings.HasPrefix(k, "rewrite_var_exp") {
+			p.parse = parseRewriteVarWithExp
+		} else if strings.HasPrefix(k, "rewrite_var") {
+			p.parse = parseRewriteVar
+		}
+
+		p = root
+	}
+	return root
 }
 
-func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, int) error, error) {
+func (in *inferNode) insert(n inferData) *inferNode {
+	p := in
+	for i, child := range p.childs {
+		if child.data.tt == n.tt && child.data.tv == n.tv {
+			return &p.childs[i]
+		}
+	}
+	p.childs = append(p.childs, inferNode{
+		data: n,
+	})
+	l := len(p.childs)
+	return &p.childs[l-1]
+}
+
+func (in *inferNode) lookup(line []*Token) (func(*Block, []*Token, int) error, error) {
 	var found = false
-	p := root
+	p := in
 	for _, t := range line {
-		if len(p.childs) == 0 && p._parse != nil {
-			return p._parse, nil
+		if len(p.childs) == 0 && p.parse != nil {
+			return p.parse, nil
 		}
 
 		for i, child := range p.childs {
-			if child.data.tt != t.typ {
+			if !t.TypeEqual(child.data.tt) {
 				continue
 			}
 			if child.data.tv != "" && child.data.tv != t.String() {
@@ -1046,47 +1092,53 @@ func _lookupInferTree(root *_InferNode, line []*Token) (func(*Block, []*Token, i
 			return nil, statementTokensErrorf(ErrStatementInferFailed, line)
 		}
 	}
-	return p._parse, nil
+	return p.parse, nil
 }
 
-func _buildInferTree() *_InferNode {
-	var rules map[string][]_InferData = map[string][]_InferData{
-		"rewrite_var1":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}},                   // e.g.: v <- "foo"
-		"rewrite_var2":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}},                   // e.g.: v <- 100
-		"rewrite_var3":     {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}},                   // e.g.: v <- $(foo)
-		"rewrite_var_exp1": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "-"}, {_number_t, ""}}, // e.g.: v <- -100
-		"rewrite_var_exp2": {{_ident_t, ""}, {_symbol_t, "<-"}, {_symbol_t, "("}},                  // e.g.: v <- (1 + 2) * 3
-		"rewrite_var_exp3": {{_ident_t, ""}, {_symbol_t, "<-"}, {_string_t, ""}, {_symbol_t, ""}},  // e.g.: v <- "a" > "b"
-		"rewrite_var_exp4": {{_ident_t, ""}, {_symbol_t, "<-"}, {_number_t, ""}, {_symbol_t, ""}},  // e.g.: v <- 100 + 1
-		"rewrite_var_exp5": {{_ident_t, ""}, {_symbol_t, "<-"}, {_refvar_t, ""}, {_symbol_t, ""}},  // e.g.: v <- $(foo) + 1
+func parseRewriteVar(b *Block, line []*Token, ln int) error {
+	t1, t2 := line[0], line[2]
+
+	t1.typ = _varname_t
+	t1._b = b
+	t1.ln = ln
+
+	t2._b = b
+	t2.ln = ln
+	if err := t2.extractVar(); err != nil {
+		return err
 	}
 
-	root := &_InferNode{}
-	p := root
-	for k, rule := range rules {
-		for _, e := range rule {
-			p = _insertInferTree(p, e)
-		}
-		if strings.HasPrefix(k, "rewrite_var_exp") {
-			p._parse = _parseRewriteVarWithExp
-		} else if strings.HasPrefix(k, "rewrite_var") {
-			p._parse = _parseRewriteVar
-		}
-
-		p = root
+	name := t1.String()
+	if v, _ := b.getVar(name); v == nil {
+		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
 	}
-	return root
+	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
+	// if err := b.rewriteVar(stm); err != nil {
+	// 	return err
+	// }
+	return b.body.Append(stm)
 }
 
-func _insertInferTree(p *_InferNode, n _InferData) *_InferNode {
-	for i, child := range p.childs {
-		if child.data.tt == n.tt && child.data.tv == n.tv {
-			return &p.childs[i]
-		}
+func parseRewriteVarWithExp(b *Block, line []*Token, ln int) error {
+	t1 := line[0]
+	t1.typ = _varname_t
+	t1.ln = ln
+	t1._b = b
+
+	t2 := newExpression(line[2:]).ToToken()
+	t2.ln = ln
+	t2._b = b
+	if err := t2.extractVar(); err != nil {
+		return err
 	}
-	p.childs = append(p.childs, _InferNode{
-		data: n,
-	})
-	l := len(p.childs)
-	return &p.childs[l-1]
+
+	name := t1.String()
+	if v, _ := b.getVar(name); v == nil {
+		return wrapErrorf(ErrVariableNotDefined, "variable name '%s'", name)
+	}
+	stm := NewStatement("rewrite_var").Append(t1).Append(t2)
+	//if err := b.rewriteVar(stm); err != nil {
+	//	return err
+	//}
+	return b.body.Append(stm)
 }

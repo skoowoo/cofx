@@ -67,7 +67,11 @@ func (l *lexer) _goto(s lexstate) {
 	l.state = s
 }
 
-func (l *lexer) split(line string, ln int) error {
+func (l *lexer) split(line string, ln int, eof bool) error {
+	if eof {
+		// always append a '\n' to the end-of-file for easy parsing by the lexer
+		line += "\n"
+	}
 	l.nums = append(l.nums, ln)
 
 	for _, c := range line {
@@ -213,7 +217,7 @@ func (l *lexer) split(line string, ln int) error {
 }
 
 func (l *lexer) foreachLine(do func(int, []*Token) error) error {
-	for n := range l.nums {
+	for _, n := range l.nums {
 		line, ok := l.tt[n]
 		if !ok {
 			continue

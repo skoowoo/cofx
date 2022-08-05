@@ -36,7 +36,7 @@ type _var struct {
 	isenv bool
 }
 
-func (v *_var) updateval(nv *_var) {
+func (v *_var) update(nv *_var) {
 	v.Lock()
 	defer v.Unlock()
 
@@ -47,7 +47,7 @@ func (v *_var) updateval(nv *_var) {
 	v.asexp = nv.asexp
 }
 
-func (v *_var) calcvarval() (string, bool) {
+func (v *_var) calc() (string, bool) {
 	v.Lock()
 	defer v.Unlock()
 
@@ -69,7 +69,7 @@ func (v *_var) calcvarval() (string, bool) {
 		vb        strings.Builder
 	)
 	for _, c := range v.child {
-		val, cached := c.calcvarval()
+		val, cached := c.calc()
 		vals = append(vals, val)
 		if !cached {
 			cacheable = false
@@ -149,7 +149,7 @@ func newVarFromToken(t *Token) (*_var, error) {
 	v := &_var{
 		v:        t.String(),
 		segments: t._segments,
-		asexp:    t.typ == _expr_t,
+		asexp:    t.TypeEqual(_expr_t),
 	}
 	if !t.hasVar() {
 		v.cached = true
@@ -227,6 +227,7 @@ func newExpression(tokens []*Token) *expression {
 	var (
 		hasString bool
 		hasArith  bool
+		hasNumber bool
 		builder   strings.Builder
 		subtokens []*Token
 	)
@@ -239,7 +240,13 @@ func newExpression(tokens []*Token) *expression {
 				builder.WriteString(t.String())
 				builder.WriteString("\"")
 			case _refvar_t:
-				if hasString || !hasArith {
+				if hasString {
+					builder.WriteString("\"")
+					builder.WriteString(t.String())
+					builder.WriteString("\"")
+				} else if hasNumber {
+					builder.WriteString(t.String())
+				} else if !hasArith {
 					builder.WriteString("\"")
 					builder.WriteString(t.String())
 					builder.WriteString("\"")
@@ -267,8 +274,11 @@ func newExpression(tokens []*Token) *expression {
 		if is.Arithmetic(t.String()) {
 			hasArith = true
 		}
-		if t.typ == _string_t {
+		if t.TypeEqual(_string_t) {
 			hasString = true
+		}
+		if t.TypeEqual(_number_t) {
+			hasNumber = true
 		}
 	}
 	if subtokens != nil {
@@ -311,20 +321,19 @@ func (vs *vartable) debug(tab ...string) {
 	}
 }
 
-func (vs *vartable) putOrUpdate(name string, v *_var) error {
+func (vs *vartable) put(name string, v *_var) {
 	vs.Lock()
 	defer vs.Unlock()
 
 	old, ok := vs.vars[name]
 	if ok {
-		old.updateval(v)
+		old.update(v)
 	} else {
 		vs.vars[name] = v
 	}
-	return nil
 }
 
-func (vs *vartable) put(name string, v *_var) error {
+func (vs *vartable) add(name string, v *_var) error {
 	vs.Lock()
 	defer vs.Unlock()
 
@@ -361,7 +370,7 @@ func (vs *vartable) calc(name string) (_v interface{}, cached bool) {
 	if !ok {
 		return nil, false
 	}
-	return v.calcvarval()
+	return v.calc()
 }
 
 func (vs *vartable) cyclecheck(names ...string) error {
