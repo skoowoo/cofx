@@ -29,6 +29,7 @@ var (
 	ErrTokenValue            error = errors.New("token value not match")
 	ErrTokenRegex            error = errors.New("token regex not match")
 	ErrTokenCharacterIllegal error = errors.New("token character illegal")
+	ErrIsKeyword             error = errors.New("token is keyword")
 )
 
 func tokenErrorf(ln int, err error, format string, args ...interface{}) error {
@@ -49,6 +50,7 @@ var (
 	ErrListElemIllegal      error = errors.New("list element format illegal")
 	ErrStatementInferFailed error = errors.New("statement infer failed")
 	ErrStatementTooMany     error = errors.New("statement too many")
+	ErrIdentConflict        error = errors.New("ident conflict")
 )
 
 func statementErrorf(ln int, err error, format string, args ...interface{}) error {

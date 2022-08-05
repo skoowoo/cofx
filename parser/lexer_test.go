@@ -20,12 +20,12 @@ func loadTestingdataForLexer(testingdata string) (*lexer, error) {
 		line, err := buff.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				err = lx.split(line, i)
+				err = lx.split(line, i, true)
 				return lx, err
 			}
 			return nil, err
 		}
-		if err := lx.split(line, i); err != nil {
+		if err := lx.split(line, i, false); err != nil {
 			return nil, err
 		}
 	}

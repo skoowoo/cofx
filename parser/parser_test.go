@@ -229,11 +229,11 @@ hello2"
 		assert.Equal(t, obj, b.target1.String())
 
 		if obj == "function2" {
-			kvs := b.body.(*FMap).ToMap()
+			kvs := b.body.(*MapBody).ToMap()
 			assert.Len(t, kvs, 2)
 		}
 		if obj == "function3" {
-			kvs := b.body.(*FMap).ToMap()
+			kvs := b.body.(*MapBody).ToMap()
 			assert.Len(t, kvs, 4)
 			assert.Equal(t, "{(1+2+3)}", kvs["k"])
 			assert.Equal(t, "hello1\nhello2\n", kvs["multi1"])
@@ -272,7 +272,7 @@ co {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.target2.IsEmpty())
 
-		slice := b.body.(*FList).ToSlice()
+		slice := b.body.(*ListBody).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -302,7 +302,7 @@ co {
 		assert.True(t, b.operator.IsEmpty())
 		assert.True(t, b.target2.IsEmpty())
 
-		slice := b.body.(*FList).ToSlice()
+		slice := b.body.(*ListBody).ToSlice()
 		assert.Len(t, slice, 3)
 		e1, e2, e3 := slice[0], slice[1], slice[2]
 		assert.Equal(t, "function1", e1)
@@ -413,7 +413,7 @@ for {
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
-		assert.Len(t, blocks, 4)
+		assert.Len(t, blocks, 5)
 		// 0 is global block
 		b := blocks[1]
 		assert.True(t, b.IsFor())
@@ -449,8 +449,8 @@ func TestInferTree(t *testing.T) {
 				typ: _string_t,
 			},
 		}
-		infertree := _buildInferTree()
-		_, err := _lookupInferTree(infertree, tokens)
+		infer := buildInferTree()
+		_, err := infer.lookup(tokens)
 		assert.NoError(t, err)
 	}
 }

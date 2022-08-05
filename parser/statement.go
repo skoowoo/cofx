@@ -21,14 +21,6 @@ func (s *Statement) FormatString() string {
 	return builder.String()
 }
 
-func (s *Statement) LastToken() *Token {
-	l := len(s.tokens)
-	if l == 0 {
-		return nil
-	}
-	return s.tokens[l-1]
-}
-
 func (s *Statement) Append(t *Token) *Statement {
 	s.tokens = append(s.tokens, t)
 	return s
