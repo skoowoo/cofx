@@ -69,13 +69,13 @@ var tokenPatterns = map[TokenType]*regexp.Regexp{
 	_unknow_t:       regexp.MustCompile(`^*$`),
 	_string_t:       regexp.MustCompile(`^*$`),
 	_refvar_t:       regexp.MustCompile(`^\$\([a-zA-Z0-9_\.]*\)$`),
-	_ident_t:        regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\.]*$`),
+	_ident_t:        regexp.MustCompile(`^[a-zA-Z0-9_\.]*$`),
 	_number_t:       regexp.MustCompile(`^[0-9\.]+$`),
 	_mapkey_t:       regexp.MustCompile(`^[^:]+$`), // not contain ":"
 	_operator_t:     regexp.MustCompile(`^(=|->)$`),
 	_load_t:         regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*:.*[a-zA-Z0-9]$`),
 	_functionname_t: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
-	_keyword_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
+	_keyword_t:      regexp.MustCompile(`^[a-z]*$`),
 	_varname_t:      regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`),
 }
 

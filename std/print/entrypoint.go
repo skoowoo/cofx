@@ -21,7 +21,7 @@ func New() *manifest.Manifest {
 	return &_manifest
 }
 
-func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, version string, args map[string]string) (map[string]string, error) {
 	logrus.Debugf("function print: args=%v\n", args)
 	var slice []string
 	for k, v := range args {
