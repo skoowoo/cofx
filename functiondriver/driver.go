@@ -20,12 +20,12 @@ type Driver interface {
 func New(l Location) Driver {
 	switch l.DriverName {
 	case "go":
-		if d := godriver.New(l.FuncName, l.FuncPath); d != nil {
+		if d := godriver.New(l.FuncName, l.FuncPath, l.Version); d != nil {
 			return d
 		}
 
 	case "cmd":
-		if d := cmddriver.New(l.FuncName, l.FuncPath); d != nil {
+		if d := cmddriver.New(l.FuncName, l.FuncPath, l.Version); d != nil {
 			return d
 		}
 	}
@@ -36,6 +36,27 @@ type Location struct {
 	DriverName string
 	FuncName   string
 	FuncPath   string
+	Version    string
+}
+
+func NewLocation(s string) Location {
+	fields := strings.Split(s, ":")
+	dname, fpath := fields[0], fields[1]
+
+	fname := path.Base(fields[1])
+	version := "latest"
+	if names := strings.Split(fname, "@"); len(names) == 2 {
+		fname = names[0]
+		version = names[1]
+	}
+
+	loc := Location{
+		DriverName: dname,
+		FuncName:   fname,
+		FuncPath:   fpath,
+		Version:    version,
+	}
+	return loc
 }
 
 func (l Location) String() string {
@@ -49,12 +70,7 @@ func NewLocationStore() LocationStore {
 }
 
 func (l LocationStore) Add(s string) (Location, error) {
-	fields := strings.Split(s, ":")
-	loc := Location{
-		DriverName: fields[0],
-		FuncName:   path.Base(fields[1]),
-		FuncPath:   fields[1],
-	}
+	loc := NewLocation(s)
 	if _, ok := l[loc.FuncName]; ok {
 		return loc, errors.New("name conflict")
 	}

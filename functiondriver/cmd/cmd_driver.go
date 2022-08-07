@@ -6,14 +6,16 @@ import (
 
 // Cmd
 type CmdDriver struct {
-	fpath string
-	fname string
+	fpath   string
+	fname   string
+	version string
 }
 
-func New(fname, fpath string) *CmdDriver {
+func New(fname, fpath, version string) *CmdDriver {
 	return &CmdDriver{
-		fname: fname,
-		fpath: fpath,
+		fname:   fname,
+		fpath:   fpath,
+		version: version,
 	}
 }
 

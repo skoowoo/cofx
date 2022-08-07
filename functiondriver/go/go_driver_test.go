@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	dr := New("print", "print")
+	dr := New("print", "print", "")
 	if dr == nil {
 		t.FailNow()
 	}
@@ -26,7 +26,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	dr := New("print", "print")
+	dr := New("print", "print", "")
 	if dr == nil {
 		t.FailNow()
 	}

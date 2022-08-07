@@ -23,7 +23,7 @@ func New() *manifest.Manifest {
 	return &_manifest
 }
 
-func Entrypoint(ctx context.Context, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, version string, args map[string]string) (map[string]string, error) {
 	script := args["script"]
 	if script == "" {
 		return nil, errors.New("command function miss 'script' argument")
