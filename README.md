@@ -1,11 +1,13 @@
 # CoFUNC
-CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
+[[中文](./README.zh_CN.md)]
+
+CoFUNC is an automation engine based on function fabric, which can build automated function flows of various capabilities through the combination of functions. flowl is a function fabric language embedded in CoFUNC, which provides functions such as function events, function operation and management from the language.
 
 ## :rocket: FlowL
-Flowl 是一门小语言，专用于函数编织； 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义、字符串嵌入变量、for 循环、switch 条件语句等。
+Flowl is a small language dedicated to function fabric; the syntax is very minimal and very simple. Currently, it supports function load, function configuration fn, function operation, variable definition, string embedded variable, for loop, switch conditional statement, etc.
 
 ### Hello World
-helloworld.flowl 代码内容：
+helloworld.flowl code content:
 ```go
 // cat examples/helloworld.flowl
 
@@ -19,36 +21,36 @@ co print {
 
 ```
 
-运行代码：
+Run the code:
 
 ```
 ➜ cofunc run examples/helloworld.flowl
 hello world!!!
 ```
 
-flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
+The flowl source file needs to use the `.flowl` extension to be executed.
 
-### 语法介绍
-#### 注释
-使用 `//` 添加代码注释。:warning: 注意，只提供独占行的注释，不能行尾注释。
+### Grammar Introduction
+#### Comment
+Use `//` to add code comments. :warning: Note that only exclusive line comments are provided, no end-of-line comments.
 
 #### :balloon: load
-load 用于加载一个函数，例如：加载打印函数 print
+load is used to load a function, for example: load the print function print
 
 ```go
-// go 是函数驱动，表示 print 这个函数是一段 Go 代码，需要用 go 驱动来运行
-// print 是函数名
+// go is a function driver, which means that the function print is a piece of Go code and needs to be run by the go driver
+// print is function name
 load go:print
 ```
 
-所有函数在使用前，都需要先 load。
+All functions need to be loaded before they can be used.
 
 #### :balloon: fn
-fn 配置一个函数，配置函数运行时需要的参数等，比如：
+fn configures a function and configures the parameters required for the function to run, such as:
 
 ```go
-// t 是函数别名
-// time 是真实函数名
+// t is the function alias
+// time is the real function name
 fn t = time {
     args = {
         "format": "YYYY-MM-DD hh:mm:ss"
@@ -56,10 +58,10 @@ fn t = time {
 }
 ``` 
 
-args 是一个内置的函数配置项，代表函数运行时传给函数的参数，函数参数固定类型为 string-to-string KVs， 对应 Go 语言就是 map[string]string，其他语言同理。:warning: 注意：每一个函数接收的参数 KV 都不一样，需要查看函数的具体用法。
+args is a built-in function configuration item, which represents the parameters passed to the function when the function is running. The fixed type of function parameters is string-to-string KVs, which corresponds to map[string]string in Go language, and the same for other languages. :warning: Note: The parameter KV received by each function is different, you need to check the specific usage of the function.
 
 #### :balloon: co
-co 取自于 coroutine 的前缀，也比较类似于 Go 语言的 go 关键字。co 关键是启动运行一个函数。比如：使用 co 运行 print 函数，输出 Hello World!
+co is taken from the prefix of coroutine, and is also similar to the go keyword of the Go language. The co keyword is to start running a function. For example: use co to run the print function, output Hello World!
 
 ```go
 fn p = print {
@@ -71,17 +73,17 @@ fn p = print {
 co p
 ```
 
-一个 flowl 源码文件中可以组合使用多个 function，因此 co 提供串行和并行执行多个 function 的能力。
+Multiple functions can be combined in a flowl source file, so co provides the ability to execute multiple functions serially and in parallel.
 
 ```go
-// 串行执行
+// serial execution
 co funciton1
 co function2
 co function3
 ```
 
 ```go
-// 并行执行
+// parallel execution
 co {
     function1
     function2
@@ -90,7 +92,7 @@ co {
 ```
 
 ```go
-// 串并行混合
+// Serial-parallel hybrid
 co function1
 co {
     function2
@@ -98,11 +100,11 @@ co {
 }
 ```
 
-#### :balloon: for 循环
+#### :balloon: for loop
 TODO:
 
-#### :balloon: 变量
-`var` 关键字可以定义一个变量，:warning: 注意：变量本身是没有类型的，但内置默认区分处理字符串和数字，数字变量能够进行算术运算
+#### :balloon: variable
+The `var` keyword can define a variable, :warning: Note: The variable itself has no type, but the built-in default distinguishes between strings and numbers, and numeric variables can perform arithmetic operations.
 
 ```go
 var a = "Hello World!"
@@ -111,17 +113,17 @@ var c = (1 + 1) * 2
 var d = $(c) * 2
 ``` 
 
-:warning: 注意： var 可以在 global、fn、for 作用域里使用，不能在 run 里使用。
+:warning: Note: var can be used in global, fn, and for scopes, but not in run.
 
-`<-` 操作符用于变量重写 （其他语言里一般叫赋值）
+The `<-` operator is used for variable rewriting (usually called assignment in other languages)
 
 ```go
 var a = "foo"
 a <- "bar
-// <- 重写变量后，a 变量的值就变成了 bar
+// <- After rewriting the variable, the value of the a variable becomes bar
 ```
 
-## :bullettrain_side: 标准函数库
+## :bullettrain_side: standard library
 - :white_check_mark: print
 - :black_square_button: sleep
 - :white_check_mark: command
@@ -132,55 +134,47 @@ a <- "bar
 - :black_square_button: HTTP Request
 - ...
 
-标准库的支持完全是根据我个人的日常使用工具来安排
+The standard library support is completely arranged according to my personal daily use tools
 
-## :bangbang: 一些重要的设计规则
+## :bangbang: some important design rules
 TODO:
 
 ## :pushpin: TODOs
-语言
-* 支持条件选择语法
-* 支持循环语句
-* fn 作用域内支持 var 定义变量
-* 支持 number 变量类型以及算术表达式
+Language
 * ...
 
 Driver
-* 支持 shell driver
-* 支持 Javascript driver
-* 支持 Rust driver
-* 支持 Docker driver
-* 支持 Kubernetes driver
+* Support shell driver
+* Support Javascript driver
+* Support Rust driver
+* Support Docker driver
+* Support Kubernetes driver
 * ...
 
-工具
-* 函数用法
-* 函数开发架手架
+tool
+* Function usage
+* Function development rack
 * cofunc-server
 * repository
 
-## 安装及配置
+## Installation and configuration
 TODO:
 
-## 架构设计
-### 核心概念
+## Architecture Design
+### Core concept
 ![](docs/assets/cofunc-core-concept.png)
 
-CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` 和 `Function`
+There are 4 core concepts in CoFUNC architecture design, namely `Flow`, `Node`, `Driver` and `Function`
 
-* Flow 就是用一个 `.flowl` 文件编写、定义的一条流
-* Node 就是组成一条 Flow 的实体，实际执行、管理 Function 的对象
-* Driver 是位于底层真正执行 Function 代码的地方，它定义了一个 Function 如何开发，如何运行，在哪里运行等等；比如：当我们需要增加 Rust 语言来开发 Function，那么就需要先实现一个 Rust 的 Driver
-* Function 就是真正的函数了，它可以是一个 Go package 代码、一个二进制程序、一个 shell 脚本，或者一个 Docker 镜像等等
+* Flow is a flow written and defined with a `.flowl` file
+* Node is the entity that constitutes a Flow, the object that actually executes and manages Function
+* Driver is the place where the function code is actually executed at the bottom layer. It defines how a function is developed, how to run, where to run, etc.; for example: when we need to add Rust language to develop functions, then we need to implement a Rust driver first
+* Function is the real function, it can be a Go package code, a binary program, a shell script, or a Docker image, etc.
 
 ### flowl
 ![](docs/assets/flowl-parser.png)
 
-flowl 采用词法和语法分离的实现方式，再语法分析完成得出一颗 AST 树后，再将 AST 转换成函数的运行队列，基于运行队列就可以按序执行函数
+flowl adopts the implementation method of lexical and grammar separation. After the syntax analysis is completed to obtain an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
-:link: [词法语法分析入口](https://github.com/cofunclabs/cofunc/blob/main/parser.go#L11) 
-
-:link: [生成运行队列入口](https://github.com/cofunclabs/cofunc/blob/main/generator.go#L12) 
-
-## 开发贡献
+## Contribution
 TODO:
