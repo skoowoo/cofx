@@ -8,6 +8,7 @@ import (
 	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/service/exported"
 )
 
 type FlowStatus int
@@ -21,6 +22,16 @@ const (
 	_flow_added
 	_flow_updated
 )
+
+var statusTable = map[FlowStatus]string{
+	_flow_unknown: "UNKNOWN",
+	_flow_added:   "ADDED",
+	_flow_error:   "ERROR",
+	_flow_ready:   "READY",
+	_flow_running: "RUNNING",
+	_flow_stopped: "STOPPED",
+	_flow_updated: "UPDATED",
+}
 
 type functionResultBody struct {
 	fid  feedbackid.ID
@@ -38,12 +49,12 @@ type functionResultBody struct {
 	status FlowStatus
 }
 
-type FunctionResult struct {
+type functionResult struct {
 	sync.Mutex
 	functionResultBody
 }
 
-func (fr *FunctionResult) WithLock(exec func(body *functionResultBody)) {
+func (fr *functionResult) WithLock(exec func(body *functionResultBody)) {
 	fr.Lock()
 	defer fr.Unlock()
 	exec(&fr.functionResultBody)
@@ -76,29 +87,41 @@ func (p *progress) Reset() {
 	p.running = make(map[int]struct{})
 }
 
-type flowBody struct {
+type FlowBody struct {
 	id     feedbackid.ID
 	status FlowStatus
 	begin  time.Time
 	end    time.Time
 	// Save the result of function execution, the map key is node's seq
-	results  map[int]*FunctionResult
+	results  map[int]*functionResult
 	progress progress
 
 	runq *generator.RunQueue
 	ast  *parser.AST
 }
 
+func (b *FlowBody) Export() exported.FlowInsight {
+	fi := exported.FlowInsight{
+		Status:  statusTable[b.status],
+		Begin:   b.begin,
+		End:     b.end,
+		Total:   b.progress.total,
+		Running: len(b.progress.running),
+		Done:    len(b.progress.done),
+	}
+	return fi
+}
+
 // Flow
 //
 type Flow struct {
 	sync.RWMutex
-	flowBody
+	FlowBody
 }
 
 func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow {
 	return &Flow{
-		flowBody: flowBody{
+		FlowBody: FlowBody{
 			id:   id,
 			runq: runq,
 			ast:  ast,
@@ -106,15 +129,17 @@ func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow 
 	}
 }
 
-func (f *Flow) WithLock(exec func(body *flowBody) error) error {
+func (f *Flow) WithLock(exec func(body *FlowBody) error) error {
 	f.Lock()
 	defer f.Unlock()
-	return exec(&f.flowBody)
+	return exec(&f.FlowBody)
 }
 
 func (f *Flow) Refresh() error {
 	f.Lock()
 	defer f.Unlock()
+
+	f.progress.Reset()
 
 	var (
 		status FlowStatus = _flow_ready
@@ -162,17 +187,17 @@ func (f *Flow) GetAST() *parser.AST {
 	return f.ast
 }
 
-func (f *Flow) GetResult(seq int) *FunctionResult {
+func (f *Flow) GetResult(seq int) *functionResult {
 	f.Lock()
 	defer f.Unlock()
 	return f.results[seq]
 }
 
-func (f *Flow) readField(read ...func(flowBody) error) error {
+func (f *Flow) readField(read ...func(FlowBody) error) error {
 	f.RLock()
 	defer f.RUnlock()
 	for _, rd := range read {
-		if err := rd(f.flowBody); err != nil {
+		if err := rd(f.FlowBody); err != nil {
 			return err
 		}
 	}
