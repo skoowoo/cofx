@@ -50,25 +50,26 @@ func (rt *Runtime) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 		if body.status == _flow_ready || body.status == _flow_running {
 			return nil
 		}
+		body.status = _flow_ready
 		body.results = make(map[int]*functionResult)
 		err := body.runq.ForfuncNode(func(stage int, n generator.Node) error {
 			if err := n.Init(ctx); err != nil {
 				return err
 			}
-			body.results[n.(generator.NodeExtend).Seq()] = &functionResult{
+			seq := n.(generator.NodeExtend).Seq()
+			body.results[seq] = &functionResult{
 				functionResultBody: functionResultBody{
 					fid:    body.id,
 					node:   n,
 					status: _flow_ready,
 				},
 			}
+			body.progress.nodes = append(body.progress.nodes, seq)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		body.status = _flow_ready
-		body.progress.total = len(body.results)
 		return nil
 	}
 

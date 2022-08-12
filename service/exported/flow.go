@@ -15,6 +15,13 @@ type FlowInsight struct {
 	Total     int       `json:"total"`
 	Running   int       `json:"running"`
 	Done      int       `json:"done"`
+	Nodes     []struct {
+		Seq       int    `json:"seq"`
+		Step      int    `json:"step"`
+		Name      string `json:"name"`
+		LastError error  `json:"last_error"`
+		Status    string `json:"status"`
+	} `json:"nodes"`
 }
 
 func (f FlowInsight) PrettyPrint(w io.Writer) error {
