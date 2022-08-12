@@ -61,7 +61,7 @@ func (fr *functionResult) WithLock(exec func(body *functionResultBody)) {
 }
 
 type progress struct {
-	total   int
+	nodes   []int
 	done    []int
 	running map[int]struct{}
 }
@@ -101,15 +101,33 @@ type FlowBody struct {
 }
 
 func (b *FlowBody) Export() exported.FlowInsight {
-	fi := exported.FlowInsight{
+	insight := exported.FlowInsight{
 		Status:  statusTable[b.status],
 		Begin:   b.begin,
 		End:     b.end,
-		Total:   b.progress.total,
+		Total:   len(b.progress.nodes),
 		Running: len(b.progress.running),
 		Done:    len(b.progress.done),
 	}
-	return fi
+	for _, seq := range b.progress.nodes {
+		fr := b.results[seq]
+		fr.WithLock(func(rb *functionResultBody) {
+			insight.Nodes = append(insight.Nodes, struct {
+				Seq       int    "json:\"seq\""
+				Step      int    "json:\"step\""
+				Name      string "json:\"name\""
+				LastError error  "json:\"last_error\""
+				Status    string "json:\"status\""
+			}{
+				Seq:       seq,
+				Step:      rb.node.(generator.NodeExtend).Step(),
+				Name:      rb.node.Name(),
+				Status:    statusTable[rb.status],
+				LastError: rb.err,
+			})
+		})
+	}
+	return insight
 }
 
 // Flow
@@ -191,15 +209,4 @@ func (f *Flow) GetResult(seq int) *functionResult {
 	f.Lock()
 	defer f.Unlock()
 	return f.results[seq]
-}
-
-func (f *Flow) readField(read ...func(FlowBody) error) error {
-	f.RLock()
-	defer f.RUnlock()
-	for _, rd := range read {
-		if err := rd(f.FlowBody); err != nil {
-			return err
-		}
-	}
-	return nil
 }
