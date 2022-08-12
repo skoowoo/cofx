@@ -47,7 +47,7 @@ func printAST(ast *parser.AST, name string) {
 func printRunQ(rq *generator.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.ForstageAndExec(context.Background(), func(stage int, nodes []generator.Node) error {
+	rq.ForstepAndExec(context.Background(), func(nodes []generator.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")

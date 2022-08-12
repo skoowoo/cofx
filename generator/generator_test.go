@@ -55,13 +55,13 @@ for {
 		assert.NotNil(t, bl)
 		assert.NotNil(t, rq)
 
-		assert.Len(t, rq.stages, 5)
-		for_node := rq.stages[0].(*ForNode)
+		assert.Len(t, rq.steps, 5)
+		for_node := rq.steps[0].(*ForNode)
 		assert.Equal(t, "FOR", for_node.Name())
-		assert.Equal(t, "time", rq.stages[1].Name())
-		assert.Equal(t, "print", rq.stages[2].Name())
-		assert.Equal(t, "sleep", rq.stages[3].Name())
-		btf_node := rq.stages[4].(*BtfNode)
+		assert.Equal(t, "time", rq.steps[1].Name())
+		assert.Equal(t, "print", rq.steps[2].Name())
+		assert.Equal(t, "sleep", rq.steps[3].Name())
+		btf_node := rq.steps[4].(*BtfNode)
 		assert.Equal(t, "BTF", btf_node.Name())
 
 		assert.Equal(t, 0, for_node.idx)
@@ -111,34 +111,30 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.NotNil(t, rq)
 
 		assert.Len(t, rq.configured, 1)
-		assert.Len(t, rq.stages, 5)
+		assert.Len(t, rq.steps, 5)
 
-		rq.ForstageAndExec(context.Background(), func(stage int, nodes []Node) error {
-			if stage == 1 {
-				node := nodes[0].(*FuncNode)
+		rq.ForstepAndExec(context.Background(), func(nodes []Node) error {
+			node := nodes[0].(*FuncNode)
+			if node.step == 1 {
 				assert.Equal(t, "f1", node.name)
 				assert.Len(t, node.args(), 2)
 				assert.Equal(t, "v1", node.args()["k"])
 			}
-			if stage == 2 {
-				node := nodes[0].(*FuncNode)
+			if node.step == 2 {
 				assert.Equal(t, "function2", node.name)
 				assert.Len(t, node.args(), 1)
 				assert.Equal(t, "v2", node.args()["k"])
 			}
-			if stage == 3 {
-				node := nodes[0].(*FuncNode)
+			if node.step == 3 {
 				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.args(), 0)
 			}
-			if stage == 4 {
-				node := nodes[0].(*FuncNode)
+			if node.step == 4 {
 				assert.Equal(t, "function4", node.name)
 				assert.NotNil(t, node.parallel)
 				assert.Equal(t, "function5", node.parallel.name)
 			}
-			if stage == 5 {
-				node := nodes[0].(*FuncNode)
+			if node.step == 5 {
 				assert.Equal(t, "function3", node.name)
 				assert.Len(t, node.args(), 1)
 				assert.Equal(t, "v3", node.args()["k"])

@@ -15,7 +15,7 @@ import (
 type RunQueue struct {
 	locations         functiondriver.LocationStore
 	configured        map[string]*FuncNode
-	stages            []Node
+	steps             []Node
 	global            *parser.Block
 	processingForNode *ForNode
 }
@@ -36,7 +36,7 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 	r := &RunQueue{
 		locations:  functiondriver.NewLocationStore(),
 		configured: make(map[string]*FuncNode),
-		stages:     make([]Node, 0),
+		steps:      make([]Node, 0),
 		global:     ast.Global(),
 	}
 	loads, fns, runs := ast.GetBlocks()
@@ -52,20 +52,8 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 	return r, nil
 }
 
-func (r *RunQueue) FuncNodeNum() int {
-	var n int
-	for _, e := range r.stages {
-		if fe, ok := e.(*FuncNode); ok {
-			for p := fe; p != nil; p = p.parallel {
-				n += 1
-			}
-		}
-	}
-	return n
-}
-
 func (r *RunQueue) ForfuncNode(do func(int, Node) error) error {
-	for i, e := range r.stages {
+	for i, e := range r.steps {
 		if fe, ok := e.(*FuncNode); ok {
 			for p := fe; p != nil; p = p.parallel {
 				if err := do(i+1, p); err != nil {
@@ -77,50 +65,44 @@ func (r *RunQueue) ForfuncNode(do func(int, Node) error) error {
 	return nil
 }
 
-// ForstageAndExec is the entry and main program for executing the run queue
-func (r *RunQueue) ForstageAndExec(ctx context.Context, exec func(int, []Node) error) error {
+// ForstepAndExec is the entry and main program for executing the run queue
+func (r *RunQueue) ForstepAndExec(ctx context.Context, exec func([]Node) error) error {
 	if err := r.beforeExec(ctx); err != nil {
 		return err
 	}
 
-	stage := 1
-	i := 0
-	for i < len(r.stages) {
-		e := r.stages[i]
+	var (
+		i = 0
+	)
+	for i < len(r.steps) {
+		e := r.steps[i]
 
+		// Execute for node
 		if n, ok := e.(*ForNode); ok {
-			if err := n.execCondition(ctx); err != nil {
+			if err := n.Exec(ctx); err != nil {
 				if err == ErrConditionIsFalse {
 					i = n.btfIdx + 1
 					continue
 				}
 				return err
 			}
-			if err := n.Exec(ctx); err != nil {
-				return err
-			}
 		}
 
+		// Execute btf node
 		if n, ok := e.(*BtfNode); ok {
 			i = n.forIdx
 			continue
 		}
 
+		// Execute function node
 		if n, ok := e.(*FuncNode); ok {
 			var batch []Node
 			for p := n; p != nil; p = p.parallel {
-				if err := p.execCondition(ctx); err != nil {
-					if err == ErrConditionIsFalse {
-						continue
-					}
-					return err
-				}
 				batch = append(batch, p)
 			}
-			if err := exec(stage, batch); err != nil {
+			if err := exec(batch); err != nil {
 				return err
 			}
-			stage += 1
 		}
 
 		i += 1
@@ -186,23 +168,27 @@ func (r *RunQueue) convertFn(blocks []*parser.Block) error {
 }
 
 func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
+	var (
+		step = 0
+		seq  = 0
+	)
 	for _, b := range blocks {
 		if b.IsFor() {
 			node := &ForNode{
-				idx: len(r.stages), // save the runq's index of 'ForNode'
+				idx: len(r.steps), // save the runq's index of 'ForNode'
 				b:   b,
 			}
 			r.processingForNode = node
-			r.stages = append(r.stages, node)
+			r.steps = append(r.steps, node)
 			continue
 		}
 		if b.IsBtf() {
 			node := &BtfNode{
-				idx:    len(r.stages),
+				idx:    len(r.steps),
 				forIdx: r.processingForNode.idx,
 			}
 			r.processingForNode.btfIdx = node.idx
-			r.stages = append(r.stages, node)
+			r.steps = append(r.steps, node)
 			r.processingForNode = nil
 			continue
 		}
@@ -211,6 +197,9 @@ func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
 			names []string
 			last  *FuncNode
 		)
+
+		step += 1
+
 		if !b.Target1().IsEmpty() {
 			names = append(names, b.Target1().String()) // only one
 		} else {
@@ -227,8 +216,12 @@ func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
 			}
 			node.co = b
 			node.returnVar = b.Target2().String()
+			node.step = step
+			node.seq = seq
+			seq += 1
+
 			if last == nil {
-				r.stages = append(r.stages, node)
+				r.steps = append(r.steps, node)
 			} else {
 				last.parallel = node
 			}
@@ -259,6 +252,11 @@ type Node interface {
 	Exec(context.Context) error
 }
 
+type NodeExtend interface {
+	Step() int
+	Seq() int
+}
+
 // ForNode stands for the starting of 'for' loop statement
 type ForNode struct {
 	idx    int
@@ -279,6 +277,9 @@ func (n *ForNode) Init(ctx context.Context, with ...func(context.Context, Node) 
 }
 
 func (n *ForNode) Exec(ctx context.Context) error {
+	if err := n.execCondition(ctx); err != nil {
+		return err
+	}
 	// exec 'rewrite variable' statement of for block
 	for _, stm := range n.b.List() {
 		if err := n.b.RewriteVar(stm); err != nil {
@@ -320,13 +321,26 @@ func (n *BtfNode) Exec(ctx context.Context) error {
 
 // FuncNode
 type FuncNode struct {
-	name      string
-	driver    functiondriver.Driver
-	parallel  *FuncNode
-	fn        *parser.Block
-	co        *parser.Block
-	_args     *parser.MapBody
+	name   string
+	driver functiondriver.Driver
+	fn     *parser.Block
+	co     *parser.Block
+	_args  *parser.MapBody
+	// returnVar is a variable name, used to save the function's return values
 	returnVar string
+	// The execution step that the node will be in, Steps are counted from 1
+	step int
+	// The sequence number of Node in the run queue
+	seq      int
+	parallel *FuncNode
+}
+
+func (n *FuncNode) Step() int {
+	return n.step
+}
+
+func (n *FuncNode) Seq() int {
+	return n.seq
 }
 
 func (n *FuncNode) FormatString() string {
@@ -350,6 +364,9 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node)
 }
 
 func (n *FuncNode) Exec(ctx context.Context) error {
+	if err := n.execCondition(ctx); err != nil {
+		return err
+	}
 	// exec 'rewrite variable' statement of fn block
 	if n.fn != nil {
 		for _, stm := range n.fn.List() {
