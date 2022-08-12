@@ -8,6 +8,7 @@ import (
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/runtime"
+	"github.com/cofunclabs/cofunc/service"
 )
 
 func runflowl(name string) error {
@@ -20,20 +21,25 @@ func runflowl(name string) error {
 	}
 	defer f.Close()
 
-	sched := runtime.New()
+	rt := runtime.New()
 
 	fid := feedbackid.NewDefaultID(name)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := sched.AddFlow(ctx, fid, f); err != nil {
+	if err := rt.AddFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if err := sched.ReadyFlow(ctx, fid); err != nil {
+	if err := rt.ReadyFlow(ctx, fid); err != nil {
 		return err
 	}
-	if err := sched.StartFlow(ctx, fid); err != nil {
+	if err := rt.StartFlow(ctx, fid); err != nil {
 		return err
 	}
+	fi, err := service.GetFlowInsight(ctx, rt, fid)
+	if err != nil {
+		return err
+	}
+	fi.JsonPrint(os.Stdout)
 	return nil
 }

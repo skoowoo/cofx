@@ -36,7 +36,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *flowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
@@ -49,7 +49,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *flowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
@@ -64,7 +64,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		time.Sleep(time.Second * 5)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *flowBody) error {
+		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})

@@ -10,52 +10,52 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 )
 
-// Sched
+// Runtime
 //
-type Sched struct {
+type Runtime struct {
 	store *flowstore
 }
 
-func New() *Sched {
-	s := &Sched{}
-	s.store = &flowstore{
+func New() *Runtime {
+	r := &Runtime{}
+	r.store = &flowstore{
 		entity: make(map[string]*Flow),
 	}
-	return s
+	return r
 }
 
-func (sd *Sched) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
+func (rt *Runtime) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
 	rq, ast, err := generator.New(rd)
 	if err != nil {
 		return err
 	}
 	flow := newflow(fid, rq, ast)
-	if err := sd.store.store(fid.Value(), flow); err != nil {
+	if err := rt.store.store(fid.Value(), flow); err != nil {
 		return err
 	}
-	flow.WithLock(func(b *flowBody) error {
+	flow.WithLock(func(b *FlowBody) error {
 		b.status = _flow_added
 		return nil
 	})
 	return nil
 }
 
-func (sd *Sched) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
-	flow, err := sd.store.get(fid.Value())
+func (rt *Runtime) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
+	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
 	}
 
-	ready := func(body *flowBody) error {
+	ready := func(body *FlowBody) error {
 		if body.status == _flow_ready || body.status == _flow_running {
 			return nil
 		}
-		body.results = make(map[int]*FunctionResult)
+		body.results = make(map[int]*functionResult)
 		err := body.runq.ForfuncNode(func(stage int, n generator.Node) error {
 			if err := n.Init(ctx); err != nil {
 				return err
 			}
-			body.results[n.(generator.NodeExtend).Seq()] = &FunctionResult{
+			body.results[n.(generator.NodeExtend).Seq()] = &functionResult{
 				functionResultBody: functionResultBody{
 					fid:    body.id,
 					node:   n,
@@ -81,14 +81,14 @@ func (sd *Sched) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
-	flow, err := sd.store.get(fid.Value())
+func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
+	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
 	}
 
 	execOneStep := func(batch []generator.Node) error {
-		ch := make(chan *FunctionResult, len(batch))
+		ch := make(chan *functionResult, len(batch))
 		// parallel run functions at the step
 		for _, node := range batch {
 			fr := flow.GetResult(node.(generator.NodeExtend).Seq())
@@ -97,7 +97,7 @@ func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 				body.status = _flow_running
 			})
 
-			go func(n generator.Node, fr *FunctionResult) {
+			go func(n generator.Node, fr *functionResult) {
 				err := n.Exec(ctx)
 				fr.WithLock(func(body *functionResultBody) {
 					body.err = err
@@ -113,7 +113,7 @@ func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		flow.Refresh()
 
 		// waiting functions at the step to finish running
-		errResults := make([]*FunctionResult, 0)
+		errResults := make([]*functionResult, 0)
 		for i := 0; i < len(batch); i++ {
 			select {
 			case <-ctx.Done():
@@ -155,18 +155,18 @@ func (sd *Sched) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (sd *Sched) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(*flowBody) error) error {
-	flow, err := sd.store.get(fid.Value())
+func (rt *Runtime) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(*FlowBody) error) error {
+	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
 	}
 	return flow.WithLock(read)
 }
 
-func (sd *Sched) StopFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) StopFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (sd *Sched) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
