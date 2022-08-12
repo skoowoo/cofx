@@ -2,7 +2,6 @@
 package runtime
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -21,17 +20,73 @@ const (
 	_flow_error
 	_flow_added
 	_flow_updated
-	_flow_running_and_updated
-	_flow_deleted
 )
 
+type functionResultBody struct {
+	fid  feedbackid.ID
+	node generator.Node
+	// Last start time
+	begin time.Time
+	// Last end time
+	end time.Time
+	// Number of runs
+	runs int
+	// Whether the last time was executed
+	executed bool
+	// Whether there is an error in the function execution
+	err    error
+	status FlowStatus
+}
+
 type FunctionResult struct {
-	fid     feedbackid.ID
-	node    generator.Node
-	returns map[string]string
-	begin   time.Time
-	end     time.Time
-	err     error
+	sync.Mutex
+	functionResultBody
+}
+
+func (fr *FunctionResult) WithLock(exec func(body *functionResultBody)) {
+	fr.Lock()
+	defer fr.Unlock()
+	exec(&fr.functionResultBody)
+}
+
+type progress struct {
+	total   int
+	done    []int
+	running map[int]struct{}
+}
+
+func (p *progress) PutRunning(seq int) {
+	if p.running == nil {
+		p.running = make(map[int]struct{})
+	}
+	p.running[seq] = struct{}{}
+}
+
+func (p *progress) ResetRunning() {
+	p.running = make(map[int]struct{})
+}
+
+func (p *progress) PutDone(seq int) {
+	p.done = append(p.done, seq)
+	delete(p.running, seq)
+}
+
+func (p *progress) Reset() {
+	p.done = p.done[0:0]
+	p.running = make(map[int]struct{})
+}
+
+type flowBody struct {
+	id     feedbackid.ID
+	status FlowStatus
+	begin  time.Time
+	end    time.Time
+	// Save the result of function execution, the map key is node's seq
+	results  map[int]*FunctionResult
+	progress progress
+
+	runq *generator.RunQueue
+	ast  *parser.AST
 }
 
 // Flow
@@ -39,27 +94,6 @@ type FunctionResult struct {
 type Flow struct {
 	sync.RWMutex
 	flowBody
-}
-
-type flowBody struct {
-	id      feedbackid.ID
-	status  FlowStatus
-	begin   time.Time
-	end     time.Time
-	total   int
-	ready   int
-	results map[string]*FunctionResult
-
-	runq *generator.RunQueue
-	ast  *parser.AST
-}
-
-func (b *flowBody) GetRunQ() *generator.RunQueue {
-	return b.runq
-}
-
-func (b *flowBody) GetAST() *parser.AST {
-	return b.ast
 }
 
 func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow {
@@ -72,6 +106,68 @@ func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow 
 	}
 }
 
+func (f *Flow) WithLock(exec func(body *flowBody) error) error {
+	f.Lock()
+	defer f.Unlock()
+	return exec(&f.flowBody)
+}
+
+func (f *Flow) Refresh() error {
+	f.Lock()
+	defer f.Unlock()
+
+	var (
+		status FlowStatus = _flow_ready
+		begin  time.Time  = time.Now()
+		end    time.Time
+	)
+	for seq, r := range f.results {
+		r.WithLock(func(body *functionResultBody) {
+			if r.begin.Unix() < begin.Unix() {
+				begin = r.begin
+			}
+			if r.end.Unix() > end.Unix() {
+				end = r.end
+			}
+			if r.status == _flow_stopped {
+				status = _flow_stopped
+				f.progress.PutDone(seq)
+			}
+			if r.status == _flow_running {
+				status = _flow_running
+				f.progress.PutRunning(seq)
+			}
+			if r.status == _flow_error {
+				status = _flow_error
+				f.progress.PutDone(seq)
+			}
+		})
+	}
+
+	f.status = status
+	f.begin = begin
+	f.end = end
+	return nil
+}
+
+func (f *Flow) GetRunQ() *generator.RunQueue {
+	f.Lock()
+	defer f.Unlock()
+	return f.runq
+}
+
+func (f *Flow) GetAST() *parser.AST {
+	f.Lock()
+	defer f.Unlock()
+	return f.ast
+}
+
+func (f *Flow) GetResult(seq int) *FunctionResult {
+	f.Lock()
+	defer f.Unlock()
+	return f.results[seq]
+}
+
 func (f *Flow) readField(read ...func(flowBody) error) error {
 	f.RLock()
 	defer f.RUnlock()
@@ -80,52 +176,5 @@ func (f *Flow) readField(read ...func(flowBody) error) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (f *Flow) updateField(update ...func(*flowBody) error) error {
-	f.Lock()
-	defer f.Unlock()
-	for _, up := range update {
-		if err := up(&f.flowBody); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func updateBeginTime(b *flowBody) error {
-	b.begin = time.Now()
-	return nil
-}
-
-func updateEndTime(b *flowBody) error {
-	b.end = time.Now()
-	return nil
-}
-
-func toRunning(b *flowBody) error {
-	if b.status == _flow_running {
-		return errors.New("function is running: " + b.id.Value())
-	}
-	if b.status == _flow_added {
-		return errors.New("function is not ready: " + b.id.Value())
-	}
-	b.status = _flow_running
-	return nil
-}
-
-func toStopped(b *flowBody) error {
-	if b.status == _flow_error {
-		// TODO:
-	}
-	if b.status == _flow_running {
-		b.status = _flow_stopped
-	}
-	return nil
-}
-
-func toError(b *flowBody) error {
-	b.status = _flow_error
 	return nil
 }
