@@ -3,12 +3,11 @@ package print
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"sort"
 	"strings"
 
 	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/sirupsen/logrus"
 )
 
 var _manifest = manifest.Manifest{
@@ -21,8 +20,7 @@ func New() *manifest.Manifest {
 	return &_manifest
 }
 
-func Entrypoint(ctx context.Context, version string, args map[string]string) (map[string]string, error) {
-	logrus.Debugf("function print: args=%v\n", args)
+func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
 	var slice []string
 	for k, v := range args {
 		if strings.HasPrefix(k, "_") {
@@ -33,7 +31,7 @@ func Entrypoint(ctx context.Context, version string, args map[string]string) (ma
 	}
 	sort.Strings(slice)
 	for _, s := range slice {
-		fmt.Fprintln(os.Stdout, s)
+		fmt.Fprintln(out, s)
 	}
 	return map[string]string{
 		"status": "ok",

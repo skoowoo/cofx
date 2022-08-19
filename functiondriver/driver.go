@@ -11,6 +11,7 @@ import (
 )
 
 type Driver interface {
+	// FunctinName returns the name of the function associated with the driver
 	FunctionName() string
 	Load(context.Context) error
 	MergeArgs(map[string]string) map[string]string
@@ -18,18 +19,22 @@ type Driver interface {
 }
 
 func New(l Location) Driver {
+	var dr Driver
 	switch l.DriverName {
 	case "go":
-		if d := godriver.New(l.FuncName, l.FuncPath, l.Version); d != nil {
-			return d
+		if d := godriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
+			return nil
+		} else {
+			dr = d
 		}
-
 	case "cmd":
-		if d := cmddriver.New(l.FuncName, l.FuncPath, l.Version); d != nil {
-			return d
+		if d := cmddriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
+			return nil
+		} else {
+			dr = d
 		}
 	}
-	return nil
+	return dr
 }
 
 type Location struct {
