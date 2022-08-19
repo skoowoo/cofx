@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/pkg/output"
 	"github.com/cofunclabs/cofunc/std"
 )
 
@@ -14,6 +15,7 @@ type GoDriver struct {
 	fname    string
 	version  string
 	manifest *manifest.Manifest
+	output   *output.Output
 }
 
 func New(fname, fpath, version string) *GoDriver {
@@ -21,6 +23,7 @@ func New(fname, fpath, version string) *GoDriver {
 		path:    fpath,
 		fname:   fname,
 		version: version,
+		output:  output.Stdout(),
 	}
 }
 
@@ -43,7 +46,7 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.path)
 	}
-	out, err := entrypoint(ctx, d.version, args)
+	out, err := entrypoint(ctx, d.output, d.version, args)
 	if err != nil {
 		return nil, err
 	}

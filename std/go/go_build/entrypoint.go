@@ -3,7 +3,7 @@ package gobuild
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -47,7 +47,7 @@ func New() *manifest.Manifest {
 	return &_manifest
 }
 
-func Entrypoint(ctx context.Context, version string, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
 	bindir := args["bindir"]
 	prefix, ok := args["prefix"]
 	if !ok {
@@ -63,13 +63,13 @@ func Entrypoint(ctx context.Context, version string, args map[string]string) (ma
 	}
 
 	// print args
-	fmt.Printf("===> prefix      : %s\n", prefix)
-	fmt.Printf("===> mainpkg_path: %s\n", mainpkgPath)
-	fmt.Printf("===> bindir      : %s\n", bindir)
+	fmt.Fprintf(out, "===> prefix      : %s\n", prefix)
+	fmt.Fprintf(out, "===> mainpkg_path: %s\n", mainpkgPath)
+	fmt.Fprintf(out, "===> bindir      : %s\n", bindir)
 
 	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
-		cmd, err := buildCommands(ctx, prefix, bindir, path)
+		cmd, err := buildCommands(ctx, prefix, bindir, path, out)
 		if err != nil {
 			return nil, err
 		}
@@ -79,13 +79,13 @@ func Entrypoint(ctx context.Context, version string, args map[string]string) (ma
 		if err := cmd.Wait(); err != nil {
 			return nil, err
 		}
-		fmt.Printf("---> %s\n", cmd.String())
+		fmt.Fprintf(out, "---> %s\n", cmd.String())
 	}
 
 	return nil, nil
 }
 
-func buildCommands(ctx context.Context, prefix, binpath, mainpath string) (*exec.Cmd, error) {
+func buildCommands(ctx context.Context, prefix, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
 	var args []string
 	args = append(args, "build")
 	args = append(args, "-o")
@@ -93,8 +93,8 @@ func buildCommands(ctx context.Context, prefix, binpath, mainpath string) (*exec
 	args = append(args, filepath.Join(prefix, mainpath))
 
 	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = w
+	cmd.Stderr = w
 	return cmd, nil
 }
 

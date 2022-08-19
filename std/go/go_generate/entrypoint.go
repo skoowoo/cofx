@@ -3,7 +3,7 @@ package gogenerate
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 
 	"github.com/cofunclabs/cofunc/manifest"
@@ -26,8 +26,8 @@ func New() *manifest.Manifest {
 	return &_manifest
 }
 
-func Entrypoint(ctx context.Context, version string, args map[string]string) (map[string]string, error) {
-	cmd, err := buildCommands(ctx)
+func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
+	cmd, err := buildCommands(ctx, out)
 	if err != nil {
 		return nil, err
 	}
@@ -37,18 +37,18 @@ func Entrypoint(ctx context.Context, version string, args map[string]string) (ma
 	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
-	fmt.Printf("---> %s\n", cmd.String())
+	fmt.Fprintf(out, "---> %s\n", cmd.String())
 
 	return nil, nil
 }
 
-func buildCommands(ctx context.Context) (*exec.Cmd, error) {
+func buildCommands(ctx context.Context, w io.Writer) (*exec.Cmd, error) {
 	var args []string
 	args = append(args, "generate")
 	args = append(args, "./...")
 
 	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = w
+	cmd.Stderr = w
 	return cmd, nil
 }
