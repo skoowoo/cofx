@@ -29,7 +29,7 @@ func (f FlowInsight) PrettyPrint(w io.Writer) error {
 	return nil
 }
 
-func (f FlowInsight) JsonPrint(w io.Writer) error {
+func (f FlowInsight) JsonWrite(w io.Writer) error {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(f)

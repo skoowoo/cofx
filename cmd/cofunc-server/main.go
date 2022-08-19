@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	"github.com/cofunclabs/cofunc/service"
 	"github.com/gorilla/mux"
 )
 
@@ -30,8 +31,15 @@ func serve() error {
 
 // InitMux initializes the mux for the server
 func InitMux() *mux.Router {
+	svc := service.New()
 	r := mux.NewRouter()
-	r.Handle("/v1/flow/", &FlowHandler{})
-	r.Handle("/v1/flows/", &FlowsHandler{})
+	r.Handle("/v1/flows/list", &FlowListHandler{svc}).Methods("GET").Schemes("http")
+	r.Handle("/v1/flows/run", &FlowRunHandler{svc}).Methods("PUT").Schemes("http")
+	r.Handle("/v1/flows/add", &FlowAddHandler{svc}).Methods("POST").Schemes("http")
+	r.Handle("/v1/flows/{id}/ready", &FlowReadyHandler{svc}).Methods("PUT").Schemes("http")
+	r.Handle("/v1/flows/{id}/start", &FlowStartHandler{svc}).Methods("PUT").Schemes("http")
+	r.Handle("/v1/flows/{id}/stop", &FlowStopHandler{svc}).Methods("PUT").Schemes("http")
+	r.Handle("/v1/flows/{id}/delete", nil).Methods("PUT").Schemes("http")
+	r.Handle("/v1/flows/{id}/status", &FlowStatusHandler{svc}).Methods("GET").Schemes("http")
 	return r
 }

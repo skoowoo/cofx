@@ -24,6 +24,12 @@ func NewDefaultID(s string) *DefaultID {
 	}
 }
 
+func WrapID(id string) *DefaultID {
+	return &DefaultID{
+		id: id,
+	}
+}
+
 func (d *DefaultID) Value() string {
 	d.RLock()
 	defer d.RUnlock()
