@@ -72,7 +72,7 @@ func (h *FlowStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var resp service.Writer
-	if insight, err := h.svc.GetFlowInsight(ctx, fid); err != nil {
+	if insight, err := h.svc.InsightFlow(ctx, fid); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = exported.SimpleError{
 			Error: err.Error(),
@@ -99,7 +99,7 @@ func (h *FlowRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var resp service.Writer
-	if err := h.svc.RunOneFlow(ctx, fid, r.Body); err != nil {
+	if err := h.svc.RunFlow(ctx, fid, r.Body); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = exported.SimpleError{
 			Error: err.Error(),

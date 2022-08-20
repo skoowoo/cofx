@@ -14,23 +14,23 @@ import (
 type FlowStatus int
 
 const (
-	_flow_unknown FlowStatus = iota
-	_flow_stopped
-	_flow_running
-	_flow_ready
-	_flow_error
-	_flow_added
-	_flow_updated
+	FlowUnknown FlowStatus = iota
+	FlowStopped
+	FlowRunning
+	FlowReady
+	FlowError
+	FlowAdded
+	FlowUpdated
 )
 
 var statusTable = map[FlowStatus]string{
-	_flow_unknown: "UNKNOWN",
-	_flow_added:   "ADDED",
-	_flow_error:   "ERROR",
-	_flow_ready:   "READY",
-	_flow_running: "RUNNING",
-	_flow_stopped: "STOPPED",
-	_flow_updated: "UPDATED",
+	FlowUnknown: "UNKNOWN",
+	FlowAdded:   "ADDED",
+	FlowError:   "ERROR",
+	FlowReady:   "READY",
+	FlowRunning: "RUNNING",
+	FlowStopped: "STOPPED",
+	FlowUpdated: "UPDATED",
 }
 
 type functionResultBody struct {
@@ -102,6 +102,8 @@ type FlowBody struct {
 
 func (b *FlowBody) Export() exported.FlowInsight {
 	insight := exported.FlowInsight{
+		Name:    "",
+		ID:      b.id.Value(),
 		Status:  statusTable[b.status],
 		Begin:   b.begin,
 		End:     b.end,
@@ -112,13 +114,7 @@ func (b *FlowBody) Export() exported.FlowInsight {
 	for _, seq := range b.progress.nodes {
 		fr := b.results[seq]
 		fr.WithLock(func(rb *functionResultBody) {
-			insight.Nodes = append(insight.Nodes, struct {
-				Seq       int    "json:\"seq\""
-				Step      int    "json:\"step\""
-				Name      string "json:\"name\""
-				LastError error  "json:\"last_error\""
-				Status    string "json:\"status\""
-			}{
+			insight.Nodes = append(insight.Nodes, exported.NodeInsight{
 				Seq:       seq,
 				Step:      rb.node.(generator.NodeExtend).Step(),
 				Name:      rb.node.Name(),
@@ -160,7 +156,7 @@ func (f *Flow) Refresh() error {
 	f.progress.Reset()
 
 	var (
-		status FlowStatus = _flow_ready
+		status FlowStatus = FlowReady
 		begin  time.Time  = time.Now()
 		end    time.Time
 	)
@@ -172,16 +168,16 @@ func (f *Flow) Refresh() error {
 			if r.end.Unix() > end.Unix() {
 				end = r.end
 			}
-			if r.status == _flow_stopped {
-				status = _flow_stopped
+			if r.status == FlowStopped {
+				status = FlowStopped
 				f.progress.PutDone(seq)
 			}
-			if r.status == _flow_running {
-				status = _flow_running
+			if r.status == FlowRunning {
+				status = FlowRunning
 				f.progress.PutRunning(seq)
 			}
-			if r.status == _flow_error {
-				status = _flow_error
+			if r.status == FlowError {
+				status = FlowError
 				f.progress.PutDone(seq)
 			}
 		})

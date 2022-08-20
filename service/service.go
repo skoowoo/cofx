@@ -19,28 +19,60 @@ func New() *SVC {
 	}
 }
 
-func (s *SVC) GetFlowInsight(ctx context.Context, fid feedbackid.ID) (exported.FlowInsight, error) {
+func (s *SVC) InsightFlow(ctx context.Context, fid feedbackid.ID) (exported.FlowInsight, error) {
 	var fi exported.FlowInsight
 	read := func(body *runtime.FlowBody) error {
 		fi = body.Export()
 		return nil
 	}
-	err := s.rt.InspectFlow(ctx, fid, read)
+	err := s.rt.OperateFlow(ctx, fid, read)
 	return fi, err
 }
 
-func (s *SVC) RunOneFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) error {
-	if err := s.rt.AddFlow(ctx, id, rd); err != nil {
+func (s *SVC) RunFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) error {
+	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
 		return err
 	} else {
 		rd.Close()
 	}
-	if err := s.rt.ReadyFlow(ctx, id); err != nil {
+	if err := s.rt.InitFlow(ctx, id); err != nil {
 		return err
 	}
-	if err := s.rt.StartFlow(ctx, id); err != nil {
+	if err := s.rt.ExecFlow(ctx, id); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (s *SVC) CreateFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) error {
+	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
+		rd.Close()
+		return err
+	} else {
+		rd.Close()
+	}
+	return nil
+}
+
+func (s *SVC) ReadyFlow(ctx context.Context, id feedbackid.ID) (exported.FlowInsight, error) {
+	if err := s.rt.InitFlow(ctx, id); err != nil {
+		return exported.FlowInsight{}, err
+	}
+	fi, err := s.InsightFlow(ctx, id)
+	if err != nil {
+		return exported.FlowInsight{}, err
+	}
+	return fi, nil
+}
+
+func (s *SVC) StartFlow(ctx context.Context, id feedbackid.ID) (exported.FlowInsight, error) {
+	if err := s.rt.ExecFlow(ctx, id); err != nil {
+		return exported.FlowInsight{}, err
+	}
+	fi, err := s.InsightFlow(ctx, id)
+	if err != nil {
+		return exported.FlowInsight{}, err
+	}
+	return fi, nil
 }

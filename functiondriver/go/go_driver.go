@@ -23,7 +23,7 @@ func New(fname, fpath, version string) *GoDriver {
 		path:    fpath,
 		fname:   fname,
 		version: version,
-		output:  output.Stdout(),
+		output:  output.Discard(),
 	}
 }
 

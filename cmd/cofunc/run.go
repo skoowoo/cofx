@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"sync"
+	"time"
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
@@ -23,5 +26,38 @@ func runflowl(name string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	return service.New().RunOneFlow(ctx, fid, f)
+	svc := service.New()
+	if err := svc.CreateFlow(ctx, fid, f); err != nil {
+		return err
+	}
+	fi, err := svc.ReadyFlow(ctx, fid)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	// start the ui in a goroutine
+	go func() {
+		defer wg.Done()
+		if err := startRunningUI(svc, &fi); err != nil {
+			log.Fatalln(err)
+			os.Exit(-1)
+		}
+	}()
+
+	time.Sleep(time.Second)
+	// start the flow in a goroutine
+	go func() {
+		defer wg.Done()
+		fi, err := svc.StartFlow(ctx, fid)
+		if err != nil {
+			log.Fatalln(err)
+			os.Exit(-1)
+		}
+		_ = fi
+	}()
+	wg.Wait()
+
+	return nil
 }

@@ -32,44 +32,44 @@ func TestAddReadyStartFlow(t *testing.T) {
 	id := feedbackid.NewDefaultID("testingdata.flowl")
 
 	{
-		err := sd.AddFlow(ctx, id, strings.NewReader(testingdata))
+		err := sd.ParseFlow(ctx, id, strings.NewReader(testingdata))
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
+		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, _flow_added, status)
+		assert.Equal(t, FlowAdded, status)
 	}
 
 	{
-		err := sd.ReadyFlow(ctx, id)
+		err := sd.InitFlow(ctx, id)
 		assert.NoError(t, err)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
+		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, _flow_ready, status)
+		assert.Equal(t, FlowReady, status)
 	}
 
 	{
-		err := sd.StartFlow(ctx, id)
+		err := sd.ExecFlow(ctx, id)
 		assert.NoError(t, err)
 
 		time.Sleep(time.Second * 5)
 
 		var status FlowStatus
-		err = sd.InspectFlow(ctx, id, func(b *FlowBody) error {
+		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, _flow_stopped, status)
+		assert.Equal(t, FlowStopped, status)
 	}
 
 	assert.Len(t, sd.store.entity, 1)

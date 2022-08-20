@@ -24,7 +24,7 @@ func New() *Runtime {
 	return r
 }
 
-func (rt *Runtime) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
+func (rt *Runtime) ParseFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
 	rq, ast, err := generator.New(rd)
 	if err != nil {
 		return err
@@ -34,23 +34,23 @@ func (rt *Runtime) AddFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader)
 		return err
 	}
 	flow.WithLock(func(b *FlowBody) error {
-		b.status = _flow_added
+		b.status = FlowAdded
 		return nil
 	})
 	return nil
 }
 
-func (rt *Runtime) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
 	}
 
 	ready := func(body *FlowBody) error {
-		if body.status == _flow_ready || body.status == _flow_running {
+		if body.status != FlowAdded {
 			return nil
 		}
-		body.status = _flow_ready
+		body.status = FlowReady
 		body.results = make(map[int]*functionResult)
 		err := body.runq.ForfuncNode(func(stage int, n generator.Node) error {
 			if err := n.Init(ctx); err != nil {
@@ -61,7 +61,7 @@ func (rt *Runtime) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 				functionResultBody: functionResultBody{
 					fid:    body.id,
 					node:   n,
-					status: _flow_ready,
+					status: FlowReady,
 				},
 			}
 			body.progress.nodes = append(body.progress.nodes, seq)
@@ -82,7 +82,7 @@ func (rt *Runtime) ReadyFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 			fr := flow.GetResult(node.(generator.NodeExtend).Seq())
 			fr.WithLock(func(body *functionResultBody) {
 				body.begin = time.Now()
-				body.status = _flow_running
+				body.status = FlowRunning
 			})
 
 			go func(n generator.Node, fr *functionResult) {
@@ -114,7 +114,7 @@ func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 		flow.Refresh()
 
 		// waiting functions at the step to finish running
-		errResults := make([]*functionResult, 0)
+		abortErr := make([]*functionResult, 0)
 		for i := 0; i < len(batch); i++ {
 			select {
 			case <-ctx.Done():
@@ -123,7 +123,7 @@ func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 			case r := <-ch:
 				r.WithLock(func(body *functionResultBody) {
 					body.end = time.Now()
-					body.status = _flow_stopped
+					body.status = FlowStopped
 					body.executed = true
 					body.runs += 1
 
@@ -133,19 +133,19 @@ func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 							body.executed = false
 							body.runs -= 1
 						} else {
-							body.status = _flow_error
+							body.status = FlowError
 						}
 					}
 				})
 				if r.err != nil {
-					errResults = append(errResults, r)
+					abortErr = append(abortErr, r)
 				}
 				flow.Refresh()
 			}
 		}
 		flow.Refresh()
 
-		if l := len(errResults); l != 0 {
+		if l := len(abortErr); l != 0 {
 			return errors.New("occurred error at step")
 		}
 		return nil
@@ -156,12 +156,12 @@ func (rt *Runtime) StartFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) InspectFlow(ctx context.Context, fid feedbackid.ID, read func(*FlowBody) error) error {
+func (rt *Runtime) OperateFlow(ctx context.Context, fid feedbackid.ID, do func(*FlowBody) error) error {
 	flow, err := rt.store.get(fid.Value())
 	if err != nil {
 		return err
 	}
-	return flow.WithLock(read)
+	return flow.WithLock(do)
 }
 
 func (rt *Runtime) StopFlow(ctx context.Context, fid feedbackid.ID) error {
