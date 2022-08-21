@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/pkg/logout"
+	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
 
 // Runtime
@@ -28,7 +28,7 @@ func New() *Runtime {
 }
 
 func (rt *Runtime) ParseFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
-	rq, ast, err := generator.New(rd)
+	rq, ast, err := actuator.New(rd)
 	if err != nil {
 		return err
 	}
@@ -56,8 +56,8 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 		body.status = StatusReady
 		body.metrics = make(map[int]*functionMetrics)
 
-		err := body.runq.ForfuncNode(func(node generator.Node) error {
-			seq := node.(generator.NodeExtend).Seq()
+		err := body.runq.ForfuncNode(func(node actuator.Node) error {
+			seq := node.(actuator.Task).Seq()
 			body.metrics[seq] = &functionMetrics{
 				functionMetricsBody: functionMetricsBody{
 					fid:    body.id,
@@ -79,7 +79,7 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 			body.logger = logger
 
 			// Initialize the function node, it will Load&Init the function driver
-			if err := node.Init(ctx, generator.WithLoad(logger)); err != nil {
+			if err := node.Init(ctx, actuator.WithLoad(logger)); err != nil {
 				return err
 			}
 			return nil
@@ -107,19 +107,19 @@ func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 		return fmt.Errorf("not ready: flow %s", fid.Value())
 	}
 
-	execOneStep := func(batch []generator.Node) error {
+	execOneStep := func(batch []actuator.Node) error {
 		ch := make(chan *functionMetrics, len(batch))
 		nodes := len(batch)
 
 		// parallel run functions at the step
 		for _, n := range batch {
-			metrics := flow.GetMetrics(n.(generator.NodeExtend).Seq())
+			metrics := flow.GetMetrics(n.(actuator.Task).Seq())
 			metrics.WithLock(func(body *functionMetricsBody) {
 				body.begin = time.Now()
 				body.status = StatusRunning
 			})
 
-			go func(node generator.Node, fm *functionMetrics) {
+			go func(node actuator.Node, fm *functionMetrics) {
 				// Start to execute the function node, it will call the function driver to execute the function code
 				err := node.Exec(ctx)
 
@@ -132,7 +132,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 					body.runs += 1
 
 					if body.err != nil {
-						if body.err == generator.ErrConditionIsFalse {
+						if body.err == actuator.ErrConditionIsFalse {
 							body.err = nil
 							body.executed = false
 							body.runs -= 1

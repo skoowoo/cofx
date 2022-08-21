@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/pkg/logout"
+	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
@@ -36,7 +36,7 @@ type functionMetricsBody struct {
 	err    error
 	status StatusType
 
-	node generator.Node
+	node actuator.Node
 }
 
 type functionMetrics struct {
@@ -95,7 +95,7 @@ type FlowBody struct {
 
 	logger *logout.Output
 
-	runq *generator.RunQueue
+	runq *actuator.RunQueue
 	ast  *parser.AST
 }
 
@@ -115,7 +115,7 @@ func (b *FlowBody) Export() exported.FlowInsight {
 		fr.WithLock(func(rb *functionMetricsBody) {
 			insight.Nodes = append(insight.Nodes, exported.NodeInsight{
 				Seq:       seq,
-				Step:      rb.node.(generator.NodeExtend).Step(),
+				Step:      rb.node.(actuator.Task).Step(),
 				Name:      rb.node.Name(),
 				Status:    string(rb.status),
 				LastError: rb.err,
@@ -133,7 +133,7 @@ type Flow struct {
 	FlowBody
 }
 
-func newflow(id feedbackid.ID, runq *generator.RunQueue, ast *parser.AST) *Flow {
+func newflow(id feedbackid.ID, runq *actuator.RunQueue, ast *parser.AST) *Flow {
 	return &Flow{
 		FlowBody: FlowBody{
 			id:   id,
@@ -241,7 +241,7 @@ func (f *Flow) ToReady() error {
 	return f.Refresh()
 }
 
-func (f *Flow) GetRunQ() *generator.RunQueue {
+func (f *Flow) GetRunQ() *actuator.RunQueue {
 	f.Lock()
 	defer f.Unlock()
 	return f.runq

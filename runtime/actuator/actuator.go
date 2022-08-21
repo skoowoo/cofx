@@ -1,4 +1,4 @@
-package generator
+package actuator
 
 import (
 	"context"
@@ -252,7 +252,7 @@ type Node interface {
 	Exec(context.Context) error
 }
 
-type NodeExtend interface {
+type Task interface {
 	Step() int
 	Seq() int
 }

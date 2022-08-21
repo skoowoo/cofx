@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
+	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
 
 func parseflowl(name string, all bool) error {
@@ -25,7 +25,7 @@ func parseflowl(name string, all bool) error {
 	defer func() {
 		f.Close()
 	}()
-	rq, ast, err := generator.New(f)
+	rq, ast, err := actuator.New(f)
 	if err != nil {
 		return err
 	}
@@ -44,10 +44,10 @@ func printAST(ast *parser.AST, name string) {
 	})
 }
 
-func printRunQ(rq *generator.RunQueue, name string) {
+func printRunQ(rq *actuator.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.ForstepAndExec(context.Background(), func(nodes []generator.Node) error {
+	rq.ForstepAndExec(context.Background(), func(nodes []actuator.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")
