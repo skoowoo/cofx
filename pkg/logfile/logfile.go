@@ -1,4 +1,4 @@
-package logout
+package logfile
 
 import (
 	"io"
@@ -6,16 +6,16 @@ import (
 	"sync"
 )
 
-type OutputOption func(*Output)
+type LogfileOption func(*Logfile)
 
-type Output struct {
+type Logfile struct {
 	sync.Mutex
 	w        io.WriteCloser
 	filePath string
 }
 
-func New(opts ...OutputOption) *Output {
-	out := &Output{
+func New(opts ...LogfileOption) *Logfile {
+	out := &Logfile{
 		w: os.Stdout,
 	}
 	for _, opt := range opts {
@@ -24,20 +24,31 @@ func New(opts ...OutputOption) *Output {
 	return out
 }
 
-func (o *Output) Write(p []byte) (int, error) {
+func (o *Logfile) Write(p []byte) (int, error) {
 	o.Lock()
 	defer o.Unlock()
 
 	return o.w.Write(p)
 }
 
-func (o *Output) IsFile() bool {
+// TODO:
+func (o *Logfile) Read(p []byte) (int, error) {
+	return 0, nil
+}
+
+// TODO:
+func (o *Logfile) ReadLine() {
+
+}
+
+func (o *Logfile) IsFile() bool {
 	o.Lock()
 	defer o.Unlock()
 	return o.filePath != ""
 }
 
-func (o *Output) Reset() error {
+func (o *Logfile) Reset() error {
+	// The 'Reset' method is only valid for 'File' type, so Reset will close the file and then reopen it
 	if !o.IsFile() {
 		return nil
 	}
@@ -56,7 +67,7 @@ func (o *Output) Reset() error {
 	return nil
 }
 
-func (o *Output) Close() error {
+func (o *Logfile) Close() error {
 	o.Lock()
 	defer o.Unlock()
 
@@ -69,13 +80,13 @@ func (o *Output) Close() error {
 }
 
 // Stdout create a 'Output' object, use it to print the output content to stdout of the OS
-func Stdout() *Output {
+func Stdout() *Logfile {
 	return New(WithWriter(os.Stdout))
 }
 
 // File create a 'Output' object, use it to write the output content into a file, the argument
 // is filename
-func File(name string) (*Output, error) {
+func File(name string) (*Logfile, error) {
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
@@ -83,14 +94,14 @@ func File(name string) (*Output, error) {
 	return New(WithWriter(f), WithFilePath(name)), nil
 }
 
-func WithWriter(w io.WriteCloser) OutputOption {
-	return func(o *Output) {
+func WithWriter(w io.WriteCloser) LogfileOption {
+	return func(o *Logfile) {
 		o.w = w
 	}
 }
 
-func WithFilePath(p string) OutputOption {
-	return func(o *Output) {
+func WithFilePath(p string) LogfileOption {
+	return func(o *Logfile) {
 		o.filePath = p
 	}
 }

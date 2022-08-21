@@ -9,7 +9,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
-	"github.com/cofunclabs/cofunc/pkg/logout"
+	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
 
@@ -27,13 +27,13 @@ func New() *Runtime {
 	return r
 }
 
-func (rt *Runtime) ParseFlow(ctx context.Context, fid feedbackid.ID, rd io.Reader) error {
+func (rt *Runtime) ParseFlow(ctx context.Context, id feedbackid.ID, rd io.Reader) error {
 	rq, ast, err := actuator.New(rd)
 	if err != nil {
 		return err
 	}
-	flow := newflow(fid, rq, ast)
-	if err := rt.store.store(fid.Value(), flow); err != nil {
+	flow := newflow(id, rq, ast)
+	if err := rt.store.store(id.Value(), flow); err != nil {
 		return err
 	}
 	flow.WithLock(func(b *FlowBody) error {
@@ -43,13 +43,13 @@ func (rt *Runtime) ParseFlow(ctx context.Context, fid feedbackid.ID, rd io.Reade
 	return nil
 }
 
-func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
-	flow, err := rt.store.get(fid.Value())
+func (rt *Runtime) InitFlow(ctx context.Context, id feedbackid.ID) error {
+	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
 	}
 	if !flow.IsAdded() {
-		return fmt.Errorf("not added: flow %s", fid.Value())
+		return fmt.Errorf("not added: flow %s", id.Value())
 	}
 
 	ready := func(body *FlowBody) error {
@@ -68,11 +68,11 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 			body.progress.nodes = append(body.progress.nodes, seq)
 
 			// Initialize the local logdir directory for the function/node in the flow
-			logdir, err := config.LogFunctionDir(fid.Value(), seq)
+			logdir, err := config.LogFunctionDir(id.Value(), seq)
 			if err != nil {
 				return fmt.Errorf("%w: create function's log directory", err)
 			}
-			logger, err := logout.File(config.LogFunctionFile(logdir))
+			logger, err := logfile.File(config.LogFunctionFile(logdir))
 			if err != nil {
 				return fmt.Errorf("%w: create function's logger", err)
 			}
@@ -98,13 +98,13 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
-	flow, err := rt.store.get(fid.Value())
+func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
+	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
 	}
 	if !flow.IsReady() {
-		return fmt.Errorf("not ready: flow %s", fid.Value())
+		return fmt.Errorf("not ready: flow %s", id.Value())
 	}
 
 	execOneStep := func(batch []actuator.Node) error {
@@ -188,18 +188,18 @@ func (rt *Runtime) Stopped2Ready(ctx context.Context, id feedbackid.ID) error {
 	return flow.ToReady()
 }
 
-func (rt *Runtime) OperateFlow(ctx context.Context, fid feedbackid.ID, do func(*FlowBody) error) error {
-	flow, err := rt.store.get(fid.Value())
+func (rt *Runtime) OperateFlow(ctx context.Context, id feedbackid.ID, do func(*FlowBody) error) error {
+	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
 	}
 	return flow.WithLock(do)
 }
 
-func (rt *Runtime) StopFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) StopFlow(ctx context.Context, id feedbackid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) DeleteFlow(ctx context.Context, fid feedbackid.ID) error {
+func (rt *Runtime) DeleteFlow(ctx context.Context, id feedbackid.ID) error {
 	return nil
 }
