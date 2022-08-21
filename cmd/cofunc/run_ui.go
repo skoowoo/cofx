@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -11,8 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
-	"github.com/cofunclabs/cofunc/service"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
@@ -23,18 +20,30 @@ var (
 	doneMark     = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
 )
 
-func startRunningUI(svc *service.SVC, fi *exported.FlowInsight) error {
+func startRunningUI(get func() (*exported.FlowInsight, error)) error {
+	fi, err := get()
+	if err != nil {
+		return err
+	}
+
 	s := spinner.New()
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
+
 	model := runningModel{
-		svc:     svc,
-		fi:      fi,
 		spinner: s,
 		progress: progress.New(
 			progress.WithDefaultGradient(),
 			progress.WithWidth(40),
 			progress.WithoutPercentage(),
 		),
+		fi: fi,
+		getCmd: tea.Tick(time.Millisecond*time.Duration(rand.Intn(500)), func(t time.Time) tea.Msg {
+			fi, err := get()
+			if err != nil {
+				return getFlowInsightErr(err)
+			}
+			return fi
+		}),
 	}
 
 	rand.Seed(time.Now().Unix())
@@ -43,29 +52,18 @@ func startRunningUI(svc *service.SVC, fi *exported.FlowInsight) error {
 
 type getFlowInsightErr error
 
-func getFlowInsightCmd(svc *service.SVC, id string) tea.Cmd {
-	d := time.Millisecond * time.Duration(rand.Intn(500))
-	return tea.Tick(d, func(t time.Time) tea.Msg {
-		fi, err := svc.InsightFlow(context.Background(), feedbackid.WrapID(id))
-		if err != nil {
-			return getFlowInsightErr(err)
-		}
-		return &fi
-	})
-}
-
 type runningModel struct {
-	svc      *service.SVC
-	fi       *exported.FlowInsight
 	width    int
 	height   int
 	spinner  spinner.Model
 	progress progress.Model
 	done     bool
+	fi       *exported.FlowInsight
+	getCmd   tea.Cmd
 }
 
 func (m runningModel) Init() tea.Cmd {
-	return tea.Batch(getFlowInsightCmd(m.svc, m.fi.ID), m.spinner.Tick)
+	return tea.Batch(m.getCmd, m.spinner.Tick)
 }
 
 func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -99,30 +97,32 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, tea.Batch(
 			progressCmd,
-			getFlowInsightCmd(m.svc, m.fi.ID),
+			m.getCmd,
 		)
 	case getFlowInsightErr:
-		return m, getFlowInsightCmd(m.svc, m.fi.ID)
+		return m, m.getCmd
 	}
 	return m, nil
 }
 
 func (m runningModel) View() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("\nExecute the flow %s\n\n", m.fi.ID))
+	builder.WriteString(fmt.Sprintf("\nExecute the flow: %s\n\n", m.fi.ID))
 
 	for _, n := range m.fi.Nodes {
 		if n.Status == "RUNNING" {
-			builder.WriteString(fmt.Sprintf("%s #%d %s\n", m.spinner.View(), n.Step, runningStyle.Render(n.Name)))
+			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", m.spinner.View(), n.Step, runningStyle.Render(n.Name), n.Runs))
 		} else if n.Status == "STOPPED" {
-			builder.WriteString(fmt.Sprintf("%s #%d %s\n", doneMark.String(), n.Step, n.Name))
+			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", doneMark.String(), n.Step, n.Name, n.Runs))
 		} else {
-			builder.WriteString(fmt.Sprintf("%s #%d %s\n", " ", n.Step, n.Name))
+			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", " ", n.Step, n.Name, n.Runs))
 		}
 	}
 
 	if m.done {
-		builder.WriteString(doneStyle.Render(fmt.Sprintf("\nDone! Executed %d functions.\n", m.fi.Total)))
+		builder.WriteString(doneStyle.Render("\nDone!\n"))
+	} else {
+		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running...\n"))
 	}
 
 	// spin := m.spinner.View() + " "

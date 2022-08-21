@@ -12,6 +12,7 @@ type NodeInsight struct {
 	Name      string `json:"name"`
 	LastError error  `json:"last_error"`
 	Status    string `json:"status"`
+	Runs      int    `json:"runs"`
 }
 
 type FlowInsight struct {

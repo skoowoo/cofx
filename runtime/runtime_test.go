@@ -29,32 +29,32 @@ func TestAddReadyStartFlow(t *testing.T) {
 	sd := New()
 
 	ctx := context.Background()
-	id := feedbackid.NewDefaultID("testingdata.flowl")
+	id := feedbackid.NewID("testingdata.flowl")
 
 	{
 		err := sd.ParseFlow(ctx, id, strings.NewReader(testingdata))
 		assert.NoError(t, err)
 
-		var status FlowStatus
+		var status StatusType
 		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FlowAdded, status)
+		assert.Equal(t, StatusAdded, status)
 	}
 
 	{
 		err := sd.InitFlow(ctx, id)
 		assert.NoError(t, err)
 
-		var status FlowStatus
+		var status StatusType
 		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FlowReady, status)
+		assert.Equal(t, StatusReady, status)
 	}
 
 	{
@@ -63,13 +63,13 @@ func TestAddReadyStartFlow(t *testing.T) {
 
 		time.Sleep(time.Second * 5)
 
-		var status FlowStatus
+		var status StatusType
 		err = sd.OperateFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, FlowStopped, status)
+		assert.Equal(t, StatusStopped, status)
 	}
 
 	assert.Len(t, sd.store.entity, 1)

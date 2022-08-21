@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/service/exported"
@@ -14,6 +15,9 @@ type SVC struct {
 }
 
 func New() *SVC {
+	if err := config.Init(); err != nil {
+		panic(err)
+	}
 	return &SVC{
 		rt: runtime.New(),
 	}

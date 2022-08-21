@@ -52,11 +52,11 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 	return r, nil
 }
 
-func (r *RunQueue) ForfuncNode(do func(int, Node) error) error {
-	for i, e := range r.steps {
+func (r *RunQueue) ForfuncNode(do func(Node) error) error {
+	for _, e := range r.steps {
 		if fe, ok := e.(*FuncNode); ok {
 			for p := fe; p != nil; p = p.parallel {
-				if err := do(i+1, p); err != nil {
+				if err := do(p); err != nil {
 					return err
 				}
 			}
@@ -352,9 +352,7 @@ func (n *FuncNode) Name() string {
 }
 
 func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
-	if len(with) == 0 {
-		with = append(with, withArgs, withLoad)
-	}
+	with = append(with, withArgs())
 	for _, f := range with {
 		if err := f(ctx, n); err != nil {
 			return err
@@ -421,34 +419,38 @@ func (n *FuncNode) needReturns() bool {
 	return len(n.returnVar) != 0
 }
 
-func withArgs(ctx context.Context, n Node) error {
-	funcnode, ok := n.(*FuncNode)
-	if !ok {
-		return nil
-	}
-	if funcnode.co.Body() != nil {
-		m, ok := funcnode.co.Body().(*parser.MapBody)
-		if ok {
-			funcnode._args = m
+func withArgs() func(context.Context, Node) error {
+	return func(ctx context.Context, n Node) error {
+		funcnode, ok := n.(*FuncNode)
+		if !ok {
 			return nil
 		}
-	}
-
-	if funcnode.fn != nil {
-		for _, b := range funcnode.fn.Child() {
-			if b.IsArgs() {
-				funcnode._args = b.Body().(*parser.MapBody)
+		if funcnode.co.Body() != nil {
+			m, ok := funcnode.co.Body().(*parser.MapBody)
+			if ok {
+				funcnode._args = m
 				return nil
 			}
 		}
-	}
-	return nil
-}
 
-func withLoad(ctx context.Context, n Node) error {
-	funcnode, ok := n.(*FuncNode)
-	if !ok {
+		if funcnode.fn != nil {
+			for _, b := range funcnode.fn.Child() {
+				if b.IsArgs() {
+					funcnode._args = b.Body().(*parser.MapBody)
+					return nil
+				}
+			}
+		}
 		return nil
 	}
-	return funcnode.driver.Load(ctx)
+}
+
+func WithLoad(logger io.Writer) func(context.Context, Node) error {
+	return func(ctx context.Context, n Node) error {
+		funcnode, ok := n.(*FuncNode)
+		if !ok {
+			return nil
+		}
+		return funcnode.driver.Load(ctx, logger)
+	}
 }

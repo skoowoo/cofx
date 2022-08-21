@@ -3,11 +3,14 @@ package runtime
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
+	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/logout"
 )
 
 // Runtime
@@ -34,7 +37,7 @@ func (rt *Runtime) ParseFlow(ctx context.Context, fid feedbackid.ID, rd io.Reade
 		return err
 	}
 	flow.WithLock(func(b *FlowBody) error {
-		b.status = FlowAdded
+		b.status = StatusAdded
 		return nil
 	})
 	return nil
@@ -45,26 +48,40 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 	if err != nil {
 		return err
 	}
+	if !flow.IsAdded() {
+		return fmt.Errorf("not added: flow %s", fid.Value())
+	}
 
 	ready := func(body *FlowBody) error {
-		if body.status != FlowAdded {
-			return nil
-		}
-		body.status = FlowReady
-		body.results = make(map[int]*functionResult)
-		err := body.runq.ForfuncNode(func(stage int, n generator.Node) error {
-			if err := n.Init(ctx); err != nil {
-				return err
-			}
-			seq := n.(generator.NodeExtend).Seq()
-			body.results[seq] = &functionResult{
-				functionResultBody: functionResultBody{
+		body.status = StatusReady
+		body.metrics = make(map[int]*functionMetrics)
+
+		err := body.runq.ForfuncNode(func(node generator.Node) error {
+			seq := node.(generator.NodeExtend).Seq()
+			body.metrics[seq] = &functionMetrics{
+				functionMetricsBody: functionMetricsBody{
 					fid:    body.id,
-					node:   n,
-					status: FlowReady,
+					node:   node,
+					status: StatusReady,
 				},
 			}
 			body.progress.nodes = append(body.progress.nodes, seq)
+
+			// Initialize the local logdir directory for the function/node in the flow
+			logdir, err := config.LogFunctionDir(fid.Value(), seq)
+			if err != nil {
+				return fmt.Errorf("%w: create function's log directory", err)
+			}
+			logger, err := logout.File(config.LogFunctionFile(logdir))
+			if err != nil {
+				return fmt.Errorf("%w: create function's logger", err)
+			}
+			body.logger = logger
+
+			// Initialize the function node, it will Load&Init the function driver
+			if err := node.Init(ctx, generator.WithLoad(logger)); err != nil {
+				return err
+			}
 			return nil
 		})
 		if err != nil {
@@ -72,7 +89,6 @@ func (rt *Runtime) InitFlow(ctx context.Context, fid feedbackid.ID) error {
 		}
 		return nil
 	}
-
 	if err := flow.WithLock(ready); err != nil {
 		return err
 	}
@@ -87,43 +103,31 @@ func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 	if err != nil {
 		return err
 	}
+	if !flow.IsReady() {
+		return fmt.Errorf("not ready: flow %s", fid.Value())
+	}
 
 	execOneStep := func(batch []generator.Node) error {
-		ch := make(chan *functionResult, len(batch))
+		ch := make(chan *functionMetrics, len(batch))
+		nodes := len(batch)
+
 		// parallel run functions at the step
-		for _, node := range batch {
-			fr := flow.GetResult(node.(generator.NodeExtend).Seq())
-			fr.WithLock(func(body *functionResultBody) {
+		for _, n := range batch {
+			metrics := flow.GetMetrics(n.(generator.NodeExtend).Seq())
+			metrics.WithLock(func(body *functionMetricsBody) {
 				body.begin = time.Now()
-				body.status = FlowRunning
+				body.status = StatusRunning
 			})
 
-			go func(n generator.Node, fr *functionResult) {
-				err := n.Exec(ctx)
-				fr.WithLock(func(body *functionResultBody) {
+			go func(node generator.Node, fm *functionMetrics) {
+				// Start to execute the function node, it will call the function driver to execute the function code
+				err := node.Exec(ctx)
+
+				// Update the statistics of the function node execution
+				fm.WithLock(func(body *functionMetricsBody) {
 					body.err = err
-				})
-				select {
-				case ch <- fr:
-				case <-ctx.Done():
-				}
-			}(node, fr)
-		}
-
-		// refresh flow
-		flow.Refresh()
-
-		// waiting functions at the step to finish running
-		abortErr := make([]*functionResult, 0)
-		for i := 0; i < len(batch); i++ {
-			select {
-			case <-ctx.Done():
-				// canced
-				close(ch)
-			case r := <-ch:
-				r.WithLock(func(body *functionResultBody) {
 					body.end = time.Now()
-					body.status = FlowStopped
+					body.status = StatusStopped
 					body.executed = true
 					body.runs += 1
 
@@ -132,14 +136,32 @@ func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 							body.err = nil
 							body.executed = false
 							body.runs -= 1
-						} else {
-							body.status = FlowError
 						}
 					}
 				})
-				if r.err != nil {
-					abortErr = append(abortErr, r)
+				select {
+				case ch <- fm:
+				case <-ctx.Done():
 				}
+			}(n, metrics)
+		}
+
+		flow.Refresh()
+
+		// waiting functions at the step to finish running
+		abortErr := make([]*functionMetrics, 0)
+		for i := 0; i < nodes; i++ {
+			select {
+			case <-ctx.Done():
+				// canced
+				close(ch)
+			case m := <-ch:
+				// Find the function node that executes with an error
+				m.WithLock(func(body *functionMetricsBody) {
+					if body.err != nil {
+						abortErr = append(abortErr, m)
+					}
+				})
 				flow.Refresh()
 			}
 		}
@@ -154,6 +176,16 @@ func (rt *Runtime) ExecFlow(ctx context.Context, fid feedbackid.ID) error {
 		return err
 	}
 	return nil
+}
+
+// Stopped2Ready will reset the status of the flow and all nodes to ready, but only when all nodes are stopped
+// When re-executing the flow, You need to call this method
+func (rt *Runtime) Stopped2Ready(ctx context.Context, id feedbackid.ID) error {
+	flow, err := rt.store.get(id.Value())
+	if err != nil {
+		return err
+	}
+	return flow.ToReady()
 }
 
 func (rt *Runtime) OperateFlow(ctx context.Context, fid feedbackid.ID, do func(*FlowBody) error) error {

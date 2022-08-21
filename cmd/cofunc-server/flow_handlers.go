@@ -94,7 +94,7 @@ type FlowRunHandler struct {
 func (h *FlowRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := r.URL.Query().Get("filename")
 
-	fid := feedbackid.NewDefaultID(filename)
+	fid := feedbackid.NewID(filename)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

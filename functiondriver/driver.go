@@ -3,6 +3,7 @@ package functiondriver
 import (
 	"context"
 	"errors"
+	"io"
 	"path"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 type Driver interface {
 	// FunctinName returns the name of the function associated with the driver
 	FunctionName() string
-	Load(context.Context) error
+	Load(context.Context, io.Writer) error
 	MergeArgs(map[string]string) map[string]string
 	Run(context.Context, map[string]string) (map[string]string, error)
 }
