@@ -7,7 +7,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
-	"github.com/cofunclabs/cofunc/pkg/logout"
+	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
@@ -93,7 +93,7 @@ type FlowBody struct {
 	metrics  map[int]*functionMetrics
 	progress progress
 
-	logger *logout.Output
+	logger *logfile.Logfile
 
 	runq *actuator.RunQueue
 	ast  *parser.AST

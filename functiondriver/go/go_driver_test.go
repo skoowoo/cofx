@@ -2,9 +2,9 @@ package godriver
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/pkg/logout"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestLoad(t *testing.T) {
 	}
 	assert.Equal(t, "print", dr.fname)
 	assert.Equal(t, "print", dr.path)
-	err := dr.Load(context.Background(), logout.Stdout())
+	err := dr.Load(context.Background(), os.Stdout)
 	args := dr.MergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
@@ -31,7 +31,7 @@ func TestRun(t *testing.T) {
 	if dr == nil {
 		t.FailNow()
 	}
-	err := dr.Load(context.Background(), logout.Stdout())
+	err := dr.Load(context.Background(), os.Stdout)
 	assert.NoError(t, err)
 	out, err := dr.Run(context.Background(), nil)
 	assert.NoError(t, err)
