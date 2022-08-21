@@ -1,41 +1,29 @@
-//go:generate stringer -type=FlowStatus
 package runtime
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/cofunclabs/cofunc/generator"
 	"github.com/cofunclabs/cofunc/parser"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/logout"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-type FlowStatus int
+type StatusType string
 
 const (
-	FlowUnknown FlowStatus = iota
-	FlowStopped
-	FlowRunning
-	FlowReady
-	FlowError
-	FlowAdded
-	FlowUpdated
+	StatusAdded   = StatusType("ADDED")
+	StatusReady   = StatusType("READY")
+	StatusRunning = StatusType("RUNNING")
+	StatusStopped = StatusType("STOPPED")
+	StatusUpdated = StatusType("UPDATED")
 )
 
-var statusTable = map[FlowStatus]string{
-	FlowUnknown: "UNKNOWN",
-	FlowAdded:   "ADDED",
-	FlowError:   "ERROR",
-	FlowReady:   "READY",
-	FlowRunning: "RUNNING",
-	FlowStopped: "STOPPED",
-	FlowUpdated: "UPDATED",
-}
-
-type functionResultBody struct {
-	fid  feedbackid.ID
-	node generator.Node
+type functionMetricsBody struct {
+	fid feedbackid.ID
 	// Last start time
 	begin time.Time
 	// Last end time
@@ -46,18 +34,26 @@ type functionResultBody struct {
 	executed bool
 	// Whether there is an error in the function execution
 	err    error
-	status FlowStatus
+	status StatusType
+
+	node generator.Node
 }
 
-type functionResult struct {
+type functionMetrics struct {
 	sync.Mutex
-	functionResultBody
+	functionMetricsBody
 }
 
-func (fr *functionResult) WithLock(exec func(body *functionResultBody)) {
-	fr.Lock()
-	defer fr.Unlock()
-	exec(&fr.functionResultBody)
+func (fm *functionMetrics) WithLock(exec func(body *functionMetricsBody)) {
+	fm.Lock()
+	defer fm.Unlock()
+	exec(&fm.functionMetricsBody)
+}
+
+func (fm *functionMetrics) IsStatus(status StatusType) bool {
+	fm.Lock()
+	defer fm.Unlock()
+	return fm.status == status
 }
 
 type progress struct {
@@ -89,12 +85,15 @@ func (p *progress) Reset() {
 
 type FlowBody struct {
 	id     feedbackid.ID
-	status FlowStatus
+	status StatusType
 	begin  time.Time
 	end    time.Time
-	// Save the result of function execution, the map key is node's seq
-	results  map[int]*functionResult
+	// Save the result metrics of function execution
+	// the map is seq->functionMetrics
+	metrics  map[int]*functionMetrics
 	progress progress
+
+	logger *logout.Output
 
 	runq *generator.RunQueue
 	ast  *parser.AST
@@ -104,7 +103,7 @@ func (b *FlowBody) Export() exported.FlowInsight {
 	insight := exported.FlowInsight{
 		Name:    "",
 		ID:      b.id.Value(),
-		Status:  statusTable[b.status],
+		Status:  string(b.status),
 		Begin:   b.begin,
 		End:     b.end,
 		Total:   len(b.progress.nodes),
@@ -112,14 +111,15 @@ func (b *FlowBody) Export() exported.FlowInsight {
 		Done:    len(b.progress.done),
 	}
 	for _, seq := range b.progress.nodes {
-		fr := b.results[seq]
-		fr.WithLock(func(rb *functionResultBody) {
+		fr := b.metrics[seq]
+		fr.WithLock(func(rb *functionMetricsBody) {
 			insight.Nodes = append(insight.Nodes, exported.NodeInsight{
 				Seq:       seq,
 				Step:      rb.node.(generator.NodeExtend).Step(),
 				Name:      rb.node.Name(),
-				Status:    statusTable[rb.status],
+				Status:    string(rb.status),
 				LastError: rb.err,
+				Runs:      rb.runs,
 			})
 		})
 	}
@@ -156,29 +156,25 @@ func (f *Flow) Refresh() error {
 	f.progress.Reset()
 
 	var (
-		status FlowStatus = FlowReady
+		status StatusType = StatusReady
 		begin  time.Time  = time.Now()
 		end    time.Time
 	)
-	for seq, r := range f.results {
-		r.WithLock(func(body *functionResultBody) {
-			if r.begin.Unix() < begin.Unix() {
-				begin = r.begin
+	for seq, m := range f.metrics {
+		m.WithLock(func(body *functionMetricsBody) {
+			if m.begin.Unix() < begin.Unix() {
+				begin = m.begin
 			}
-			if r.end.Unix() > end.Unix() {
-				end = r.end
+			if m.end.Unix() > end.Unix() {
+				end = m.end
 			}
-			if r.status == FlowStopped {
-				status = FlowStopped
+			if m.status == StatusStopped {
+				status = StatusStopped
 				f.progress.PutDone(seq)
 			}
-			if r.status == FlowRunning {
-				status = FlowRunning
+			if m.status == StatusRunning {
+				status = StatusRunning
 				f.progress.PutRunning(seq)
-			}
-			if r.status == FlowError {
-				status = FlowError
-				f.progress.PutDone(seq)
 			}
 		})
 	}
@@ -187,6 +183,62 @@ func (f *Flow) Refresh() error {
 	f.begin = begin
 	f.end = end
 	return nil
+}
+
+func (f *Flow) IsReady() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.status == StatusReady
+}
+
+func (f *Flow) IsStopped() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.status == StatusStopped
+}
+
+func (f *Flow) IsRunning() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.status == StatusRunning
+}
+
+func (f *Flow) IsAdded() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.status == StatusAdded
+}
+
+func (f *Flow) ToReady() error {
+	// The purpose of using a function to execute the code block is to avoid the deadlock,
+	// because the 'f.Refresh()' method will also lock the 'f'
+	err := func() error {
+		f.Lock()
+		defer f.Unlock()
+
+		for _, m := range f.metrics {
+			if !m.IsStatus(StatusStopped) {
+				return errors.New("not stopped")
+			}
+		}
+		for _, m := range f.metrics {
+			m.WithLock(func(body *functionMetricsBody) {
+				body.status = StatusReady
+				body.begin = time.Time{}
+				body.end = time.Time{}
+				body.executed = false
+				body.err = nil
+				body.runs = 0
+			})
+		}
+
+		return f.logger.Reset()
+	}() // To avoid deadlock
+	if err != nil {
+		return err
+	}
+
+	return f.Refresh()
 }
 
 func (f *Flow) GetRunQ() *generator.RunQueue {
@@ -201,8 +253,8 @@ func (f *Flow) GetAST() *parser.AST {
 	return f.ast
 }
 
-func (f *Flow) GetResult(seq int) *functionResult {
+func (f *Flow) GetMetrics(seq int) *functionMetrics {
 	f.Lock()
 	defer f.Unlock()
-	return f.results[seq]
+	return f.metrics[seq]
 }

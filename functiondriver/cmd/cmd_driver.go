@@ -2,8 +2,7 @@ package cmddriver
 
 import (
 	"context"
-
-	"github.com/cofunclabs/cofunc/pkg/output"
+	"io"
 )
 
 // Cmd
@@ -11,7 +10,7 @@ type CmdDriver struct {
 	fpath   string
 	fname   string
 	version string
-	output  *output.Output
+	logger  io.Writer
 }
 
 func New(fname, fpath, version string) *CmdDriver {
@@ -19,11 +18,10 @@ func New(fname, fpath, version string) *CmdDriver {
 		fname:   fname,
 		fpath:   fpath,
 		version: version,
-		output:  output.New(),
 	}
 }
 
-func (d *CmdDriver) Load(ctx context.Context) error {
+func (d *CmdDriver) Load(ctx context.Context, logger io.Writer) error {
 	// todo
 	return nil
 }

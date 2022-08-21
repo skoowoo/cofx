@@ -15,8 +15,8 @@ func loadTestingdata2(data string) ([]*parser.Block, *parser.AST, *RunQueue, err
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	err = rq.ForfuncNode(func(stage int, n Node) error {
-		return n.Init(context.TODO(), withArgs)
+	err = rq.ForfuncNode(func(n Node) error {
+		return n.Init(context.TODO())
 	})
 	if err != nil {
 		return nil, nil, nil, err

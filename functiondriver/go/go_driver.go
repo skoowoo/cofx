@@ -3,9 +3,9 @@ package godriver
 import (
 	"context"
 	"errors"
+	"io"
 
 	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/output"
 	"github.com/cofunclabs/cofunc/std"
 )
 
@@ -15,7 +15,7 @@ type GoDriver struct {
 	fname    string
 	version  string
 	manifest *manifest.Manifest
-	output   *output.Output
+	logger   io.Writer
 }
 
 func New(fname, fpath, version string) *GoDriver {
@@ -23,17 +23,17 @@ func New(fname, fpath, version string) *GoDriver {
 		path:    fpath,
 		fname:   fname,
 		version: version,
-		output:  output.Discard(),
 	}
 }
 
 // load go://function
-func (d *GoDriver) Load(ctx context.Context) error {
+func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 	mf := std.Lookup(d.fname)
 	if mf == nil {
 		return errors.New("in builtins package, not found function's manifest: " + d.path)
 	}
 	d.manifest = mf
+	d.logger = logger
 	return nil
 }
 
@@ -46,7 +46,7 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	if entrypoint == nil {
 		return nil, errors.New("in function, not found the entrypoint: " + d.path)
 	}
-	out, err := entrypoint(ctx, d.output, d.version, args)
+	out, err := entrypoint(ctx, d.logger, d.version, args)
 	if err != nil {
 		return nil, err
 	}

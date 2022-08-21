@@ -1,26 +1,23 @@
 package feedbackid
 
 import (
-	"encoding/base64"
-	"sync"
+	"crypto/md5"
+	"fmt"
 )
 
 type ID interface {
 	Value() string
-	String() string
-	Feedback(m string)
+	Short() string
 }
 
 type DefaultID struct {
-	sync.RWMutex
-	id      string
-	message string
+	id string
 }
 
-func NewDefaultID(s string) *DefaultID {
-	encoded := base64.StdEncoding.EncodeToString([]byte(s))
+func NewID(s string) *DefaultID {
+	encoded := md5.Sum([]byte(s))
 	return &DefaultID{
-		id: encoded,
+		id: fmt.Sprintf("%x", encoded),
 	}
 }
 
@@ -31,19 +28,9 @@ func WrapID(id string) *DefaultID {
 }
 
 func (d *DefaultID) Value() string {
-	d.RLock()
-	defer d.RUnlock()
 	return d.id
 }
 
-func (d *DefaultID) String() string {
-	d.RLock()
-	defer d.RUnlock()
-	return d.id + ":" + d.message
-}
-
-func (d *DefaultID) Feedback(m string) {
-	d.Lock()
-	defer d.Unlock()
-	d.message = m
+func (d *DefaultID) Short() string {
+	return d.id[:8]
 }

@@ -11,6 +11,7 @@ import (
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/service"
+	"github.com/cofunclabs/cofunc/service/exported"
 )
 
 func runflowl(name string) error {
@@ -22,7 +23,7 @@ func runflowl(name string) error {
 		return err
 	}
 
-	fid := feedbackid.NewDefaultID(name)
+	fid := feedbackid.NewID(name)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -30,8 +31,7 @@ func runflowl(name string) error {
 	if err := svc.CreateFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	fi, err := svc.ReadyFlow(ctx, fid)
-	if err != nil {
+	if _, err := svc.ReadyFlow(ctx, fid); err != nil {
 		return err
 	}
 
@@ -40,7 +40,10 @@ func runflowl(name string) error {
 	// start the ui in a goroutine
 	go func() {
 		defer wg.Done()
-		if err := startRunningUI(svc, &fi); err != nil {
+		if err := startRunningUI(func() (*exported.FlowInsight, error) {
+			fi, err := svc.InsightFlow(ctx, fid)
+			return &fi, err
+		}); err != nil {
 			log.Fatalln(err)
 			os.Exit(-1)
 		}
