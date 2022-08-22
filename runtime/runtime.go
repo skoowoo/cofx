@@ -72,7 +72,7 @@ func (rt *Runtime) InitFlow(ctx context.Context, id feedbackid.ID) error {
 			if err != nil {
 				return fmt.Errorf("%w: create function's log directory", err)
 			}
-			logger, err := logfile.File(config.LogFunctionFile(logdir))
+			logger, err := logfile.TruncFile(config.LogFunctionFile(logdir))
 			if err != nil {
 				return fmt.Errorf("%w: create function's logger", err)
 			}
@@ -188,7 +188,7 @@ func (rt *Runtime) Stopped2Ready(ctx context.Context, id feedbackid.ID) error {
 	return flow.ToReady()
 }
 
-func (rt *Runtime) OperateFlow(ctx context.Context, id feedbackid.ID, do func(*FlowBody) error) error {
+func (rt *Runtime) FetchFlow(ctx context.Context, id feedbackid.ID, do func(*FlowBody) error) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err

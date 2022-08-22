@@ -2,16 +2,16 @@ package main
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
 
 // root command
 var rootCmd = &cobra.Command{
-	Use:   "flowl",
-	Short: "function flow language",
-	Long: `A function flow tool, used to Parse, Create, Run
-	and Manage flow based on funtion`,
+	Use:   "cofunc",
+	Short: "function fabric",
+	Long:  `A function fabric tool, used to Parse, Create, Run and Manage flow based on funtion fabric`,
 }
 
 func Execute() {
@@ -28,9 +28,9 @@ func initCmd() {
 		parseCmd := &cobra.Command{
 			Use:          "parse [path of flowl file]",
 			Short:        "Parse a flowl file",
-			Example:      "flowl parse [-a] ./example.flowl",
+			Example:      "cofunc parse [-a] ./example.flowl",
 			SilenceUsage: true,
-			Args:         cobra.MinimumNArgs(1),
+			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return parseflowl(args[0], showAll)
 			},
@@ -43,13 +43,32 @@ func initCmd() {
 		runCmd := &cobra.Command{
 			Use:          "run [path of flowl file]",
 			Short:        "run a flowl file",
-			Example:      "flowl run ./example.flowl",
+			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
-			Args:         cobra.MinimumNArgs(1),
+			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return runflowl(args[0])
 			},
 		}
 		rootCmd.AddCommand(runCmd)
+	}
+
+	{
+		logCmd := &cobra.Command{
+			Use:          "log [flow id] [function seq]",
+			Short:        "View the execution log of the flow or function",
+			Example:      "cofunc run b0804ec967f48520697662a204f5fe72 1",
+			SilenceUsage: true,
+			Args:         cobra.ExactArgs(2),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				id := args[0]
+				seq, err := strconv.ParseInt(args[1], 10, 64)
+				if err != nil {
+					return err
+				}
+				return viewLog(id, int(seq))
+			},
+		}
+		rootCmd.AddCommand(logCmd)
 	}
 }

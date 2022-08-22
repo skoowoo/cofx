@@ -6,6 +6,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
@@ -29,7 +30,7 @@ func (s *SVC) InsightFlow(ctx context.Context, fid feedbackid.ID) (exported.Flow
 		fi = body.Export()
 		return nil
 	}
-	err := s.rt.OperateFlow(ctx, fid, read)
+	err := s.rt.FetchFlow(ctx, fid, read)
 	return fi, err
 }
 
@@ -79,4 +80,22 @@ func (s *SVC) StartFlow(ctx context.Context, id feedbackid.ID) (exported.FlowIns
 		return exported.FlowInsight{}, err
 	}
 	return fi, nil
+}
+
+// ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'
+// is the sequence of the function, the 'w' argument is the output destination of the log.
+func (s *SVC) ViewLog(ctx context.Context, id feedbackid.ID, seq int, w io.Writer) error {
+	dir, err := config.LogFunctionDir(id.Value(), seq)
+	if err != nil {
+		return err
+	}
+	logger, err := logfile.File(config.LogFunctionFile(dir))
+	if err != nil {
+		return err
+	}
+	defer logger.Close()
+	if _, err := io.Copy(w, logger); err != nil {
+		return err
+	}
+	return nil
 }
