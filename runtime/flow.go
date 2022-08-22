@@ -99,6 +99,10 @@ type FlowBody struct {
 	ast  *parser.AST
 }
 
+func (b *FlowBody) Logger() *logfile.Logfile {
+	return b.logger
+}
+
 func (b *FlowBody) Export() exported.FlowInsight {
 	insight := exported.FlowInsight{
 		Name:    "",
