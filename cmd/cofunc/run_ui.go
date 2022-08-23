@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,12 +14,7 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-var (
-	runningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
-	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("239"))
-	doneStyle    = lipgloss.NewStyle().Margin(1, 2)
-	doneMark     = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
-)
+var runCmdExited bool
 
 func startRunningUI(get func() (*exported.FlowInsight, error)) error {
 	fi, err := get()
@@ -37,7 +33,7 @@ func startRunningUI(get func() (*exported.FlowInsight, error)) error {
 			progress.WithoutPercentage(),
 		),
 		fi: fi,
-		getCmd: tea.Tick(time.Millisecond*time.Duration(rand.Intn(500)), func(t time.Time) tea.Msg {
+		getCmd: tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
 			fi, err := get()
 			if err != nil {
 				return getFlowInsightErr(err)
@@ -89,11 +85,14 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fi = msg
 		if m.fi.Done == m.fi.Total {
 			m.done = true
-			return m, tea.Quit
 		}
 
 		// Update progress bar
 		progressCmd := m.progress.SetPercent(float64(m.fi.Done) / float64(m.fi.Total))
+
+		if runCmdExited {
+			return m, tea.Quit
+		}
 
 		return m, tea.Batch(
 			progressCmd,
@@ -105,24 +104,60 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+var (
+	doneStyle        = lipgloss.NewStyle().MarginLeft(0).MarginTop(2)
+	doneMark         = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
+	errorMark        = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).SetString("✗")
+	stepStyle        = lipgloss.NewStyle().Width(4)
+	seqStyle         = lipgloss.NewStyle().Width(4)
+	runsStyle        = lipgloss.NewStyle().Width(4)
+	runningNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211")).Width(20)
+	nameStyle        = lipgloss.NewStyle().Width(20)
+)
+
 func (m runningModel) View() string {
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("\nExecute the flow: %s\n\n", m.fi.ID))
 
 	for _, n := range m.fi.Nodes {
 		if n.Status == "RUNNING" {
-			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", m.spinner.View(), n.Step, runningStyle.Render(n.Name), n.Runs))
+			builder.WriteString(
+				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+					m.spinner.View(),
+					stepStyle.Render(strconv.Itoa(n.Step)),
+					seqStyle.Render(strconv.Itoa(n.Seq)),
+					runningNameStyle.Render(n.Name),
+					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
+					n.Duration))
 		} else if n.Status == "STOPPED" {
-			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", doneMark.String(), n.Step, n.Name, n.Runs))
+			mark := doneMark
+			if n.LastError != nil {
+				mark = errorMark
+			}
+			builder.WriteString(
+				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+					mark.String(),
+					stepStyle.Render(strconv.Itoa(n.Step)),
+					seqStyle.Render(strconv.Itoa(n.Seq)),
+					nameStyle.Render(n.Name),
+					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
+					n.Duration))
 		} else {
-			builder.WriteString(fmt.Sprintf("%s #%d %s (%d)\n", " ", n.Step, n.Name, n.Runs))
+			builder.WriteString(
+				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+					" ",
+					stepStyle.Render(strconv.Itoa(n.Step)),
+					seqStyle.Render(strconv.Itoa(n.Seq)),
+					nameStyle.Render(n.Name),
+					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
+					n.Duration))
 		}
 	}
 
 	if m.done {
-		builder.WriteString(doneStyle.Render("\nDone!\n"))
+		builder.WriteString(doneStyle.Render(doneMark.String() + " Done!" + fmt.Sprintf(" Duration: %dms\n", m.fi.Duration)))
 	} else {
-		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running...\n"))
+		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running..." + fmt.Sprintf(" Duration: %dms\n", m.fi.Duration)))
 	}
 
 	// spin := m.spinner.View() + " "

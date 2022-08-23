@@ -118,6 +118,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
 				body.begin = time.Now()
 				body.status = StatusRunning
 			})
+			flow.Refresh()
 
 			go func(node actuator.Node, fm *functionMetrics) {
 				// Start to execute the function node, it will call the function driver to execute the function code
@@ -127,14 +128,13 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
 				fm.WithLock(func(body *functionMetricsBody) {
 					body.err = err
 					body.end = time.Now()
+					body.duration = body.end.Sub(body.begin).Milliseconds()
 					body.status = StatusStopped
-					body.executed = true
 					body.runs += 1
 
 					if body.err != nil {
 						if body.err == actuator.ErrConditionIsFalse {
 							body.err = nil
-							body.executed = false
 							body.runs -= 1
 						}
 					}
@@ -145,7 +145,6 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
 				}
 			}(n, metrics)
 		}
-
 		flow.Refresh()
 
 		// waiting functions at the step to finish running
@@ -172,7 +171,18 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
 		}
 		return nil
 	}
-	if err := flow.GetRunQ().ForstepAndExec(ctx, execOneStep); err != nil {
+	flow.WithLock(func(body *FlowBody) error {
+		body.begin = time.Now()
+		body.status = StatusRunning
+		return nil
+	})
+	err = flow.GetRunQ().ForstepAndExec(ctx, execOneStep)
+	flow.WithLock(func(body *FlowBody) error {
+		body.status = StatusStopped
+		body.duration = time.Since(body.begin).Milliseconds()
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	return nil

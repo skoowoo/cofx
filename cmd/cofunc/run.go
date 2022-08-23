@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -35,6 +34,7 @@ func runflowl(name string) error {
 		return err
 	}
 
+	var lasterr error
 	var wg sync.WaitGroup
 	wg.Add(2)
 	// start the ui in a goroutine
@@ -44,8 +44,7 @@ func runflowl(name string) error {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
 		}); err != nil {
-			log.Fatalln(err)
-			os.Exit(-1)
+			lasterr = err
 		}
 	}()
 
@@ -55,12 +54,16 @@ func runflowl(name string) error {
 		defer wg.Done()
 		fi, err := svc.StartFlow(ctx, fid)
 		if err != nil {
-			log.Fatalln(err)
-			os.Exit(-1)
+			lasterr = err
 		}
 		_ = fi
+		runCmdExited = true
 	}()
 	wg.Wait()
+
+	if lasterr != nil {
+		os.Exit(-1)
+	}
 
 	return nil
 }

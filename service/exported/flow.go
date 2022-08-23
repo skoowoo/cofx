@@ -13,6 +13,7 @@ type NodeInsight struct {
 	LastError error  `json:"last_error"`
 	Status    string `json:"status"`
 	Runs      int    `json:"runs"`
+	Duration  int64  `json:"duration"`
 }
 
 type FlowInsight struct {
@@ -21,7 +22,7 @@ type FlowInsight struct {
 	Status    string        `json:"status"`
 	LastError error         `json:"last_error"`
 	Begin     time.Time     `json:"begin_time"`
-	End       time.Time     `json:"end_time"`
+	Duration  int64         `json:"duration"`
 	Total     int           `json:"total"`
 	Running   int           `json:"running"`
 	Done      int           `json:"done"`
