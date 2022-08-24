@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/cofunclabs/cofunc/parser"
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/pkg/logfile"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
@@ -23,7 +23,7 @@ const (
 )
 
 type functionMetricsBody struct {
-	fid feedbackid.ID
+	fid nameid.ID
 	// Last start time
 	begin time.Time
 	// Last end time
@@ -83,7 +83,7 @@ func (p *progress) Reset() {
 }
 
 type FlowBody struct {
-	id       feedbackid.ID
+	id       nameid.ID
 	status   StatusType
 	begin    time.Time
 	duration int64
@@ -104,7 +104,7 @@ func (b *FlowBody) Logger() *logfile.Logfile {
 
 func (b *FlowBody) Export() exported.FlowInsight {
 	insight := exported.FlowInsight{
-		Name:     "",
+		Name:     b.id.Name(),
 		ID:       b.id.Value(),
 		Status:   string(b.status),
 		Begin:    b.begin,
@@ -119,6 +119,8 @@ func (b *FlowBody) Export() exported.FlowInsight {
 			insight.Nodes = append(insight.Nodes, exported.NodeInsight{
 				Seq:       seq,
 				Step:      mb.node.(actuator.Task).Step(),
+				Function:  mb.node.(actuator.Task).FName(),
+				Driver:    mb.node.(actuator.Task).DName(),
 				Name:      mb.node.Name(),
 				Status:    string(mb.status),
 				LastError: mb.err,
@@ -137,7 +139,7 @@ type Flow struct {
 	FlowBody
 }
 
-func newflow(id feedbackid.ID, runq *actuator.RunQueue, ast *parser.AST) *Flow {
+func newflow(id nameid.ID, runq *actuator.RunQueue, ast *parser.AST) *Flow {
 	return &Flow{
 		FlowBody: FlowBody{
 			id:   id,

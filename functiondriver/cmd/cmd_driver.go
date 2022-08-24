@@ -5,6 +5,8 @@ import (
 	"io"
 )
 
+const Name = "cmd"
+
 // Cmd
 type CmdDriver struct {
 	fpath   string
@@ -36,4 +38,8 @@ func (d *CmdDriver) Run(ctx context.Context, args map[string]string) (map[string
 
 func (d *CmdDriver) FunctionName() string {
 	return d.fname
+}
+
+func (d *CmdDriver) Name() string {
+	return Name
 }

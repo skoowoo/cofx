@@ -5,8 +5,8 @@ import (
 	"io"
 
 	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/pkg/logfile"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
@@ -24,7 +24,7 @@ func New() *SVC {
 	}
 }
 
-func (s *SVC) InsightFlow(ctx context.Context, fid feedbackid.ID) (exported.FlowInsight, error) {
+func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowInsight, error) {
 	var fi exported.FlowInsight
 	read := func(body *runtime.FlowBody) error {
 		fi = body.Export()
@@ -34,7 +34,7 @@ func (s *SVC) InsightFlow(ctx context.Context, fid feedbackid.ID) (exported.Flow
 	return fi, err
 }
 
-func (s *SVC) RunFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) error {
+func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
 		return err
@@ -50,7 +50,7 @@ func (s *SVC) RunFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) e
 	return nil
 }
 
-func (s *SVC) CreateFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser) error {
+func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
 		return err
@@ -60,7 +60,7 @@ func (s *SVC) CreateFlow(ctx context.Context, id feedbackid.ID, rd io.ReadCloser
 	return nil
 }
 
-func (s *SVC) ReadyFlow(ctx context.Context, id feedbackid.ID) (exported.FlowInsight, error) {
+func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID) (exported.FlowInsight, error) {
 	if err := s.rt.InitFlow(ctx, id); err != nil {
 		return exported.FlowInsight{}, err
 	}
@@ -71,7 +71,7 @@ func (s *SVC) ReadyFlow(ctx context.Context, id feedbackid.ID) (exported.FlowIns
 	return fi, nil
 }
 
-func (s *SVC) StartFlow(ctx context.Context, id feedbackid.ID) (exported.FlowInsight, error) {
+func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowInsight, error) {
 	if err := s.rt.ExecFlow(ctx, id); err != nil {
 		return exported.FlowInsight{}, err
 	}
@@ -84,7 +84,7 @@ func (s *SVC) StartFlow(ctx context.Context, id feedbackid.ID) (exported.FlowIns
 
 // ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'
 // is the sequence of the function, the 'w' argument is the output destination of the log.
-func (s *SVC) ViewLog(ctx context.Context, id feedbackid.ID, seq int, w io.Writer) error {
+func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) error {
 	dir, err := config.LogFunctionDir(id.Value(), seq)
 	if err != nil {
 		return err

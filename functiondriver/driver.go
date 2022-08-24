@@ -12,6 +12,8 @@ import (
 )
 
 type Driver interface {
+	// Name returns the name of the driver, e.g. "go", "cmd", etc.
+	Name() string
 	// FunctinName returns the name of the function associated with the driver
 	FunctionName() string
 	Load(context.Context, io.Writer) error
@@ -22,13 +24,13 @@ type Driver interface {
 func New(l Location) Driver {
 	var dr Driver
 	switch l.DriverName {
-	case "go":
+	case godriver.Name:
 		if d := godriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
 			return nil
 		} else {
 			dr = d
 		}
-	case "cmd":
+	case cmddriver.Name:
 		if d := cmddriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
 			return nil
 		} else {

@@ -10,6 +10,8 @@ type NodeInsight struct {
 	Seq       int    `json:"seq"`
 	Step      int    `json:"step"`
 	Name      string `json:"name"`
+	Function  string `json:"function"`
+	Driver    string `json:"driver"`
 	LastError error  `json:"last_error"`
 	Status    string `json:"status"`
 	Runs      int    `json:"runs"`

@@ -255,6 +255,8 @@ type Node interface {
 type Task interface {
 	Step() int
 	Seq() int
+	FName() string
+	DName() string
 }
 
 // ForNode stands for the starting of 'for' loop statement
@@ -341,6 +343,14 @@ func (n *FuncNode) Step() int {
 
 func (n *FuncNode) Seq() int {
 	return n.seq
+}
+
+func (n *FuncNode) FName() string {
+	return n.driver.FunctionName()
+}
+
+func (n *FuncNode) DName() string {
+	return n.driver.Name()
 }
 
 func (n *FuncNode) FormatString() string {
