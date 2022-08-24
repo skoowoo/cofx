@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 	sd := New()
 
 	ctx := context.Background()
-	id := feedbackid.NewID("testingdata.flowl")
+	id := nameid.New("testingdata.flowl")
 
 	{
 		err := sd.ParseFlow(ctx, id, strings.NewReader(testingdata))

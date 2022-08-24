@@ -9,6 +9,8 @@ import (
 	"github.com/cofunclabs/cofunc/std"
 )
 
+const Name = "go"
+
 // GoDriver
 type GoDriver struct {
 	path     string
@@ -55,6 +57,10 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 
 func (d *GoDriver) FunctionName() string {
 	return d.fname
+}
+
+func (d *GoDriver) Name() string {
+	return Name
 }
 
 func mergeArgs(base, prior map[string]string) map[string]string {

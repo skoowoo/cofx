@@ -110,23 +110,49 @@ var (
 	errorMark        = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).SetString("✗")
 	stepStyle        = lipgloss.NewStyle().Width(4)
 	seqStyle         = lipgloss.NewStyle().Width(4)
-	runsStyle        = lipgloss.NewStyle().Width(4)
-	runningNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211")).Width(20)
-	nameStyle        = lipgloss.NewStyle().Width(20)
+	runsStyle        = lipgloss.NewStyle().Width(6)
+	runningNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
+	nameStyle        = lipgloss.NewStyle()
+	driverStyle      = lipgloss.NewStyle().Width(8)
 )
+
+func maxNameWidth(nodes []exported.NodeInsight) int {
+	max := 20
+	for _, n := range nodes {
+		w := lipgloss.Width(n.Name + " ➜ " + n.Function)
+		if w > max {
+			max = w + 2
+		}
+	}
+	return max
+}
 
 func (m runningModel) View() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("\nExecute the flow: %s\n\n", m.fi.ID))
+	builder.WriteString(fmt.Sprintf("\nFLOW NAME: %s", m.fi.Name))
+	builder.WriteString(fmt.Sprintf("\nFLOW ID:   %s\n\n", m.fi.ID))
+
+	nameMaxWidth := maxNameWidth(m.fi.Nodes)
+
+	builder.WriteString(
+		fmt.Sprintf("%s %s  %s %s %s %s DURATION\n",
+			" ",
+			stepStyle.Render("STEP"),
+			seqStyle.Render("SEQ"),
+			nameStyle.Width(nameMaxWidth).Render("NAME"),
+			driverStyle.Render("DRIVER"),
+			runsStyle.Render("RUNS"),
+		))
 
 	for _, n := range m.fi.Nodes {
 		if n.Status == "RUNNING" {
 			builder.WriteString(
-				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+				fmt.Sprintf("%s #%s %s %s %s %s %dms\n",
 					m.spinner.View(),
 					stepStyle.Render(strconv.Itoa(n.Step)),
 					seqStyle.Render(strconv.Itoa(n.Seq)),
-					runningNameStyle.Render(n.Name),
+					runningNameStyle.Width(nameMaxWidth).Render(n.Name+" ➜ "+n.Function),
+					driverStyle.Render(n.Driver),
 					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
 					n.Duration))
 		} else if n.Status == "STOPPED" {
@@ -135,29 +161,31 @@ func (m runningModel) View() string {
 				mark = errorMark
 			}
 			builder.WriteString(
-				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+				fmt.Sprintf("%s #%s %s %s %s %s %dms\n",
 					mark.String(),
 					stepStyle.Render(strconv.Itoa(n.Step)),
 					seqStyle.Render(strconv.Itoa(n.Seq)),
-					nameStyle.Render(n.Name),
+					nameStyle.Width(nameMaxWidth).Render(n.Name+" ➜ "+n.Function),
+					driverStyle.Render(n.Driver),
 					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
 					n.Duration))
 		} else {
 			builder.WriteString(
-				fmt.Sprintf("%s #%s %s %s %s %dms\n",
+				fmt.Sprintf("%s #%s %s %s %s %s %dms\n",
 					" ",
 					stepStyle.Render(strconv.Itoa(n.Step)),
 					seqStyle.Render(strconv.Itoa(n.Seq)),
-					nameStyle.Render(n.Name),
+					nameStyle.Width(nameMaxWidth).Render(n.Name+" ➜ "+n.Function),
+					driverStyle.Render(n.Driver),
 					runsStyle.Render(fmt.Sprintf("(%d)", n.Runs)),
 					n.Duration))
 		}
 	}
 
 	if m.done {
-		builder.WriteString(doneStyle.Render(doneMark.String() + " Done!" + fmt.Sprintf(" Duration: %dms\n", m.fi.Duration)))
+		builder.WriteString(doneStyle.Render(doneMark.String() + " Done!" + fmt.Sprintf(" Duration: %dms\n\n", m.fi.Duration)))
 	} else {
-		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running..." + fmt.Sprintf(" Duration: %dms\n", m.fi.Duration)))
+		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running..." + fmt.Sprintf(" Duration: %dms\n\n", m.fi.Duration)))
 	}
 
 	// spin := m.spinner.View() + " "

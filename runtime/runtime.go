@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
 	"github.com/cofunclabs/cofunc/pkg/logfile"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
 
@@ -27,7 +27,7 @@ func New() *Runtime {
 	return r
 }
 
-func (rt *Runtime) ParseFlow(ctx context.Context, id feedbackid.ID, rd io.Reader) error {
+func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) error {
 	rq, ast, err := actuator.New(rd)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id feedbackid.ID, rd io.Reader
 	return nil
 }
 
-func (rt *Runtime) InitFlow(ctx context.Context, id feedbackid.ID) error {
+func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (rt *Runtime) InitFlow(ctx context.Context, id feedbackid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
+func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id feedbackid.ID) error {
 
 // Stopped2Ready will reset the status of the flow and all nodes to ready, but only when all nodes are stopped
 // When re-executing the flow, You need to call this method
-func (rt *Runtime) Stopped2Ready(ctx context.Context, id feedbackid.ID) error {
+func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
@@ -198,7 +198,7 @@ func (rt *Runtime) Stopped2Ready(ctx context.Context, id feedbackid.ID) error {
 	return flow.ToReady()
 }
 
-func (rt *Runtime) FetchFlow(ctx context.Context, id feedbackid.ID, do func(*FlowBody) error) error {
+func (rt *Runtime) FetchFlow(ctx context.Context, id nameid.ID, do func(*FlowBody) error) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
@@ -206,10 +206,10 @@ func (rt *Runtime) FetchFlow(ctx context.Context, id feedbackid.ID, do func(*Flo
 	return flow.WithLock(do)
 }
 
-func (rt *Runtime) StopFlow(ctx context.Context, id feedbackid.ID) error {
+func (rt *Runtime) StopFlow(ctx context.Context, id nameid.ID) error {
 	return nil
 }
 
-func (rt *Runtime) DeleteFlow(ctx context.Context, id feedbackid.ID) error {
+func (rt *Runtime) DeleteFlow(ctx context.Context, id nameid.ID) error {
 	return nil
 }

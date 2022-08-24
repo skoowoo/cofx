@@ -8,7 +8,7 @@ import (
 	"time"
 
 	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/service"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
@@ -22,7 +22,7 @@ func runflowl(name string) error {
 		return err
 	}
 
-	fid := feedbackid.NewID(name)
+	fid := nameid.New(name)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/cofunclabs/cofunc/pkg/feedbackid"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/service"
 	"github.com/cofunclabs/cofunc/service/exported"
 	"github.com/gorilla/mux"
@@ -67,7 +67,7 @@ type FlowStatusHandler struct {
 
 func (h *FlowStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	fid := feedbackid.WrapID(id)
+	fid := nameid.WrapID(id)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -94,7 +94,7 @@ type FlowRunHandler struct {
 func (h *FlowRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := r.URL.Query().Get("filename")
 
-	fid := feedbackid.NewID(filename)
+	fid := nameid.New(filename)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
