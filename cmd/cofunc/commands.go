@@ -27,7 +27,7 @@ func initCmd() {
 
 		parseCmd := &cobra.Command{
 			Use:          "parse [path of flowl file]",
-			Short:        "Parse a flowl file",
+			Short:        "Parse a flowl source file",
 			Example:      "cofunc parse [-a] ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
@@ -70,5 +70,19 @@ func initCmd() {
 			},
 		}
 		rootCmd.AddCommand(logCmd)
+	}
+
+	{
+		listCmd := &cobra.Command{
+			Use:          "list",
+			Short:        "list all flows that you coded in the flow source directory",
+			Example:      "cofunc list",
+			SilenceUsage: true,
+			Args:         cobra.NoArgs,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return listFlows()
+			},
+		}
+		rootCmd.AddCommand(listCmd)
 	}
 }

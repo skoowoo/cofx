@@ -36,3 +36,17 @@ func (f FlowInsight) JsonWrite(w io.Writer) error {
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(f)
 }
+
+type FlowMetaInsight struct {
+	Name   string `json:"name"`
+	ID     string `json:"id"`
+	Total  int    `json:"total"`
+	Source string `json:"source"`
+	Desc   string `json:"desc"`
+}
+
+func (f FlowMetaInsight) JsonWrite(w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(f)
+}

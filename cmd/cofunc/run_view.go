@@ -16,7 +16,7 @@ import (
 
 var runCmdExited bool
 
-func startRunningUI(get func() (*exported.FlowInsight, error)) error {
+func startRunningView(get func() (*exported.FlowInsight, error)) error {
 	fi, err := get()
 	if err != nil {
 		return err

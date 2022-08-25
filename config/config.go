@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 type getdir func() string
@@ -12,6 +13,7 @@ func Init() error {
 	dirs := []getdir{
 		LogDir,
 		LogBucketDir,
+		FlowSourceDir,
 	}
 	for _, dir := range dirs {
 		_, err := os.Stat(dir())
@@ -34,7 +36,7 @@ func LogDir() string {
 	if v == "" {
 		v = ".cofunc/logs"
 	}
-	return v
+	return prettyDirPath(v)
 }
 
 func LogBucketDir() string {
@@ -53,4 +55,16 @@ func LogFunctionDir(flowID string, seq int) (string, error) {
 // LogFunctionFile returns the name of function's log file, the argument is the directory where the log file is located
 func LogFunctionFile(dir string) string {
 	return path.Join(dir, "logfile")
+}
+
+func FlowSourceDir() string {
+	v := os.Getenv("CO_FLOW_SOURCE_DIR")
+	if v == "" {
+		v = ".cofunc/flows"
+	}
+	return prettyDirPath(v)
+}
+
+func prettyDirPath(p string) string {
+	return filepath.Clean(p) + "/"
 }

@@ -2,12 +2,19 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
 
+	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
+	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
@@ -97,5 +104,61 @@ func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) e
 	if _, err := io.Copy(w, logger); err != nil {
 		return err
 	}
+	return nil
+}
+
+// ListAvailableFlows returns the list of all available flows in flow source directory, the method will
+// parse the flowl source file and generate AST.
+func (s *SVC) ListAvailableFlows(ctx context.Context) ([]exported.FlowMetaInsight, error) {
+	var (
+		sources []string
+		flows   []exported.FlowMetaInsight
+	)
+	dir := config.FlowSourceDir()
+	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("%w: access path '%s'", err, path)
+		}
+		if info.IsDir() {
+			return nil
+		}
+		sources = append(sources, path)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: walk dir '%s' to list flows", err, dir)
+	}
+	for _, path := range sources {
+		id := nameid.New(co.TruncFlowl(strings.TrimPrefix(path, dir)))
+		meta := exported.FlowMetaInsight{
+			Name: id.Name(),
+			ID:   id.Value(),
+		}
+		if err := parseOneFlowl(path, &meta); err != nil {
+			return nil, fmt.Errorf("%w: parse '%s'", err, path)
+		}
+		flows = append(flows, meta)
+	}
+	return flows, nil
+}
+
+func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	q, _, err := actuator.New(f)
+	if err != nil {
+		return err
+	}
+	var total int
+	q.ForfuncNode(func(n actuator.Node) error {
+		total++
+		return nil
+	})
+	meta.Source = name
+	meta.Total = total
 	return nil
 }

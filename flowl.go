@@ -1,11 +1,14 @@
 package cofunc
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 const filesuffix = ".flowl"
 
 func IsFlowl(name string) bool {
-	return strings.HasSuffix(name, filesuffix)
+	return filepath.Ext(name) == filesuffix
 }
 
 func TruncFlowl(name string) string {

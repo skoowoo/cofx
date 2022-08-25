@@ -40,7 +40,7 @@ func runflowl(name string) error {
 	// start the ui in a goroutine
 	go func() {
 		defer wg.Done()
-		if err := startRunningUI(func() (*exported.FlowInsight, error) {
+		if err := startRunningView(func() (*exported.FlowInsight, error) {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
 		}); err != nil {
