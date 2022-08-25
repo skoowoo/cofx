@@ -42,7 +42,7 @@ func initCmd() {
 	{
 		runCmd := &cobra.Command{
 			Use:          "run [path of flowl file]",
-			Short:        "run a flowl file",
+			Short:        "Run a flowl file",
 			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
@@ -75,7 +75,7 @@ func initCmd() {
 	{
 		listCmd := &cobra.Command{
 			Use:          "list",
-			Short:        "list all flows that you coded in the flow source directory",
+			Short:        "List all flows that you coded in the flow source directory",
 			Example:      "cofunc list",
 			SilenceUsage: true,
 			Args:         cobra.NoArgs,

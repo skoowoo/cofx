@@ -1,3 +1,5 @@
+![](./docs/assets/logo.png)
+
 # CoFUNC
 CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
 
