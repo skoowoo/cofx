@@ -31,8 +31,8 @@ func New() *SVC {
 	}
 }
 
-func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowInsight, error) {
-	var fi exported.FlowInsight
+func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunningInsight, error) {
+	var fi exported.FlowRunningInsight
 	read := func(body *runtime.FlowBody) error {
 		fi = body.Export()
 		return nil
@@ -67,24 +67,24 @@ func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) er
 	return nil
 }
 
-func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID) (exported.FlowInsight, error) {
+func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID) (exported.FlowRunningInsight, error) {
 	if err := s.rt.InitFlow(ctx, id); err != nil {
-		return exported.FlowInsight{}, err
+		return exported.FlowRunningInsight{}, err
 	}
 	fi, err := s.InsightFlow(ctx, id)
 	if err != nil {
-		return exported.FlowInsight{}, err
+		return exported.FlowRunningInsight{}, err
 	}
 	return fi, nil
 }
 
-func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowInsight, error) {
+func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowRunningInsight, error) {
 	if err := s.rt.ExecFlow(ctx, id); err != nil {
-		return exported.FlowInsight{}, err
+		return exported.FlowRunningInsight{}, err
 	}
 	fi, err := s.InsightFlow(ctx, id)
 	if err != nil {
-		return exported.FlowInsight{}, err
+		return exported.FlowRunningInsight{}, err
 	}
 	return fi, nil
 }

@@ -40,7 +40,7 @@ func runflowl(name string, fullscreen bool) error {
 	// start the ui in a goroutine
 	go func() {
 		defer wg.Done()
-		if err := startRunningView(fullscreen, func() (*exported.FlowInsight, error) {
+		if err := startRunningView(fullscreen, func() (*exported.FlowRunningInsight, error) {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
 		}); err != nil {

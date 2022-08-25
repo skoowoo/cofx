@@ -16,7 +16,7 @@ import (
 
 var runCmdExited bool
 
-func startRunningView(fullscreen bool, get func() (*exported.FlowInsight, error)) error {
+func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight, error)) error {
 	fi, err := get()
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ type runningModel struct {
 	spinner    spinner.Model
 	progress   progress.Model
 	done       bool
-	fi         *exported.FlowInsight
+	fi         *exported.FlowRunningInsight
 	getCmd     tea.Cmd
 	fullscreen bool
 }
@@ -87,7 +87,7 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.progress = newModel
 		}
 		return m, cmd
-	case *exported.FlowInsight:
+	case *exported.FlowRunningInsight:
 		m.fi = msg
 		if m.fi.Done == m.fi.Total {
 			m.done = true
@@ -122,7 +122,7 @@ var (
 	driverStyle      = lipgloss.NewStyle().Width(8)
 )
 
-func maxNameWidth(nodes []exported.NodeInsight) int {
+func maxNameWidth(nodes []exported.NodeRunningInsight) int {
 	max := 20
 	for _, n := range nodes {
 		w := lipgloss.Width(n.Name + " ➜ " + n.Function)

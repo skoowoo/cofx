@@ -23,19 +23,21 @@ const (
 )
 
 type functionMetricsBody struct {
+	// Flow id
 	fid nameid.ID
-	// Last start time
+	// The start time of the last running
 	begin time.Time
-	// Last end time
-	end      time.Time
+	// The end time of the last running
+	end time.Time
+	// The duration of the last running
 	duration int64
 	// Number of runs
 	runs int
 	// Whether there is an error in the function execution
-	err    error
-	status StatusType
+	err error
 
-	node actuator.Node
+	status StatusType
+	node   actuator.Node
 }
 
 type functionMetrics struct {
@@ -56,8 +58,11 @@ func (fm *functionMetrics) IsStatus(status StatusType) bool {
 }
 
 type progress struct {
-	nodes   []int
-	done    []int
+	// Stored seq number of all nodes in a flow
+	nodes []int
+	// Stored seq number of all fnished nodes in a flow
+	done []int
+	// Stored seq number of all running nodes in a flow; The key is the seq number, which is easy to find.
 	running map[int]struct{}
 }
 
@@ -83,15 +88,19 @@ func (p *progress) Reset() {
 }
 
 type FlowBody struct {
-	id       nameid.ID
-	status   StatusType
-	begin    time.Time
+	// Flow id
+	id nameid.ID
+	// The start time of the last running
+	begin time.Time
+	// The duration of the last running
 	duration int64
 	// Save the result metrics of function execution
 	// the map is seq->functionMetrics
-	metrics  map[int]*functionMetrics
+	metrics map[int]*functionMetrics
+	// Saved the execution progress of all nodes
 	progress progress
 
+	status StatusType
 	logger *logfile.Logfile
 
 	runq *actuator.RunQueue
@@ -102,8 +111,8 @@ func (b *FlowBody) Logger() *logfile.Logfile {
 	return b.logger
 }
 
-func (b *FlowBody) Export() exported.FlowInsight {
-	insight := exported.FlowInsight{
+func (b *FlowBody) Export() exported.FlowRunningInsight {
+	insight := exported.FlowRunningInsight{
 		Name:     b.id.Name(),
 		ID:       b.id.Value(),
 		Status:   string(b.status),
@@ -116,7 +125,7 @@ func (b *FlowBody) Export() exported.FlowInsight {
 	for _, seq := range b.progress.nodes {
 		fm := b.metrics[seq]
 		fm.WithLock(func(mb *functionMetricsBody) {
-			insight.Nodes = append(insight.Nodes, exported.NodeInsight{
+			insight.Nodes = append(insight.Nodes, exported.NodeRunningInsight{
 				Seq:       seq,
 				Step:      mb.node.(actuator.Task).Step(),
 				Function:  mb.node.(actuator.Task).FName(),
