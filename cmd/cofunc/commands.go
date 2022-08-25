@@ -47,7 +47,7 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runflowl(args[0])
+				return runflowl(args[0], false)
 			},
 		}
 		rootCmd.AddCommand(runCmd)

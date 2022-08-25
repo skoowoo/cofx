@@ -13,7 +13,7 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-func runflowl(name string) error {
+func runflowl(name string, fullscreen bool) error {
 	if !co.IsFlowl(name) {
 		return fmt.Errorf("not '.flowl': file '%s'", name)
 	}
@@ -40,7 +40,7 @@ func runflowl(name string) error {
 	// start the ui in a goroutine
 	go func() {
 		defer wg.Done()
-		if err := startRunningView(func() (*exported.FlowInsight, error) {
+		if err := startRunningView(fullscreen, func() (*exported.FlowInsight, error) {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
 		}); err != nil {

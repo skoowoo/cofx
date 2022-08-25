@@ -16,14 +16,20 @@ func listFlows() error {
 		return err
 	}
 
-	selected, err := startListingView(availables)
-	if err != nil {
-		return err
-	}
+	for {
+		selected, err := startListingView(availables)
+		if err != nil {
+			return err
+		}
 
-	// to run the selected flow
-	if selected.Source != "" {
-		return runflowl(selected.Source)
+		// to run the selected flow
+		if selected.Source != "" {
+			err := runflowl(selected.Source, true)
+			if err != nil {
+				return err
+			}
+		} else {
+			return nil
+		}
 	}
-	return nil
 }

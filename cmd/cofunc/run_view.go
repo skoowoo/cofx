@@ -16,7 +16,7 @@ import (
 
 var runCmdExited bool
 
-func startRunningView(get func() (*exported.FlowInsight, error)) error {
+func startRunningView(fullscreen bool, get func() (*exported.FlowInsight, error)) error {
 	fi, err := get()
 	if err != nil {
 		return err
@@ -40,22 +40,28 @@ func startRunningView(get func() (*exported.FlowInsight, error)) error {
 			}
 			return fi
 		}),
+		fullscreen: fullscreen,
 	}
 
 	rand.Seed(time.Now().Unix())
-	return tea.NewProgram(model).Start()
+	if fullscreen {
+		return tea.NewProgram(model, tea.WithAltScreen()).Start()
+	} else {
+		return tea.NewProgram(model).Start()
+	}
 }
 
 type getFlowInsightErr error
 
 type runningModel struct {
-	width    int
-	height   int
-	spinner  spinner.Model
-	progress progress.Model
-	done     bool
-	fi       *exported.FlowInsight
-	getCmd   tea.Cmd
+	width      int
+	height     int
+	spinner    spinner.Model
+	progress   progress.Model
+	done       bool
+	fi         *exported.FlowInsight
+	getCmd     tea.Cmd
+	fullscreen bool
 }
 
 func (m runningModel) Init() tea.Cmd {
@@ -90,7 +96,7 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update progress bar
 		progressCmd := m.progress.SetPercent(float64(m.fi.Done) / float64(m.fi.Total))
 
-		if runCmdExited {
+		if runCmdExited && !m.fullscreen {
 			return m, tea.Quit
 		}
 

@@ -29,10 +29,10 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		items = append(items, flowItem(f))
 	}
 
-	m := listFlowModel{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
-	m.list.Title = "All Available Flows"
+	model := listFlowModel{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
+	model.list.Title = "All Available Flows"
 
-	ret, err := tea.NewProgram(m, tea.WithAltScreen()).StartReturningModel()
+	ret, err := tea.NewProgram(model, tea.WithAltScreen()).StartReturningModel()
 	if err != nil {
 		return exported.FlowMetaInsight{}, err
 	}
@@ -57,7 +57,7 @@ func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
-		if msg.String() == "enter" {
+		if msg.String() == "ctrl+r" {
 			m.selected = exported.FlowMetaInsight(m.list.SelectedItem().(flowItem))
 			return m, tea.Quit
 		}
