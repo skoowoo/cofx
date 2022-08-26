@@ -135,8 +135,8 @@ func maxNameWidth(nodes []exported.NodeRunningInsight) int {
 
 func (m runningModel) View() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("\nFLOW NAME: %s", m.fi.Name))
-	builder.WriteString(fmt.Sprintf("\nFLOW ID:   %s\n\n", m.fi.ID))
+	builder.WriteString(fmt.Sprintf("  FLOW NAME: %s\n", m.fi.Name))
+	builder.WriteString(fmt.Sprintf("  FLOW ID:   %s\n\n", m.fi.ID))
 
 	nameMaxWidth := maxNameWidth(m.fi.Nodes)
 
@@ -197,5 +197,5 @@ func (m runningModel) View() string {
 	// spin := m.spinner.View() + " "
 	// prog := m.progress.View()
 
-	return builder.String()
+	return docStyle.Render(builder.String())
 }

@@ -7,11 +7,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
-
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {
 	items := []list.Item{}
@@ -19,13 +16,17 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		items = append(items, flowItem(f))
 	}
 
-	model := listFlowModel{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
+	model := listFlowModel{
+		list: list.New(items, list.NewDefaultDelegate(), 0, 0),
+	}
 	model.list.Title = "All Available Flows"
 
-	ret, err := tea.NewProgram(model, tea.WithAltScreen()).StartReturningModel()
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	ret, err := p.StartReturningModel()
 	if err != nil {
 		return exported.FlowMetaInsight{}, err
 	}
+
 	if m, ok := ret.(listFlowModel); ok && m.selected.Name != "" {
 		return m.selected, nil
 	}
@@ -77,7 +78,7 @@ func (f flowItem) Title() string {
 }
 
 func (f flowItem) Description() string {
-	return fmt.Sprintf("%s %s", f.Source, f.Desc)
+	return fmt.Sprintf("%d %s %s", f.Total, f.Source, f.Desc)
 }
 
 func (f flowItem) FilterValue() string {

@@ -9,9 +9,28 @@ import (
 
 // root command
 var rootCmd = &cobra.Command{
-	Use:   "cofunc",
-	Short: "function fabric",
-	Long:  `A function fabric tool, used to Parse, Create, Run and Manage flow based on funtion fabric`,
+	Use: "cofunc",
+	Long: `
+An automation engine based on function fabric, can used to parse, create, run
+and manage flow
+
+Execute 'cofunc' command directly and no any args or sub-command, will list
+all flows in interactive mode
+
+Environment variables:
+	CO_LOG_DIR=<path of a directory>           // Set the log directory
+	CO_FLOW_SOURCE_DIR=<path of a directory>   // Set the flowl source directory
+
+Examples:
+	cofunc
+	cofunc list
+	cofunc parse ./helloworld.flowl
+	cofunc run ./helloworld.flowl
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		interactive := true
+		return listFlows(interactive)
+	},
 }
 
 func Execute() {
@@ -41,7 +60,7 @@ func initCmd() {
 
 	{
 		runCmd := &cobra.Command{
-			Use:          "run [path of flowl file]",
+			Use:          "run [path of flowl file] or [flow name in list]",
 			Short:        "Run a flowl file",
 			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
@@ -80,7 +99,8 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.NoArgs,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return listFlows()
+				interactive := false
+				return listFlows(interactive)
 			},
 		}
 		rootCmd.AddCommand(listCmd)
