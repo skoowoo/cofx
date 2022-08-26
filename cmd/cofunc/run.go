@@ -2,20 +2,24 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	co "github.com/cofunclabs/cofunc"
+	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/service"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
 func runflowl(name string, fullscreen bool) error {
+	// If the argument 'name' not contains the suffix ".flowl", We will treat it as a flow name
+	// So we will generate the full path of the flowl file based on the flow name.
+	// if the arument 'name' contains the suffix ".flowl", we will treat it as a full path of the flowl file, so can open it directly.
 	if !co.IsFlowl(name) {
-		return fmt.Errorf("not '.flowl': file '%s'", name)
+		name = filepath.Join(config.FlowSourceDir(), name) + ".flowl"
 	}
 	f, err := os.Open(name)
 	if err != nil {
