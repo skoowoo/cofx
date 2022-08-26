@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,19 +11,7 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-type flowItem exported.FlowMetaInsight
-
-func (f flowItem) Title() string {
-	return fmt.Sprintf("%s %s", f.Name, f.ID)
-}
-
-func (f flowItem) Description() string {
-	return fmt.Sprintf("%s %s", f.Source, f.Desc)
-}
-
-func (f flowItem) FilterValue() string {
-	return f.Name
-}
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {
 	items := []list.Item{}
@@ -61,6 +51,11 @@ func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selected = exported.FlowMetaInsight(m.list.SelectedItem().(flowItem))
 			return m, tea.Quit
 		}
+		if msg.String() == "ctrl+e" {
+			return m, openEditor(m.list.SelectedItem().(flowItem).Source)
+		}
+	case editorFinishedMsg:
+
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
@@ -71,8 +66,35 @@ func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
-
 func (m listFlowModel) View() string {
 	return docStyle.Render(m.list.View())
+}
+
+type flowItem exported.FlowMetaInsight
+
+func (f flowItem) Title() string {
+	return fmt.Sprintf("%s %s", f.Name, f.ID)
+}
+
+func (f flowItem) Description() string {
+	return fmt.Sprintf("%s %s", f.Source, f.Desc)
+}
+
+func (f flowItem) FilterValue() string {
+	return f.Name
+}
+
+type editorFinishedMsg struct {
+	err error
+}
+
+func openEditor(file string) tea.Cmd {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vim"
+	}
+	c := exec.Command(editor, file) //nolint:gosec
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return editorFinishedMsg{err}
+	})
 }
