@@ -58,10 +58,7 @@ co print {
 
 运行代码：
 
-```
-➜ cofunc run examples/helloworld.flowl
-hello world!!!
-```
+![](./docs/assets/hello.gif)
 
 flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
 

@@ -5,7 +5,7 @@
 CoFUNC is an automation engine based on function fabric, which can build automated function flows of various capabilities through the combination of functions. flowl is a function fabric language embedded in CoFUNC, which provides functions such as function events, function operation and management from the language.
 
 ## :gift: CLI
-```go
+```
 // cofunc -h
 
 An automation engine based on function fabric, can used to parse, create, run
@@ -60,10 +60,7 @@ co print {
 
 Run the code:
 
-```
-➜ cofunc run examples/helloworld.flowl
-hello world!!!
-```
+![](./docs/assets/hello.gif)
 
 The flowl source file needs to use the `.flowl` extension to be executed.
 
