@@ -2,7 +2,7 @@
 
 [[中文](./README.zh_CN.md)]
 
-CoFUNC is an automation engine based on function fabric, which can build automated function flows of various capabilities through the combination of functions. flowl is a function fabric language embedded in CoFUNC, which provides functions such as function events, function operation and management from the language.
+CoFUNC is an automation engine based on function fabric, which can be used to build automated function flows through the combination of functions. FlowL is a `function fabric` language embedded in CoFUNC, which provides some features such as function events, function operation and management from the language.
 
 ## :gift: CLI
 ```
@@ -37,8 +37,6 @@ Available Commands:
 
 Flags:
   -h, --help   help for cofunc
-
-Use "cofunc [command] --help" for more information about a command.
 ```
 
 ## :rocket: FlowL
@@ -66,14 +64,14 @@ The flowl source file needs to use the `.flowl` extension to be executed.
 
 ### Grammar Introduction
 #### :balloon: Comment
-Use `//` to add code comments. :warning: Note that only exclusive line comments are provided, no end-of-line comments.
+Use `//` to add code comments. :warning: Note that only exclusive line comments are provided, not support end-of-line comments.
 
 #### :balloon: load
-load is used to load a function, for example: load the print function print
+load is used to load a function, for example: load the function 'print'
 
 ```go
 // go is a function driver, which means that the function print is a piece of Go code and needs to be run by the go driver
-// print is function name
+// print is the function name
 load go:print
 ```
 
