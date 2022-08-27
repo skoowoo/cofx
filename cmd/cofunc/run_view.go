@@ -36,7 +36,7 @@ func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight,
 		getCmd: tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
 			fi, err := get()
 			if err != nil {
-				return getFlowInsightErr(err)
+				return viewErrorMessage(err)
 			}
 			return fi
 		}),
@@ -50,8 +50,6 @@ func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight,
 		return tea.NewProgram(model).Start()
 	}
 }
-
-type getFlowInsightErr error
 
 type runningModel struct {
 	width      int
@@ -104,23 +102,11 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			progressCmd,
 			m.getCmd,
 		)
-	case getFlowInsightErr:
+	case viewErrorMessage:
 		return m, m.getCmd
 	}
 	return m, nil
 }
-
-var (
-	doneStyle        = lipgloss.NewStyle().MarginLeft(0).MarginTop(2)
-	doneMark         = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
-	errorMark        = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).SetString("✗")
-	stepStyle        = lipgloss.NewStyle().Width(4)
-	seqStyle         = lipgloss.NewStyle().Width(4)
-	runsStyle        = lipgloss.NewStyle().Width(6)
-	runningNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
-	nameStyle        = lipgloss.NewStyle()
-	driverStyle      = lipgloss.NewStyle().Width(8)
-)
 
 func maxNameWidth(nodes []exported.NodeRunningInsight) int {
 	max := 20
@@ -189,9 +175,9 @@ func (m runningModel) View() string {
 	}
 
 	if m.done {
-		builder.WriteString(doneStyle.Render(doneMark.String() + " Done!" + fmt.Sprintf(" Duration: %dms\n\n", m.fi.Duration)))
+		builder.WriteString("\n\n" + doneMark.String() + fmt.Sprintf(" Done! Duration: %dms\n\n", m.fi.Duration))
 	} else {
-		builder.WriteString(doneStyle.Render(m.spinner.View() + " Running..." + fmt.Sprintf(" Duration: %dms\n\n", m.fi.Duration)))
+		builder.WriteString("\n\n" + m.spinner.View() + fmt.Sprintf(" Running... Duration: %dms\n\n", m.fi.Duration))
 	}
 
 	// spin := m.spinner.View() + " "
