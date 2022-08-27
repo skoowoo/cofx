@@ -1,4 +1,4 @@
-![](./docs/assets/logo2.png)
+![](./docs/assets/logo.png)
 
 [[中文](./README.zh_CN.md)]
 
