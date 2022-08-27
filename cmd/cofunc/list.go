@@ -37,7 +37,7 @@ func listFlows(interactive bool) error {
 
 		// to run the selected flow
 		if selected.Source != "" {
-			err := runflowl(selected.Source, true)
+			err := runflowl(selected.Source, false, true)
 			if err != nil {
 				return err
 			}

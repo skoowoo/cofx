@@ -13,6 +13,30 @@ import (
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
 
+type GetLogger func(actuator.Node) (*logfile.Logfile, error)
+
+// GetStdoutLogger returns a stdout logger to use
+func GetStdoutLogger(node actuator.Node) (*logfile.Logfile, error) {
+	return logfile.Stdout(), nil
+}
+
+// GetDefaultLogger returns a default logger to use, the defualt logger is output to a file
+func GetDefaultLogger(id nameid.ID) GetLogger {
+	return func(node actuator.Node) (*logfile.Logfile, error) {
+		seq := node.(actuator.Task).Seq()
+		// Initialize the local logdir directory for the function/node in the flow
+		logdir, err := config.LogFunctionDir(id.Value(), seq)
+		if err != nil {
+			return nil, fmt.Errorf("%w: create function's log directory", err)
+		}
+		logger, err := logfile.TruncFile(config.LogFunctionFile(logdir))
+		if err != nil {
+			return nil, fmt.Errorf("%w: create function's logger", err)
+		}
+		return logger, nil
+	}
+}
+
 // Runtime
 //
 type Runtime struct {
@@ -43,7 +67,7 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) er
 	return nil
 }
 
-func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID) error {
+func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogger) error {
 	flow, err := rt.store.get(id.Value())
 	if err != nil {
 		return err
@@ -67,14 +91,9 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID) error {
 			}
 			body.progress.nodes = append(body.progress.nodes, seq)
 
-			// Initialize the local logdir directory for the function/node in the flow
-			logdir, err := config.LogFunctionDir(id.Value(), seq)
+			logger, err := getlogger(node)
 			if err != nil {
-				return fmt.Errorf("%w: create function's log directory", err)
-			}
-			logger, err := logfile.TruncFile(config.LogFunctionFile(logdir))
-			if err != nil {
-				return fmt.Errorf("%w: create function's logger", err)
+				return err
 			}
 			body.logger = logger
 

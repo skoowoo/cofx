@@ -59,6 +59,8 @@ func initCmd() {
 	}
 
 	{
+		var stdout bool
+
 		runCmd := &cobra.Command{
 			Use:          "run [path of flowl file] or [flow name in list]",
 			Short:        "Run a flowl file",
@@ -66,9 +68,10 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runflowl(args[0], false)
+				return runflowl(args[0], stdout, false)
 			},
 		}
+		runCmd.Flags().BoolVarP(&stdout, "stdout", "s", false, "Directly print the output of the flow to stdout")
 		rootCmd.AddCommand(runCmd)
 	}
 

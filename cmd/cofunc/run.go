@@ -14,7 +14,7 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-func runflowl(name string, fullscreen bool) error {
+func runflowl(name string, toStdout bool, fullscreen bool) error {
 	// If the argument 'name' not contains the suffix ".flowl", We will treat it as a flow name
 	// So we will generate the full path of the flowl file based on the flow name.
 	// if the arument 'name' contains the suffix ".flowl", we will treat it as a full path of the flowl file, so can open it directly.
@@ -34,12 +34,22 @@ func runflowl(name string, fullscreen bool) error {
 	if err := svc.CreateFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if _, err := svc.ReadyFlow(ctx, fid); err != nil {
+	if _, err := svc.ReadyFlow(ctx, fid, toStdout); err != nil {
 		return err
 	}
+	// toStdout will print the output of flow into stdout
+	if toStdout {
+		_, err := svc.StartFlow(ctx, fid)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 
-	var lasterr error
-	var wg sync.WaitGroup
+	var (
+		lasterr error
+		wg      sync.WaitGroup
+	)
 	wg.Add(2)
 	// start the ui in a goroutine
 	go func() {

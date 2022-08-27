@@ -48,7 +48,7 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 	} else {
 		rd.Close()
 	}
-	if err := s.rt.InitFlow(ctx, id); err != nil {
+	if err := s.rt.InitFlow(ctx, id, runtime.GetStdoutLogger); err != nil {
 		return err
 	}
 	if err := s.rt.ExecFlow(ctx, id); err != nil {
@@ -67,8 +67,14 @@ func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) er
 	return nil
 }
 
-func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID) (exported.FlowRunningInsight, error) {
-	if err := s.rt.InitFlow(ctx, id); err != nil {
+func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (exported.FlowRunningInsight, error) {
+	var get runtime.GetLogger
+	if toStdout {
+		get = runtime.GetStdoutLogger
+	} else {
+		get = runtime.GetDefaultLogger(id)
+	}
+	if err := s.rt.InitFlow(ctx, id, get); err != nil {
 		return exported.FlowRunningInsight{}, err
 	}
 	fi, err := s.InsightFlow(ctx, id)
