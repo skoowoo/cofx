@@ -66,17 +66,28 @@ type FlowStatusHandler struct {
 }
 
 func (h *FlowStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	fid := nameid.WrapID(id)
+	nameorid := nameid.NameOrID(mux.Vars(r)["nameorid"])
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	fid, err := h.svc.LookupID(ctx, nameorid)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		resp := exported.SimpleError{
+			Error: err.Error(),
+			Desc:  []string{fid.Name(), fid.ID()},
+		}
+		if err := resp.JsonWrite(w); err != nil {
+			log.Fatalln(err)
+		}
+		return
+	}
 
 	var resp service.Writer
 	if insight, err := h.svc.InsightFlow(ctx, fid); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = exported.SimpleError{
 			Error: err.Error(),
-			Desc:  []string{fid.Value()},
+			Desc:  []string{fid.ID()},
 		}
 	} else {
 		w.WriteHeader(http.StatusOK)
@@ -103,13 +114,13 @@ func (h *FlowRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = exported.SimpleError{
 			Error: err.Error(),
-			Desc:  []string{filename, fid.Value()},
+			Desc:  []string{filename, fid.ID()},
 		}
 	} else {
 		w.WriteHeader(http.StatusOK)
 		resp = exported.SimpleSucceed{
 			Message: "succeed",
-			Desc:    []string{filename, fid.Value()},
+			Desc:    []string{filename, fid.ID()},
 		}
 	}
 	if err := resp.JsonWrite(w); err != nil {

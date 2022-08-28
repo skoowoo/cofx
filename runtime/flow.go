@@ -114,7 +114,7 @@ func (b *FlowBody) Logger() *logfile.Logfile {
 func (b *FlowBody) Export() exported.FlowRunningInsight {
 	insight := exported.FlowRunningInsight{
 		Name:     b.id.Name(),
-		ID:       b.id.Value(),
+		ID:       b.id.ID(),
 		Status:   string(b.status),
 		Begin:    b.begin,
 		Duration: b.duration,

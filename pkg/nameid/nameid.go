@@ -2,15 +2,22 @@ package nameid
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 
 	co "github.com/cofunclabs/cofunc"
 )
 
+type NameOrID string
+
+func (n NameOrID) String() string {
+	return string(n)
+}
+
 type ID interface {
 	Name() string
-	Value() string
-	ShortID() string
+	ID() string
+	String() string
 }
 
 type NameID struct {
@@ -26,20 +33,42 @@ func New(s string) *NameID {
 	}
 }
 
-func WrapID(id string) *NameID {
+func Wrap(name string, id string) *NameID {
 	return &NameID{
-		id: id,
+		name: name,
+		id:   id,
 	}
+}
+
+func Guess(s NameOrID, guessID func(string) *NameID, guessName ...func(string) *NameID) (*NameID, error) {
+	if id := guessID(s.String()); id != nil {
+		return id, nil
+	}
+	if len(guessName) != 0 {
+		gn := guessName[0]
+		if id := gn(s.String()); id != nil {
+			return id, nil
+		}
+	} else {
+		if id := guessID(New(s.String()).ID()); id != nil {
+			return id, nil
+		}
+	}
+	return nil, errors.New("not a valid name or id: " + s.String())
 }
 
 func (d *NameID) Name() string {
 	return d.name
 }
 
-func (d *NameID) Value() string {
+func (d *NameID) ID() string {
 	return d.id
 }
 
 func (d *NameID) ShortID() string {
-	return d.id[:8]
+	return d.id[:10]
+}
+
+func (d *NameID) String() string {
+	return d.name + " " + d.id
 }

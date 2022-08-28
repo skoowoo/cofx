@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/spf13/cobra"
 )
 
@@ -59,36 +60,48 @@ func initCmd() {
 	}
 
 	{
-		var stdout bool
-
 		runCmd := &cobra.Command{
-			Use:          "run [path of flowl file] or [flow name in list]",
+			Use:          "run [path of flowl file] or [flow name or id]",
 			Short:        "Run a flowl file",
 			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runflowl(args[0], stdout, false)
+				return runflowl(nameid.NameOrID(args[0]))
 			},
 		}
-		runCmd.Flags().BoolVarP(&stdout, "stdout", "s", false, "Directly print the output of the flow to stdout")
 		rootCmd.AddCommand(runCmd)
 	}
 
 	{
+		prunCmd := &cobra.Command{
+			Use:          "prun [path of flowl file] or [flow name or id]",
+			Short:        "Prettily run a flowl file",
+			Example:      "cofunc prun ./example.flowl",
+			SilenceUsage: true,
+			Args:         cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				fullscreen := false
+				return prunflowl(nameid.NameOrID(args[0]), fullscreen)
+			},
+		}
+		rootCmd.AddCommand(prunCmd)
+	}
+
+	{
 		logCmd := &cobra.Command{
-			Use:          "log [flow id] [function seq]",
+			Use:          "log [flow name or id] [function seq]",
 			Short:        "View the execution log of the flow or function",
 			Example:      "cofunc run b0804ec967f48520697662a204f5fe72 1",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id := args[0]
+				nameorid := nameid.NameOrID(args[0])
 				seq, err := strconv.ParseInt(args[1], 10, 64)
 				if err != nil {
 					return err
 				}
-				return viewLog(id, int(seq))
+				return viewLog(nameorid, int(seq))
 			},
 		}
 		rootCmd.AddCommand(logCmd)

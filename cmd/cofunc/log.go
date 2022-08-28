@@ -8,12 +8,16 @@ import (
 	"github.com/cofunclabs/cofunc/service"
 )
 
-func viewLog(id string, seq int) error {
+func viewLog(nameorid nameid.NameOrID, seq int) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	svc := service.New()
-	if err := svc.ViewLog(ctx, nameid.WrapID(id), seq, os.Stdout); err != nil {
+	id, err := svc.LookupID(ctx, nameorid)
+	if err != nil {
+		return err
+	}
+	if err := svc.ViewLog(ctx, id, seq, os.Stdout); err != nil {
 		return err
 	}
 

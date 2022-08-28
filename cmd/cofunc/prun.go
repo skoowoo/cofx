@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"os"
+	"sync"
+	"time"
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/service"
+	"github.com/cofunclabs/cofunc/service/exported"
 )
 
-func runflowl(nameorid nameid.NameOrID) error {
+func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 	svc := service.New()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -42,11 +45,42 @@ func runflowl(nameorid nameid.NameOrID) error {
 	if err := svc.CreateFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if _, err := svc.ReadyFlow(ctx, fid, true); err != nil {
+	if _, err := svc.ReadyFlow(ctx, fid, false); err != nil {
 		return err
 	}
-	if _, err := svc.StartFlow(ctx, fid); err != nil {
-		return err
+
+	var (
+		lasterr error
+		wg      sync.WaitGroup
+	)
+	wg.Add(2)
+	// start the ui in a goroutine
+	go func() {
+		defer wg.Done()
+		if err := startRunningView(fullscreen, func() (*exported.FlowRunningInsight, error) {
+			fi, err := svc.InsightFlow(ctx, fid)
+			return &fi, err
+		}); err != nil {
+			lasterr = err
+		}
+	}()
+
+	time.Sleep(time.Second)
+	// start the flow in a goroutine
+	go func() {
+		defer wg.Done()
+		fi, err := svc.StartFlow(ctx, fid)
+		if err != nil {
+			lasterr = err
+		}
+		_ = fi
+		runCmdExited = true
+	}()
+	wg.Wait()
+
+	if lasterr != nil {
+		os.Exit(-1)
 	}
+
 	return nil
 }
