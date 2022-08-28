@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/service"
 )
 
@@ -13,10 +14,7 @@ func listFlows(interactive bool) error {
 	defer cancel()
 
 	svc := service.New()
-	availables, err := svc.ListAvailableFlows(ctx)
-	if err != nil {
-		return err
-	}
+	availables := svc.ListAvailables(ctx)
 
 	// execute 'cofunc list' command
 	if !interactive {
@@ -37,7 +35,7 @@ func listFlows(interactive bool) error {
 
 		// to run the selected flow
 		if selected.Source != "" {
-			err := runflowl(selected.Source, false, true)
+			err := runflowl(nameid.NameOrID(selected.Source), false, true)
 			if err != nil {
 				return err
 			}

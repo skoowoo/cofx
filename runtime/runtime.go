@@ -25,7 +25,7 @@ func GetDefaultLogger(id nameid.ID) GetLogger {
 	return func(node actuator.Node) (*logfile.Logfile, error) {
 		seq := node.(actuator.Task).Seq()
 		// Initialize the local logdir directory for the function/node in the flow
-		logdir, err := config.LogFunctionDir(id.Value(), seq)
+		logdir, err := config.LogFunctionDir(id.ID(), seq)
 		if err != nil {
 			return nil, fmt.Errorf("%w: create function's log directory", err)
 		}
@@ -57,7 +57,7 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) er
 		return err
 	}
 	flow := newflow(id, rq, ast)
-	if err := rt.store.store(id.Value(), flow); err != nil {
+	if err := rt.store.store(id.ID(), flow); err != nil {
 		return err
 	}
 	flow.WithLock(func(b *FlowBody) error {
@@ -68,12 +68,12 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) er
 }
 
 func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogger) error {
-	flow, err := rt.store.get(id.Value())
+	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
 	}
 	if !flow.IsAdded() {
-		return fmt.Errorf("not added: flow %s", id.Value())
+		return fmt.Errorf("not added: flow %s", id.ID())
 	}
 
 	ready := func(body *FlowBody) error {
@@ -118,12 +118,12 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 }
 
 func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
-	flow, err := rt.store.get(id.Value())
+	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
 	}
 	if !flow.IsReady() {
-		return fmt.Errorf("not ready: flow %s", id.Value())
+		return fmt.Errorf("not ready: flow %s", id.ID())
 	}
 
 	execOneStep := func(batch []actuator.Node) error {
@@ -210,7 +210,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 // Stopped2Ready will reset the status of the flow and all nodes to ready, but only when all nodes are stopped
 // When re-executing the flow, You need to call this method
 func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
-	flow, err := rt.store.get(id.Value())
+	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
 }
 
 func (rt *Runtime) FetchFlow(ctx context.Context, id nameid.ID, do func(*FlowBody) error) error {
-	flow, err := rt.store.get(id.Value())
+	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
 	}

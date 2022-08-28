@@ -18,17 +18,62 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
+// Path2Name be used to convert the path of a flowl source file to the flow's name.
+func Path2Name(path string, trimpath ...string) string {
+	if len(trimpath) > 0 {
+		path = strings.TrimPrefix(path, trimpath[0])
+	} else {
+		path = strings.TrimPrefix(path, config.FlowSourceDir())
+	}
+	return co.TruncFlowl(path)
+}
+
 type SVC struct {
 	rt *runtime.Runtime
+	// availables store all available flows, the key is the string of flow's id.
+	availables map[string]exported.FlowMetaInsight
 }
 
 func New() *SVC {
 	if err := config.Init(); err != nil {
 		panic(err)
 	}
-	return &SVC{
-		rt: runtime.New(),
+	all, err := restoreAvailables(config.FlowSourceDir())
+	if err != nil {
+		panic(err)
 	}
+	return &SVC{
+		rt:         runtime.New(),
+		availables: all,
+	}
+}
+
+// LookupID be used to lookup 'nameid.ID' by the string of flow's id or name
+func (s *SVC) LookupID(ctx context.Context, nameorid nameid.NameOrID) (nameid.ID, error) {
+	return nameid.Guess(nameorid, func(id string) *nameid.NameID {
+		if v, ok := s.availables[id]; ok {
+			return nameid.Wrap(v.Name, v.ID)
+		}
+		return nil
+	})
+}
+
+// ListAvailables returns the list of all available flows in the flow source directory that be defined by
+// the environment variable 'CO_FLOW_SOURCE_DIR'.
+func (s *SVC) ListAvailables(ctx context.Context) []exported.FlowMetaInsight {
+	var availables []exported.FlowMetaInsight
+	for _, f := range s.availables {
+		availables = append(availables, f)
+	}
+	return availables
+}
+
+// GetAvailableMeta returns the meta of the flow with the flow id
+func (s *SVC) GetAvailableMeta(ctx context.Context, id nameid.ID) (exported.FlowMetaInsight, error) {
+	if v, ok := s.availables[id.ID()]; ok {
+		return v, nil
+	}
+	return exported.FlowMetaInsight{}, fmt.Errorf("not found meta: flow '%s'", id)
 }
 
 func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunningInsight, error) {
@@ -98,7 +143,7 @@ func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowRunning
 // ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'
 // is the sequence of the function, the 'w' argument is the output destination of the log.
 func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) error {
-	dir, err := config.LogFunctionDir(id.Value(), seq)
+	dir, err := config.LogFunctionDir(id.ID(), seq)
 	if err != nil {
 		return err
 	}
@@ -113,14 +158,13 @@ func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) e
 	return nil
 }
 
-// ListAvailableFlows returns the list of all available flows in flow source directory, the method will
+// restoreAvailables returns all available flows in flow source directory, the method will
 // parse the flowl source file and generate AST.
-func (s *SVC) ListAvailableFlows(ctx context.Context) ([]exported.FlowMetaInsight, error) {
+func restoreAvailables(dir string) (map[string]exported.FlowMetaInsight, error) {
 	var (
 		sources []string
-		flows   []exported.FlowMetaInsight
+		flows   map[string]exported.FlowMetaInsight = make(map[string]exported.FlowMetaInsight)
 	)
-	dir := config.FlowSourceDir()
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("%w: access path '%s'", err, path)
@@ -135,15 +179,15 @@ func (s *SVC) ListAvailableFlows(ctx context.Context) ([]exported.FlowMetaInsigh
 		return nil, fmt.Errorf("%w: walk dir '%s' to list flows", err, dir)
 	}
 	for _, path := range sources {
-		id := nameid.New(co.TruncFlowl(strings.TrimPrefix(path, dir)))
+		id := nameid.New(Path2Name(path, dir))
 		meta := exported.FlowMetaInsight{
 			Name: id.Name(),
-			ID:   id.Value(),
+			ID:   id.ID(),
 		}
 		if err := parseOneFlowl(path, &meta); err != nil {
 			return nil, fmt.Errorf("%w: parse '%s'", err, path)
 		}
-		flows = append(flows, meta)
+		flows[meta.ID] = meta
 	}
 	return flows, nil
 }

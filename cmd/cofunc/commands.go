@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +69,7 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runflowl(args[0], stdout, false)
+				return runflowl(nameid.NameOrID(args[0]), stdout, false)
 			},
 		}
 		runCmd.Flags().BoolVarP(&stdout, "stdout", "s", false, "Directly print the output of the flow to stdout")
@@ -83,12 +84,12 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id := args[0]
+				nameorid := nameid.NameOrID(args[0])
 				seq, err := strconv.ParseInt(args[1], 10, 64)
 				if err != nil {
 					return err
 				}
-				return viewLog(id, int(seq))
+				return viewLog(nameorid, int(seq))
 			},
 		}
 		rootCmd.AddCommand(logCmd)
