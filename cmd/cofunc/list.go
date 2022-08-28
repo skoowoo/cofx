@@ -35,7 +35,7 @@ func listFlows(interactive bool) error {
 
 		// to run the selected flow
 		if selected.Source != "" {
-			err := runflowl(nameid.NameOrID(selected.Source), false, true)
+			err := prunflowl(nameid.NameOrID(selected.Source), true)
 			if err != nil {
 				return err
 			}

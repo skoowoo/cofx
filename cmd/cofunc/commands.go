@@ -60,8 +60,6 @@ func initCmd() {
 	}
 
 	{
-		var stdout bool
-
 		runCmd := &cobra.Command{
 			Use:          "run [path of flowl file] or [flow name or id]",
 			Short:        "Run a flowl file",
@@ -69,11 +67,25 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runflowl(nameid.NameOrID(args[0]), stdout, false)
+				return runflowl(nameid.NameOrID(args[0]))
 			},
 		}
-		runCmd.Flags().BoolVarP(&stdout, "stdout", "s", false, "Directly print the output of the flow to stdout")
 		rootCmd.AddCommand(runCmd)
+	}
+
+	{
+		prunCmd := &cobra.Command{
+			Use:          "prun [path of flowl file] or [flow name or id]",
+			Short:        "Prettily run a flowl file",
+			Example:      "cofunc prun ./example.flowl",
+			SilenceUsage: true,
+			Args:         cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				fullscreen := false
+				return prunflowl(nameid.NameOrID(args[0]), fullscreen)
+			},
+		}
+		rootCmd.AddCommand(prunCmd)
 	}
 
 	{
