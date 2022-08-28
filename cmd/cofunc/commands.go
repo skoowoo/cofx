@@ -63,7 +63,7 @@ func initCmd() {
 		var stdout bool
 
 		runCmd := &cobra.Command{
-			Use:          "run [path of flowl file] or [flow name in list]",
+			Use:          "run [path of flowl file] or [flow name or id]",
 			Short:        "Run a flowl file",
 			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
@@ -78,7 +78,7 @@ func initCmd() {
 
 	{
 		logCmd := &cobra.Command{
-			Use:          "log [flow id] [function seq]",
+			Use:          "log [flow name or id] [function seq]",
 			Short:        "View the execution log of the flow or function",
 			Example:      "cofunc run b0804ec967f48520697662a204f5fe72 1",
 			SilenceUsage: true,
