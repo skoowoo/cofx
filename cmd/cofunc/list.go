@@ -18,9 +18,9 @@ func listFlows(interactive bool) error {
 
 	// execute 'cofunc list' command
 	if !interactive {
-		fmt.Fprintln(os.Stdout, flowNameStyle.Render("FLOW NAME")+flowIDStyle.Render("FLOW ID")+"SOURCE")
+		fmt.Fprintln(os.Stdout, colorGrey.Render(iconSpace.String()+flowNameStyle.Render("FLOW NAME")+flowIDStyle.Render("FLOW ID")+"SOURCE"))
 		for _, f := range availables {
-			s := flowNameStyle.Render(f.Name) + flowIDStyle.Render(f.ID) + f.Source
+			s := iconCircle.String() + flowNameStyle.Render(f.Name) + flowIDStyle.Render(f.ID) + f.Source
 			fmt.Fprintln(os.Stdout, s)
 		}
 		return nil
