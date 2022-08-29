@@ -17,7 +17,6 @@ var _manifest = manifest.Manifest{
 	Name:        "go_build",
 	Description: "For building go project that based on 'go mod'",
 	Driver:      "go",
-	Entrypoint:  "Entrypoint",
 	Args: map[string]string{
 		"bindir": "bin/",
 	},

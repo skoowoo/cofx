@@ -12,7 +12,6 @@ var _manifest = manifest.Manifest{
 	Name:        "sleep",
 	Description: "Used to pause the program for a period of time",
 	Driver:      "go",
-	Entrypoint:  "Entrypoint",
 	Args: map[string]string{
 		"time": "1s",
 	},

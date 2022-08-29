@@ -13,7 +13,6 @@ var _manifest = manifest.Manifest{
 	Name:           "go_generate",
 	Description:    "A function that packaging 'go generate' command",
 	Driver:         "go",
-	Entrypoint:     "Entrypoint",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
