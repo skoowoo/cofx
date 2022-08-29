@@ -29,8 +29,7 @@ Examples:
 	cofunc run ./helloworld.flowl
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		interactive := true
-		return listFlows(interactive)
+		return mainList()
 	},
 }
 
@@ -115,8 +114,7 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.NoArgs,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				interactive := false
-				return listFlows(interactive)
+				return listFlows()
 			},
 		}
 		rootCmd.AddCommand(listCmd)

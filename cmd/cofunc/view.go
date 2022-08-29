@@ -20,10 +20,12 @@ var (
 	runningNameStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
 
 	// common
+	colorGreen = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+	colorGrey  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	colorRed   = lipgloss.NewStyle().Foreground(lipgloss.Color("160"))
+
 	iconStyle  = lipgloss.NewStyle().Width(2)
 	iconSpace  = lipgloss.NewStyle().Width(2).SetString(" ")
-	iconOK     = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓").Width(2)
-	iconFailed = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).SetString("✗").Width(2)
-	iconCircle = lipgloss.NewStyle().Foreground(lipgloss.Color("25")).SetString("●").Width(2)
-	colorGrey  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	iconOK     = colorGreen.Copy().Width(2).SetString("✓")
+	iconFailed = colorRed.Copy().Width(2).SetString("✗")
 )

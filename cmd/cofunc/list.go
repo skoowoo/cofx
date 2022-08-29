@@ -5,44 +5,51 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cofunclabs/cofunc/pkg/nameid"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/cofunclabs/cofunc/service"
 )
 
-func listFlows(interactive bool) error {
+func listFlows() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	svc := service.New()
 	availables := svc.ListAvailables(ctx)
 
-	// execute 'cofunc list' command
-	if !interactive {
-		fmt.Fprintln(os.Stdout, "")
-		fmt.Fprintln(os.Stdout, colorGrey.Render(iconSpace.String()+flowNameStyle.Render("FLOW NAME")+flowIDStyle.Render("FLOW ID")+"SOURCE"))
-		for _, f := range availables {
-			s := iconCircle.String() + flowNameStyle.Render(f.Name) + flowIDStyle.Render(f.ID) + f.Source
-			fmt.Fprintln(os.Stdout, s)
+	// calculate the max length of flow's source field
+	var max int
+	for _, f := range availables {
+		if max < len(f.Source) {
+			max = len(f.Source)
 		}
-		fmt.Fprintln(os.Stdout, "")
-		return nil
 	}
+	sourceStyle := lipgloss.NewStyle().Width(max + 2)
 
-	//  execute 'cofunc' command without any args or sub-command
-	for {
-		selected, err := startListingView(availables)
-		if err != nil {
-			return err
-		}
+	// here is title
+	fmt.Fprintln(os.Stdout, "\n"+
+		colorGrey.Render(iconSpace.String()+
+			flowNameStyle.Render("FLOW NAME")+
+			flowIDStyle.Render("FLOW ID")+
+			sourceStyle.Render("SOURCE")+
+			"DESC"))
 
-		// to run the selected flow
-		if selected.Source != "" {
-			err := prunflowl(nameid.NameOrID(selected.Source), true)
-			if err != nil {
-				return err
-			}
+	for _, f := range availables {
+		var s string
+		if f.Total == -1 {
+			s = iconFailed.String() +
+				flowNameStyle.Render(f.Name) +
+				flowIDStyle.Render(f.ID) +
+				sourceStyle.Render(f.Source) +
+				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
-			return nil
+			s = iconOK.String() +
+				flowNameStyle.Render(f.Name) +
+				flowIDStyle.Render(f.ID) +
+				sourceStyle.Render(f.Source) +
+				lipgloss.NewStyle().MaxWidth(30).Render(f.Desc)
 		}
+		fmt.Fprintln(os.Stdout, s)
 	}
+	fmt.Fprintf(os.Stdout, "\n")
+	return nil
 }

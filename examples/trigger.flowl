@@ -1,0 +1,15 @@
+load "go:print"
+
+var ev
+
+event {
+    co http_request -> ev
+    co time_cron -> ev
+    co time_tick -> ev
+}
+
+var a = "hello world!!!"
+
+co print {
+    "_" : "$(a)"
+}

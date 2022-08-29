@@ -74,7 +74,7 @@ func (l *lexer) split(line string, ln int, eof bool) error {
 	}
 	l.nums = append(l.nums, ln)
 
-	for _, c := range line {
+	for pos, c := range line {
 		switch l.state {
 		case _lx_unknow:
 			if is.Space(c) || is.EOL(c) {
@@ -112,11 +112,14 @@ func (l *lexer) split(line string, ln int, eof bool) error {
 				str: l.export(),
 				typ: _symbol_t,
 			})
-			// Here is special handling of comments, because one comment can contain unicode character
+			// Here is special handling of comments, because a line comment can contain unicode character
 			if ts := l.get(ln); ts != nil {
 				if len(ts) == 1 && ts[0].String() == "//" {
-					// skip the remaining characters on the current line
-					// We don't save them into a token, Maybe someday We will save them.
+					// save the remaining characters on the current line as comment
+					l.insert(ln, &Token{
+						str: strings.TrimSpace(line[pos:]),
+						typ: _string_t,
+					})
 					l._goto(_lx_unknow)
 					return nil
 				}

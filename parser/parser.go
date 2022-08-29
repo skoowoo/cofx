@@ -162,7 +162,10 @@ var statementInferRules map[string][]inferData = map[string][]inferData{
 
 // AST store all blocks in the flowl
 type AST struct {
+	// global is the root block of the AST, we can access the whole AST tree through global block
 	global Block
+	// We use the first line comment in the flowl file as the description of the flow
+	desc string
 
 	// for parsing
 	_InferTree *inferNode
@@ -228,12 +231,16 @@ func newast() *AST {
 	return ast
 }
 
-func (a *AST) Global() *Block {
-	return &a.global
+func (ast *AST) Global() *Block {
+	return &ast.global
 }
 
-func (a *AST) GetBlocks() (loads []*Block, fns []*Block, runs []*Block) {
-	a.Foreach(func(b *Block) error {
+func (ast *AST) Desc() string {
+	return ast.desc
+}
+
+func (ast *AST) GetBlocks() (loads []*Block, fns []*Block, runs []*Block) {
+	ast.Foreach(func(b *Block) error {
 		if b.IsLoad() {
 			loads = append(loads, b)
 		}
@@ -248,8 +255,8 @@ func (a *AST) GetBlocks() (loads []*Block, fns []*Block, runs []*Block) {
 	return
 }
 
-func (a *AST) Foreach(do func(*Block) error) error {
-	return deepwalk(&a.global, do)
+func (ast *AST) Foreach(do func(*Block) error) error {
+	return deepwalk(&ast.global, do)
 }
 
 func deepwalk(b *Block, do func(*Block) error) error {
@@ -271,8 +278,13 @@ func (ast *AST) scan(lx *lexer) error {
 		if len(line) == 0 {
 			return nil
 		}
-		// discard the commments
+		// the line is a commment
 		if line[0].String() == _kw_comment {
+			// save the first line comment as the description of the flow
+			if ast.desc == "" && len(ast.global.child) == 0 && len(line) > 1 {
+				ast.desc = line[1].String()
+			}
+			// discard the other line comments
 			return nil
 		}
 

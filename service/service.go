@@ -185,7 +185,9 @@ func restoreAvailables(dir string) (map[string]exported.FlowMetaInsight, error) 
 			ID:   id.ID(),
 		}
 		if err := parseOneFlowl(path, &meta); err != nil {
-			return nil, fmt.Errorf("%w: parse '%s'", err, path)
+			meta.Desc = fmt.Errorf("%w: parse '%s'", err, path).Error()
+			// -1 means that have a error in the flowl source file
+			meta.Total = -1
 		}
 		flows[meta.ID] = meta
 	}
@@ -199,7 +201,7 @@ func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
 	}
 	defer f.Close()
 
-	q, _, err := actuator.New(f)
+	q, ast, err := actuator.New(f)
 	if err != nil {
 		return err
 	}
@@ -210,5 +212,6 @@ func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
 	})
 	meta.Source = name
 	meta.Total = total
+	meta.Desc = ast.Desc()
 	return nil
 }
