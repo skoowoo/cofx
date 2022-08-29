@@ -13,6 +13,7 @@ type Manifest struct {
 	EntrypointFunc func(context.Context, io.Writer, string, map[string]string) (map[string]string, error) `json:"-"`
 	Args           map[string]string                                                                      `json:"args"`
 	RetryOnFailure int                                                                                    `json:"retry_on_failure"`
+	IgnoreFailure  bool                                                                                   `json:"ignore_failure"`
 	Usage          Usage                                                                                  `json:"usage"`
 }
 

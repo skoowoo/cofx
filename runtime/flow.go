@@ -128,8 +128,8 @@ func (b *FlowBody) Export() exported.FlowRunningInsight {
 			insight.Nodes = append(insight.Nodes, exported.NodeRunningInsight{
 				Seq:       seq,
 				Step:      mb.node.(actuator.Task).Step(),
-				Function:  mb.node.(actuator.Task).FName(),
-				Driver:    mb.node.(actuator.Task).DName(),
+				Function:  mb.node.(actuator.Task).Driver().FunctionName(),
+				Driver:    mb.node.(actuator.Task).Driver().Name(),
 				Name:      mb.node.Name(),
 				Status:    string(mb.status),
 				LastError: mb.err,

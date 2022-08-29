@@ -114,7 +114,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Len(t, rq.steps, 5)
 
 		rq.ForstepAndExec(context.Background(), func(nodes []Node) error {
-			node := nodes[0].(*FuncNode)
+			node := nodes[0].(*TaskNode)
 			if node.step == 1 {
 				assert.Equal(t, "f1", node.name)
 				assert.Len(t, node.args(), 2)

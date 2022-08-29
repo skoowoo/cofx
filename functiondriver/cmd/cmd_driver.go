@@ -3,6 +3,8 @@ package cmddriver
 import (
 	"context"
 	"io"
+
+	"github.com/cofunclabs/cofunc/manifest"
 )
 
 const Name = "cmd"
@@ -42,4 +44,7 @@ func (d *CmdDriver) FunctionName() string {
 
 func (d *CmdDriver) Name() string {
 	return Name
+}
+func (d *CmdDriver) Manifest() manifest.Manifest {
+	return manifest.Manifest{}
 }

@@ -9,6 +9,7 @@ import (
 
 	cmddriver "github.com/cofunclabs/cofunc/functiondriver/cmd"
 	godriver "github.com/cofunclabs/cofunc/functiondriver/go"
+	"github.com/cofunclabs/cofunc/manifest"
 )
 
 type Driver interface {
@@ -16,11 +17,17 @@ type Driver interface {
 	Name() string
 	// FunctinName returns the name of the function associated with the driver
 	FunctionName() string
+	// Manifest returns the manifest of the function associated with the driver
+	Manifest() manifest.Manifest
+
 	Load(context.Context, io.Writer) error
 	MergeArgs(map[string]string) map[string]string
+	// Run calls the entrypoint of the function associated with the driver to execute the function code
 	Run(context.Context, map[string]string) (map[string]string, error)
 }
 
+// New creates a driver instance based on the 'load' information in flowl source file,
+// A Driver instance contains two parts that's driver and function
 func New(l Location) Driver {
 	var dr Driver
 	switch l.DriverName {

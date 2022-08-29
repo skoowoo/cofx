@@ -39,10 +39,6 @@ func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 	return nil
 }
 
-func (d *GoDriver) MergeArgs(args map[string]string) map[string]string {
-	return mergeArgs(d.manifest.Args, args)
-}
-
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	entrypoint := d.manifest.EntrypointFunc
 	if entrypoint == nil {
@@ -61,6 +57,14 @@ func (d *GoDriver) FunctionName() string {
 
 func (d *GoDriver) Name() string {
 	return Name
+}
+
+func (d *GoDriver) Manifest() manifest.Manifest {
+	return *d.manifest
+}
+
+func (d *GoDriver) MergeArgs(args map[string]string) map[string]string {
+	return mergeArgs(d.manifest.Args, args)
 }
 
 func mergeArgs(base, prior map[string]string) map[string]string {

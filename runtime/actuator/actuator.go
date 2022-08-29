@@ -14,7 +14,7 @@ import (
 //
 type RunQueue struct {
 	locations         functiondriver.LocationStore
-	configured        map[string]*FuncNode
+	configured        map[string]*TaskNode
 	steps             []Node
 	global            *parser.Block
 	processingForNode *ForNode
@@ -35,7 +35,7 @@ func New(rd io.Reader) (*RunQueue, *parser.AST, error) {
 func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 	r := &RunQueue{
 		locations:  functiondriver.NewLocationStore(),
-		configured: make(map[string]*FuncNode),
+		configured: make(map[string]*TaskNode),
 		steps:      make([]Node, 0),
 		global:     ast.Global(),
 	}
@@ -54,7 +54,7 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 
 func (r *RunQueue) ForfuncNode(do func(Node) error) error {
 	for _, e := range r.steps {
-		if fe, ok := e.(*FuncNode); ok {
+		if fe, ok := e.(*TaskNode); ok {
 			for p := fe; p != nil; p = p.parallel {
 				if err := do(p); err != nil {
 					return err
@@ -95,7 +95,7 @@ func (r *RunQueue) ForstepAndExec(ctx context.Context, exec func([]Node) error) 
 		}
 
 		// Execute function node
-		if n, ok := e.(*FuncNode); ok {
+		if n, ok := e.(*TaskNode); ok {
 			var batch []Node
 			for p := n; p != nil; p = p.parallel {
 				batch = append(batch, p)
@@ -128,7 +128,7 @@ func (r *RunQueue) afterExec(ctx context.Context) error {
 	return nil
 }
 
-func (r *RunQueue) createFuncNode(nodename, fname string) (*FuncNode, error) {
+func (r *RunQueue) createFuncNode(nodename, fname string) (*TaskNode, error) {
 	location, ok := r.locations.Get(fname)
 	if !ok {
 		return nil, wrapErrorf(ErrFunctionNotLoaded, "'%s'", fname)
@@ -137,7 +137,7 @@ func (r *RunQueue) createFuncNode(nodename, fname string) (*FuncNode, error) {
 	if driver == nil {
 		return nil, wrapErrorf(ErrDriverNotFound, "'%s'", location)
 	}
-	node := &FuncNode{
+	node := &TaskNode{
 		name:   nodename,
 		driver: driver,
 	}
@@ -195,7 +195,7 @@ func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
 
 		var (
 			names []string
-			last  *FuncNode
+			last  *TaskNode
 		)
 
 		step += 1
@@ -231,11 +231,11 @@ func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
 	return nil
 }
 
-func (r *RunQueue) putConfigured(node *FuncNode) {
+func (r *RunQueue) putConfigured(node *TaskNode) {
 	r.configured[node.name] = node
 }
 
-func (r *RunQueue) getConfigured(nodename string) *FuncNode {
+func (r *RunQueue) getConfigured(nodename string) *TaskNode {
 	node, ok := r.configured[nodename]
 	if !ok {
 		return nil
@@ -255,8 +255,9 @@ type Node interface {
 type Task interface {
 	Step() int
 	Seq() int
-	FName() string
-	DName() string
+	Driver() functiondriver.Driver
+	IgnoreFailure() bool
+	RetryOnFailure() int
 }
 
 // ForNode stands for the starting of 'for' loop statement
@@ -321,47 +322,55 @@ func (n *BtfNode) Exec(ctx context.Context) error {
 	return nil
 }
 
-// FuncNode
-type FuncNode struct {
-	name   string
+// TaskNode
+type TaskNode struct {
+	// name of the node
+	name string
+	// driver connected by the node
 	driver functiondriver.Driver
-	fn     *parser.Block
-	co     *parser.Block
-	_args  *parser.MapBody
+	// 'fn' configuration of the function connected by the node
+	fn *parser.Block
+	// starting definition of the function connected by the node
+	co *parser.Block
 	// returnVar is a variable name, used to save the function's return values
 	returnVar string
 	// The execution step that the node will be in, Steps are counted from 1
 	step int
 	// The sequence number of Node in the run queue
 	seq      int
-	parallel *FuncNode
+	parallel *TaskNode
+	_args    *parser.MapBody
 }
 
-func (n *FuncNode) Step() int {
+func (n *TaskNode) Step() int {
 	return n.step
 }
 
-func (n *FuncNode) Seq() int {
+func (n *TaskNode) Seq() int {
 	return n.seq
 }
 
-func (n *FuncNode) FName() string {
-	return n.driver.FunctionName()
+func (n *TaskNode) Driver() functiondriver.Driver {
+	return n.driver
 }
 
-func (n *FuncNode) DName() string {
-	return n.driver.Name()
+func (n *TaskNode) IgnoreFailure() bool {
+	return n.driver.Manifest().IgnoreFailure
 }
 
-func (n *FuncNode) FormatString() string {
+func (n *TaskNode) RetryOnFailure() int {
+	return n.driver.Manifest().RetryOnFailure
+}
+
+func (n *TaskNode) FormatString() string {
 	return fmt.Sprintf("%s->%s", n.name, n.driver.FunctionName())
 }
 
-func (n *FuncNode) Name() string {
+func (n *TaskNode) Name() string {
 	return n.name
 }
 
-func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
+func (n *TaskNode) Init(ctx context.Context, with ...func(context.Context, Node) error) error {
 	with = append(with, withArgs())
 	for _, f := range with {
 		if err := f(ctx, n); err != nil {
@@ -371,7 +380,7 @@ func (n *FuncNode) Init(ctx context.Context, with ...func(context.Context, Node)
 	return nil
 }
 
-func (n *FuncNode) Exec(ctx context.Context) error {
+func (n *TaskNode) Exec(ctx context.Context) error {
 	if err := n.execCondition(ctx); err != nil {
 		return err
 	}
@@ -394,7 +403,7 @@ func (n *FuncNode) Exec(ctx context.Context) error {
 	return nil
 }
 
-func (n *FuncNode) execCondition(ctx context.Context) error {
+func (n *TaskNode) execCondition(ctx context.Context) error {
 	if n.co.InSwitch() {
 		if !n.co.ExecCondition() {
 			return ErrConditionIsFalse
@@ -403,7 +412,7 @@ func (n *FuncNode) execCondition(ctx context.Context) error {
 	return nil
 }
 
-func (n *FuncNode) args() map[string]string {
+func (n *TaskNode) args() map[string]string {
 	if n._args == nil {
 		return map[string]string{}
 	}
@@ -412,7 +421,7 @@ func (n *FuncNode) args() map[string]string {
 
 // saveReturns will create some field var
 // Field Var are dynamic var
-func (n *FuncNode) saveReturns(retkvs map[string]string, filter func(string) bool) bool {
+func (n *TaskNode) saveReturns(retkvs map[string]string, filter func(string) bool) bool {
 	name := n.returnVar
 	for field, val := range retkvs {
 		if filter != nil && !filter(field) {
@@ -425,13 +434,13 @@ func (n *FuncNode) saveReturns(retkvs map[string]string, filter func(string) boo
 	return true
 }
 
-func (n *FuncNode) needReturns() bool {
+func (n *TaskNode) needReturns() bool {
 	return len(n.returnVar) != 0
 }
 
 func withArgs() func(context.Context, Node) error {
 	return func(ctx context.Context, n Node) error {
-		funcnode, ok := n.(*FuncNode)
+		funcnode, ok := n.(*TaskNode)
 		if !ok {
 			return nil
 		}
@@ -457,7 +466,7 @@ func withArgs() func(context.Context, Node) error {
 
 func WithLoad(logger io.Writer) func(context.Context, Node) error {
 	return func(ctx context.Context, n Node) error {
-		funcnode, ok := n.(*FuncNode)
+		funcnode, ok := n.(*TaskNode)
 		if !ok {
 			return nil
 		}

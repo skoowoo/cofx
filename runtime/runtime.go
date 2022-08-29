@@ -140,24 +140,36 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 			flow.Refresh()
 
 			go func(node actuator.Node, fm *functionMetrics) {
+				retries := node.(actuator.Task).RetryOnFailure() + 1
 				// Start to execute the function node, it will call the function driver to execute the function code
-				err := node.Exec(ctx)
+				for i := 0; i < retries; i++ {
+					err := node.Exec(ctx)
 
-				// Update the statistics of the function node execution
-				fm.WithLock(func(body *functionMetricsBody) {
-					body.err = err
-					body.end = time.Now()
-					body.duration = body.end.Sub(body.begin).Milliseconds()
-					body.status = StatusStopped
-					body.runs += 1
+					// Update the statistics of the function node execution
+					fm.WithLock(func(body *functionMetricsBody) {
+						body.err = err
+						body.end = time.Now()
+						body.duration = body.end.Sub(body.begin).Milliseconds()
+						body.status = StatusStopped
+						body.runs += 1
 
-					if body.err != nil {
-						if body.err == actuator.ErrConditionIsFalse {
-							body.err = nil
-							body.runs -= 1
+						if body.err != nil {
+							if body.err == actuator.ErrConditionIsFalse {
+								body.err = nil
+								body.runs -= 1
+							}
 						}
+					})
+
+					// retry if have a error
+					if err != nil && err != actuator.ErrConditionIsFalse {
+						continue
+					} else {
+						break
 					}
-				})
+				}
+
+				// send the result of the function execution to make it stopped really
 				select {
 				case ch <- fm:
 				case <-ctx.Done():
@@ -176,7 +188,8 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 			case m := <-ch:
 				// Find the function node that executes with an error
 				m.WithLock(func(body *functionMetricsBody) {
-					if body.err != nil {
+					ignore := body.node.(actuator.Task).IgnoreFailure()
+					if body.err != nil && !ignore {
 						abortErr = append(abortErr, m)
 					}
 				})
