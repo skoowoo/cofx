@@ -11,9 +11,8 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:       "print",
-	Driver:     "go",
-	Entrypoint: "Entrypoint",
+	Name:   "print",
+	Driver: "go",
 }
 
 func New() (*manifest.Manifest, manifest.EntrypointFunc) {

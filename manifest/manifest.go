@@ -1,9 +1,11 @@
 package manifest
 
 type Manifest struct {
-	Name           string            `json:"name"`
-	Description    string            `json:"description"`
-	Driver         string            `json:"driver"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Driver      string `json:"driver"`
+	// You don't need to specify the Entrypoint field, When develop a new function.
+	// Because the Entrypoint field is automatically filled in, When register the new function into std.
 	Entrypoint     string            `json:"entrypoint"`
 	Args           map[string]string `json:"args"`
 	RetryOnFailure int               `json:"retry_on_failure"`

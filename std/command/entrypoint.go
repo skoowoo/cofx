@@ -11,9 +11,8 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:       "command",
-	Driver:     "go",
-	Entrypoint: "Entrypoint",
+	Name:   "command",
+	Driver: "go",
 	Args: map[string]string{
 		"script": "",
 	},

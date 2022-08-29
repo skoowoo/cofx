@@ -55,6 +55,9 @@ func init() {
 
 	for i, New := range stds {
 		mf, ep := New()
+		// Get entrypoint name from entrypointfunc, then auto register the entrypoint field of the manifest.
+		mf.Entrypoint = manifest.Func2Name(ep)
+
 		if mf.Name == "" {
 			panic(fmt.Errorf("name is empty in manifest %d", i))
 		}
