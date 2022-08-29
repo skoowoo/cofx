@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/functiondriver"
 	"github.com/cofunclabs/cofunc/parser"
@@ -337,7 +339,9 @@ type TaskNode struct {
 	// The execution step that the node will be in, Steps are counted from 1
 	step int
 	// The sequence number of Node in the run queue
-	seq      int
+	seq int
+	// parallel is a node running in parallel with this node at the same time,
+	// We use 'parallel' field to implement the parallel execution of nodes
 	parallel *TaskNode
 	_args    *parser.MapBody
 }
@@ -355,11 +359,25 @@ func (n *TaskNode) Driver() functiondriver.Driver {
 }
 
 func (n *TaskNode) IgnoreFailure() bool {
-	return n.driver.Manifest().IgnoreFailure
+	ignore := n.driver.Manifest().IgnoreFailure
+	if n.fn != nil {
+		if v := n.fn.GetVarValue("ignore_failure"); strings.ToLower(v) == "true" {
+			ignore = true
+		}
+	}
+	return ignore
 }
 
 func (n *TaskNode) RetryOnFailure() int {
-	return n.driver.Manifest().RetryOnFailure
+	retries := n.driver.Manifest().RetryOnFailure
+	if n.fn != nil {
+		if v := n.fn.GetVarValue("retry_on_failure"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				retries = n
+			}
+		}
+	}
+	return retries
 }
 
 func (n *TaskNode) FormatString() string {

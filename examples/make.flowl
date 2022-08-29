@@ -33,8 +33,10 @@ co print {
 
 fn build = go_build {
 	args = {
-		"mainpkg_path": "cmd/cofunc"
+		"mainpkg_path": "md/cofunc"
 	}
+	var ignore_failure = "true"
+	var retry_on_failure = 3
 }
 
 fn gotest = command {

@@ -202,6 +202,15 @@ func (b *Block) Debug() {
 	b.vtbl.debug("\t")
 }
 
+// GetVarValue returns the value of the variable, the argument is the variable name
+func (b *Block) GetVarValue(name string) string {
+	defer func() {
+		recover()
+	}()
+	v, _ := b.calcVar(name)
+	return v
+}
+
 // Getvar lookup variable by name in map
 func (b *Block) getVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
