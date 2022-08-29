@@ -9,9 +9,9 @@ import (
 )
 
 func TestCommandFunction(t *testing.T) {
-	mf := New()
+	mf, ep := New()
 	assert.Equal(t, "go", mf.Driver)
-	_, err := mf.EntrypointFunc(context.Background(), os.Stdout, "latest", map[string]string{
+	_, err := ep(context.Background(), os.Stdout, "latest", map[string]string{
 		"script": "echo hello cofunc && sleep 2 && echo hello cofunc2",
 	})
 	assert.NoError(t, err)

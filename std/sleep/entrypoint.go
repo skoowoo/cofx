@@ -9,11 +9,10 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:           "sleep",
-	Description:    "Used to pause the program for a period of time",
-	Driver:         "go",
-	EntryPoint:     "",
-	EntrypointFunc: Entrypoint,
+	Name:        "sleep",
+	Description: "Used to pause the program for a period of time",
+	Driver:      "go",
+	Entrypoint:  "Entrypoint",
 	Args: map[string]string{
 		"time": "1s",
 	},
@@ -24,8 +23,8 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() *manifest.Manifest {
-	return &_manifest
+func New() (*manifest.Manifest, manifest.EntrypointFunc) {
+	return &_manifest, Entrypoint
 }
 
 func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {

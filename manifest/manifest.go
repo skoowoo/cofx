@@ -1,20 +1,14 @@
 package manifest
 
-import (
-	"context"
-	"io"
-)
-
 type Manifest struct {
-	Name           string
-	Description    string                                                                                 `json:"description"`
-	Driver         string                                                                                 `json:"driver"`
-	EntryPoint     string                                                                                 `json:"entrypoint"`
-	EntrypointFunc func(context.Context, io.Writer, string, map[string]string) (map[string]string, error) `json:"-"`
-	Args           map[string]string                                                                      `json:"args"`
-	RetryOnFailure int                                                                                    `json:"retry_on_failure"`
-	IgnoreFailure  bool                                                                                   `json:"ignore_failure"`
-	Usage          Usage                                                                                  `json:"usage"`
+	Name           string            `json:"name"`
+	Description    string            `json:"description"`
+	Driver         string            `json:"driver"`
+	Entrypoint     string            `json:"entrypoint"`
+	Args           map[string]string `json:"args"`
+	RetryOnFailure int               `json:"retry_on_failure"`
+	IgnoreFailure  bool              `json:"ignore_failure"`
+	Usage          Usage             `json:"usage"`
 }
 
 type Usage struct {

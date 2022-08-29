@@ -14,10 +14,10 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:           "go_build",
-	Description:    "For building go project that based on 'go mod'",
-	Driver:         "go",
-	EntrypointFunc: Entrypoint,
+	Name:        "go_build",
+	Description: "For building go project that based on 'go mod'",
+	Driver:      "go",
+	Entrypoint:  "Entrypoint",
 	Args: map[string]string{
 		"bindir": "bin/",
 	},
@@ -43,8 +43,8 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() *manifest.Manifest {
-	return &_manifest
+func New() (*manifest.Manifest, manifest.EntrypointFunc) {
+	return &_manifest, Entrypoint
 }
 
 func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {

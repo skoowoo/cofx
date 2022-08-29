@@ -11,16 +11,16 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:           "command",
-	Driver:         "go",
-	EntrypointFunc: Entrypoint,
+	Name:       "command",
+	Driver:     "go",
+	Entrypoint: "Entrypoint",
 	Args: map[string]string{
 		"script": "",
 	},
 }
 
-func New() *manifest.Manifest {
-	return &_manifest
+func New() (*manifest.Manifest, manifest.EntrypointFunc) {
+	return &_manifest, Entrypoint
 }
 
 func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {

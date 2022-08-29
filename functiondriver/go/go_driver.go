@@ -13,11 +13,12 @@ const Name = "go"
 
 // GoDriver
 type GoDriver struct {
-	path     string
-	fname    string
-	version  string
-	manifest *manifest.Manifest
-	logger   io.Writer
+	path       string
+	fname      string
+	version    string
+	manifest   *manifest.Manifest
+	entrypoint manifest.EntrypointFunc
+	logger     io.Writer
 }
 
 func New(fname, fpath, version string) *GoDriver {
@@ -30,21 +31,18 @@ func New(fname, fpath, version string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
-	mf := std.Lookup(d.fname)
-	if mf == nil {
-		return errors.New("in builtins package, not found function's manifest: " + d.path)
+	mf, ep := std.Lookup(d.fname)
+	if mf == nil || ep == nil {
+		return errors.New("in std, not found function's manifest or entrypoint: " + d.path)
 	}
 	d.manifest = mf
+	d.entrypoint = ep
 	d.logger = logger
 	return nil
 }
 
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
-	entrypoint := d.manifest.EntrypointFunc
-	if entrypoint == nil {
-		return nil, errors.New("in function, not found the entrypoint: " + d.path)
-	}
-	out, err := entrypoint(ctx, d.logger, d.version, args)
+	out, err := d.entrypoint(ctx, d.logger, d.version, args)
 	if err != nil {
 		return nil, err
 	}
