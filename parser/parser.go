@@ -25,6 +25,7 @@ const (
 	_ast_switch_body
 	_ast_case_body
 	_ast_default_body
+	_ast_event_body
 )
 
 var statementPatterns = map[string]struct {
@@ -146,6 +147,13 @@ var statementPatterns = map[string]struct {
 		[]string{"}"},
 		[]TokenType{_symbol_t},
 		nil,
+	},
+	"event": {
+		2, 2,
+		[]TokenType{_ident_t, _symbol_t},
+		[]string{_kw_event, "{"},
+		[]TokenType{_keyword_t, _symbol_t},
+		func() body { return &plainbody{} },
 	},
 }
 
@@ -333,6 +341,13 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 				parsingblock = block
 				ast._goto(_ast_switch_body)
+			case _kw_event:
+				block, err := ast.parseEvent(line, ln, parsingblock)
+				if err != nil {
+					return err
+				}
+				parsingblock = block
+				ast._goto(_ast_event_body)
 			default:
 				if _parse, err := ast._InferTree.lookup(line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
@@ -396,6 +411,8 @@ func (ast *AST) scan(lx *lexer) error {
 					ast._goto(_ast_case_body)
 				} else if parent.IsDefault() {
 					ast._goto(_ast_default_body)
+				} else if parent.IsEvent() {
+					ast._goto(_ast_event_body)
 				} else {
 					ast._goto(_ast_global)
 				}
@@ -575,6 +592,12 @@ func (ast *AST) scan(lx *lexer) error {
 			default:
 				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 			}
+		case _ast_event_body:
+			block, err := ast.parseEventBody(line, ln, parsingblock)
+			if err != nil {
+				return err
+			}
+			parsingblock = block
 		}
 		return nil
 	})
@@ -729,7 +752,6 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 		child:  []*Block{},
 		parent: b,
 		vtbl:   vartable{vars: make(map[string]*_var)},
-		body:   &plainbody{},
 	}
 	body, err := ast.preparse("fn", line, ln, nb)
 	if err != nil {
@@ -762,10 +784,8 @@ func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
 
 func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	nb := &Block{
-		child:  []*Block{},
 		parent: b,
 		vtbl:   vartable{vars: make(map[string]*_var)},
-		body:   nil,
 	}
 
 	var (
@@ -1023,6 +1043,47 @@ func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
 
 	b.child = append(b.child, nb)
 	return nb, nil
+}
+
+func (ast *AST) parseEvent(line []*Token, ln int, b *Block) (*Block, error) {
+	nb := &Block{
+		parent: b,
+		vtbl:   vartable{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("event", line, ln, nb)
+	if err != nil {
+		return nil, err
+	}
+	nb.body = body
+	nb.kind = *line[0]
+
+	b.child = append(b.child, nb)
+	return nb, nil
+}
+
+func (ast *AST) parseEventBody(line []*Token, ln int, b *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, b); err == nil {
+		ast._goto(_ast_global)
+		return &ast.global, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_co:
+		block, err := ast.parseCo(line, ln, b)
+		if err != nil {
+			return nil, err
+		}
+		// need to goto and parse the body of 'co'
+		if block.body != nil {
+			ast._goto(_ast_co_body)
+			return block, nil
+		}
+	default:
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+	// don't goto, keep parsing the body of 'event'
+	return b, nil
 }
 
 type _FA struct {

@@ -565,3 +565,59 @@ func TestVarExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestEvent(t *testing.T) {
+	{
+		const testingdata string = `
+		var out
+		event {
+			co function1 -> out
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_event, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+	}
+	{
+		const testingdata string = `
+		var out
+		event {
+			co function1 -> out
+			co function2 -> out
+			co function3 -> out
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 5)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_event, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+		assert.Equal(t, _kw_co, blocks[3].kind.String())
+		assert.Equal(t, _kw_co, blocks[4].kind.String())
+	}
+	{
+		const testingdata string = `
+		var out
+		event {
+			co function1 -> out
+			co function2 -> out {
+				"k": "v"
+			}
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 4)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_event, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+		assert.Equal(t, _kw_co, blocks[3].kind.String())
+	}
+}

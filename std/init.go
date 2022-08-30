@@ -10,9 +10,10 @@ import (
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
 	"github.com/cofunclabs/cofunc/std/print"
 	"github.com/cofunclabs/cofunc/std/sleep"
-	cotime "github.com/cofunclabs/cofunc/std/time"
+	stdtime "github.com/cofunclabs/cofunc/std/time"
 )
 
+// Lookup returns the manifest object and entrypoint method of the given function name.
 func Lookup(name string) (*manifest.Manifest, manifest.EntrypointFunc) {
 	fc, ok := builtin[name]
 	if ok {
@@ -36,7 +37,9 @@ func register(name string, mf *manifest.Manifest, ep manifest.EntrypointFunc) er
 }
 
 var (
-	builtin     map[string]*manifest.Manifest
+	// builtin store kvs of function name -> manifest.
+	builtin map[string]*manifest.Manifest
+	// entrypoints store kvs of function name + entrypoint name -> entrypoint func.
 	entrypoints map[string]manifest.EntrypointFunc
 )
 
@@ -48,7 +51,7 @@ func init() {
 		sleep.New,
 		print.New,
 		command.New,
-		cotime.New,
+		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
 	}

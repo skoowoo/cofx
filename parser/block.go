@@ -142,6 +142,10 @@ func (b *Block) IsDefault() bool {
 	return b.Iskind(_kw_default)
 }
 
+func (b *Block) IsEvent() bool {
+	return b.Iskind(_kw_event)
+}
+
 func (b *Block) InFor() bool {
 	var p *Block
 	for p = b.parent; p != nil; p = p.parent {
