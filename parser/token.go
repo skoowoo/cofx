@@ -21,6 +21,7 @@ const (
 	_kw_switch  = "switch"
 	_kw_case    = "case"
 	_kw_default = "default"
+	_kw_event   = "event"
 )
 
 var keywordTable = map[string]struct{}{
@@ -35,6 +36,7 @@ var keywordTable = map[string]struct{}{
 	_kw_load:    {},
 	_kw_switch:  {},
 	_kw_var:     {},
+	_kw_event:   {},
 }
 
 func iskeyword(ss ...string) (string, bool) {
