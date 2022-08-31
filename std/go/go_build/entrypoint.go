@@ -13,6 +13,22 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/textline"
 )
 
+var prefixArg = manifest.UsageDesc{
+	Name: "prefix",
+	Desc: "By default, the module field contents are read from the 'go.mod' file",
+}
+
+var bindirArg = manifest.UsageDesc{
+	Name: "bindir",
+	Desc: "",
+}
+
+var mainpkgArg = manifest.UsageDesc{
+	Name: "mainpkg_path",
+	Desc: `Specifies the path of main package, if there are more than one, separated by ','.
+ If not specified, the mainpkg is automatically parsed`,
+}
+
 var _manifest = manifest.Manifest{
 	Name:        "go_build",
 	Description: "For building go project that based on 'go mod'",
@@ -22,22 +38,7 @@ var _manifest = manifest.Manifest{
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args: []manifest.UsageDesc{
-			{
-				Name:           "prefix",
-				Desc:           "By default, the module field contents are read from the 'go.mod' file",
-				OptionalValues: nil,
-			},
-			{
-				Name: "bindir",
-				Desc: "",
-			},
-			{
-				Name: "mainpkg_path",
-				Desc: `Specifies the path of main package, if there are more than one, separated by ','.
- If not specified, the mainpkg is automatically parsed`,
-			},
-		},
+		Args:         []manifest.UsageDesc{prefixArg, bindirArg, mainpkgArg},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
@@ -46,19 +47,19 @@ func New() (*manifest.Manifest, manifest.EntrypointFunc) {
 	return &_manifest, Entrypoint
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
-	bindir := args["bindir"]
-	prefix, ok := args["prefix"]
-	if !ok {
+func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+	bindir := args.GetString(bindirArg.Name)
+	prefix := args.GetString(prefixArg.Name)
+	if prefix == "" {
 		var err error
 		if prefix, err = textline.FindFileLine("go.mod", splitSpace, getPrefix); err != nil {
 			return nil, err
 		}
 	}
-	mainpkgPath, ok := args["mainpkg_path"]
-	if !ok {
+	mainpkgPath := args.GetString(mainpkgArg.Name)
+	if mainpkgPath == "" {
 		// TODO:
-		_ = ok
+		_ = mainpkgPath
 	}
 
 	// print args

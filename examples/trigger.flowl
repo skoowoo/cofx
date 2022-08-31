@@ -1,3 +1,4 @@
+// An example of event trigger
 load "go:print"
 load "go:time"
 load "go:sleep"
@@ -10,12 +11,12 @@ event {
 }
 
 var t
-var a = "hello world!!!"
+var s = "hello world!!!"
 
 co sleep {
     "duration" : "10s"
 }
 co time -> t
 co print {
-    "_" : "$(a) $(t.now)"
+    "_" : "$(s) $(t.now)"
 }

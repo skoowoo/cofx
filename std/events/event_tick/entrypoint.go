@@ -8,6 +8,11 @@ import (
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
+var durationArg = manifest.UsageDesc{
+	Name: "duration",
+	Desc: "A time duration, e.g. 1s, 1m, 1h, 1m10s",
+}
+
 var _manifest = manifest.Manifest{
 	Name:        "event_tick",
 	Description: "Used to trigger an event every X seconds",
@@ -17,7 +22,7 @@ var _manifest = manifest.Manifest{
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{},
+		Args:         []manifest.UsageDesc{durationArg},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
@@ -26,8 +31,8 @@ func New() (*manifest.Manifest, manifest.EntrypointFunc) {
 	return &_manifest, Entrypoint
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
-	s := args["duration"]
+func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+	s := args.GetString(durationArg.Name)
 	v, err := time.ParseDuration(s)
 	if err != nil {
 		return nil, err

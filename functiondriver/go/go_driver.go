@@ -42,7 +42,7 @@ func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 }
 
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
-	out, err := d.entrypoint(ctx, d.logger, d.version, args)
+	out, err := d.entrypoint(ctx, d.logger, d.version, manifest.EntrypointArgs(args))
 	if err != nil {
 		return nil, err
 	}

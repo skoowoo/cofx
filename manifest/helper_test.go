@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func IsAFunction(context.Context, io.Writer, string, map[string]string) (map[string]string, error) {
+func IsAFunction(ctx context.Context, w io.Writer, version string, args EntrypointArgs) (map[string]string, error) {
 	return nil, nil
 }
 

@@ -67,18 +67,6 @@ func New() *Runtime {
 	return r
 }
 
-func (rt *Runtime) startEventWatcher() error {
-	for {
-		ev := <-rt.events
-		// Use a goroutine to execute the flow, avoid to block the event trigger, because
-		// the flow may be run for a long time.
-		go func() {
-			ev.result <- ev.execute(ev.id)
-			close(ev.result)
-		}()
-	}
-}
-
 // ParseFlow parse one flowl source file to a flow in runtime, the argument 'rd' is a reader for
 // a flow source file
 func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) error {
@@ -273,6 +261,18 @@ func (rt *Runtime) StartEventTrigger(ctx context.Context, id nameid.ID) error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func (rt *Runtime) startEventWatcher() error {
+	for {
+		ev := <-rt.events
+		// Use a goroutine to execute the flow, avoid to block the event trigger, because
+		// the flow may be run for a long time.
+		go func() {
+			ev.result <- ev.execute(ev.id)
+			close(ev.result)
+		}()
+	}
 }
 
 // ExecFlow execute a flow step by step.

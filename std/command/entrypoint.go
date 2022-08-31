@@ -22,7 +22,7 @@ func New() (*manifest.Manifest, manifest.EntrypointFunc) {
 	return &_manifest, Entrypoint
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
+func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
 	script := args["script"]
 	if script == "" {
 		return nil, errors.New("command function miss 'script' argument")
