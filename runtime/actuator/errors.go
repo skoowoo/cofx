@@ -3,6 +3,7 @@ package actuator
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -16,6 +17,8 @@ var (
 )
 
 func wrapErrorf(err error, format string, args ...interface{}) error {
-	args = append(args, err)
-	return fmt.Errorf(format+": %w", args)
+	var builder strings.Builder
+	builder.WriteString(err.Error())
+	builder.WriteString(": ")
+	return fmt.Errorf(builder.String()+format, args...)
 }

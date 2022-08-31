@@ -47,7 +47,7 @@ func printAST(ast *parser.AST, name string) {
 func printRunQ(rq *actuator.RunQueue, name string) {
 	fmt.Printf("run queue in %s:\n", name)
 	i := 0
-	rq.ForstepAndExec(context.Background(), func(nodes []actuator.Node) error {
+	rq.WalkAndExec(context.Background(), func(nodes []actuator.Node) error {
 		var buf bytes.Buffer
 		i += 1
 		buf.WriteString("Stage ")

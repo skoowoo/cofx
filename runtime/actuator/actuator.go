@@ -18,6 +18,7 @@ type RunQueue struct {
 	locations         functiondriver.LocationStore
 	configured        map[string]*TaskNode
 	steps             []Node
+	triggers          []Trigger
 	global            *parser.Block
 	processingForNode *ForNode
 }
@@ -42,19 +43,28 @@ func newRunQueue(ast *parser.AST) (*RunQueue, error) {
 		global:     ast.Global(),
 	}
 	loads, fns, runs := ast.GetBlocks()
-	if err := r.convertLoad(loads); err != nil {
+	if err := r.generateLocations(loads); err != nil {
 		return nil, err
 	}
-	if err := r.convertFn(fns); err != nil {
+	if err := r.generateConfiguredFn(fns); err != nil {
 		return nil, err
 	}
-	if err := r.convertCoAndFor(runs); err != nil {
+	if err := r.generateSteps(runs); err != nil {
+		return nil, err
+	}
+	if err := r.generateEventTriggers(runs); err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
-func (r *RunQueue) ForfuncNode(do func(Node) error) error {
+// GetTriggers returns all event triggers
+func (r *RunQueue) GetTriggers() []Trigger {
+	return r.triggers
+}
+
+// WalkNode traverses all task nodes in order
+func (r *RunQueue) WalkNode(do func(Node) error) error {
 	for _, e := range r.steps {
 		if fe, ok := e.(*TaskNode); ok {
 			for p := fe; p != nil; p = p.parallel {
@@ -67,8 +77,8 @@ func (r *RunQueue) ForfuncNode(do func(Node) error) error {
 	return nil
 }
 
-// ForstepAndExec is the entry and main program for executing the run queue
-func (r *RunQueue) ForstepAndExec(ctx context.Context, exec func([]Node) error) error {
+// WalkAndExec is the entry and main program for executing the run queue
+func (r *RunQueue) WalkAndExec(ctx context.Context, exec func([]Node) error) error {
 	if err := r.beforeExec(ctx); err != nil {
 		return err
 	}
@@ -130,7 +140,7 @@ func (r *RunQueue) afterExec(ctx context.Context) error {
 	return nil
 }
 
-func (r *RunQueue) createFuncNode(nodename, fname string) (*TaskNode, error) {
+func (r *RunQueue) createNode(nodename, fname string) (*TaskNode, error) {
 	location, ok := r.locations.Get(fname)
 	if !ok {
 		return nil, wrapErrorf(ErrFunctionNotLoaded, "'%s'", fname)
@@ -146,7 +156,7 @@ func (r *RunQueue) createFuncNode(nodename, fname string) (*TaskNode, error) {
 	return node, nil
 }
 
-func (r *RunQueue) convertLoad(blocks []*parser.Block) error {
+func (r *RunQueue) generateLocations(blocks []*parser.Block) error {
 	for _, b := range blocks {
 		s := b.Target1().String()
 		if l, err := r.locations.Add(s); err != nil {
@@ -156,10 +166,10 @@ func (r *RunQueue) convertLoad(blocks []*parser.Block) error {
 	return nil
 }
 
-func (r *RunQueue) convertFn(blocks []*parser.Block) error {
+func (r *RunQueue) generateConfiguredFn(blocks []*parser.Block) error {
 	for _, b := range blocks {
 		nodename, fname := b.Target1().String(), b.Target2().String()
-		node, err := r.createFuncNode(nodename, fname)
+		node, err := r.createNode(nodename, fname)
 		if err != nil {
 			return err
 		}
@@ -169,12 +179,42 @@ func (r *RunQueue) convertFn(blocks []*parser.Block) error {
 	return nil
 }
 
-func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
+func (r *RunQueue) generateEventTriggers(blocks []*parser.Block) error {
+	// the seq number of trigger node start from 10000, '< 10000' is reserved for function node.
+	seq := 10000
+	for _, b := range blocks {
+		if b.IsCo() && b.Parent().IsEvent() {
+			name := b.Target1().String()
+			node := r.getConfigured(name)
+			if node == nil {
+				// Not configured function, so run directly with default function name
+				var err error
+				if node, err = r.createNode(name, name); err != nil {
+					return wrapErrorf(err, "in event trigger")
+				}
+			}
+			node.co = b
+			node.returnVar = b.Target2().String()
+			node.seq = seq
+			seq++
+
+			r.triggers = append(r.triggers, node)
+		}
+	}
+	return nil
+}
+
+func (r *RunQueue) generateSteps(blocks []*parser.Block) error {
 	var (
 		step = 0
 		seq  = 0
 	)
 	for _, b := range blocks {
+		// filter out the 'co' blocks in 'event' block
+		if b.IsCo() && b.Parent().IsEvent() {
+			continue
+		}
+
 		if b.IsFor() {
 			node := &ForNode{
 				idx: len(r.steps), // save the runq's index of 'ForNode'
@@ -212,7 +252,7 @@ func (r *RunQueue) convertCoAndFor(blocks []*parser.Block) error {
 			if node == nil {
 				// Not configured function, so run directly with default function name
 				var err error
-				if node, err = r.createFuncNode(name, name); err != nil {
+				if node, err = r.createNode(name, name); err != nil {
 					return wrapErrorf(err, "in parallel run function")
 				}
 			}
@@ -260,6 +300,10 @@ type Task interface {
 	Driver() functiondriver.Driver
 	IgnoreFailure() bool
 	RetryOnFailure() int
+}
+
+type Trigger interface {
+	Node
 }
 
 // ForNode stands for the starting of 'for' loop statement
@@ -324,7 +368,7 @@ func (n *BtfNode) Exec(ctx context.Context) error {
 	return nil
 }
 
-// TaskNode
+// TaskNode is the unit of a flow, be used to connect driver and execute the function through the driver
 type TaskNode struct {
 	// name of the node
 	name string
@@ -342,8 +386,9 @@ type TaskNode struct {
 	seq int
 	// parallel is a node running in parallel with this node at the same time,
 	// We use 'parallel' field to implement the parallel execution of nodes
-	parallel *TaskNode
+
 	_args    *parser.MapBody
+	parallel *TaskNode
 }
 
 func (n *TaskNode) Step() int {
