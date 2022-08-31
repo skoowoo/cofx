@@ -456,7 +456,7 @@ func (n *TaskNode) Exec(ctx context.Context) error {
 		}
 	}
 
-	rets, err := n.driver.Run(ctx, n.driver.MergeArgs(n.args()))
+	rets, err := n.driver.Run(ctx, n.args())
 	if err != nil {
 		return err
 	}

@@ -2,8 +2,8 @@ package eventcron
 
 import (
 	"context"
-	"io"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -26,11 +26,11 @@ var _manifest = manifest.Manifest{
 		ReturnValues: []manifest.UsageDesc{}},
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	s := args.GetString(exprArg.Name)
 	_ = s
 	return nil, nil

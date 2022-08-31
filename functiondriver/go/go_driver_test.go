@@ -16,7 +16,7 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, "print", dr.fname)
 	assert.Equal(t, "print", dr.path)
 	err := dr.Load(context.Background(), os.Stdout)
-	args := dr.MergeArgs(map[string]string{
+	args := dr.mergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
 		"k3": "v3",

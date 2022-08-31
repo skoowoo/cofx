@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os/exec"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -18,24 +18,24 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	script := args["script"]
 	if script == "" {
 		return nil, errors.New("command function miss 'script' argument")
 	}
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script)
-	cmd.Stdout = out
-	cmd.Stderr = out
+	cmd.Stdout = bundle.Logger
+	cmd.Stderr = bundle.Logger
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(out, "---> %s\n", cmd.String())
+	fmt.Fprintf(bundle.Logger, "---> %s\n", cmd.String())
 	return nil, nil
 }

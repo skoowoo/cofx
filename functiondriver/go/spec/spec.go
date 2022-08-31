@@ -1,4 +1,4 @@
-package manifest
+package spec
 
 import (
 	"context"
@@ -68,8 +68,23 @@ func (e EntrypointArgs) Get(name string, typ ArgValType) (interface{}, error) {
 	return nil, nil
 }
 
+// EntrypointBundle
+type EntrypointBundle struct {
+	Version string
+	Logger  io.Writer
+	Bound   interface{}
+}
+
 // EntrypointFunc defines the entrypoint type of the function
-type EntrypointFunc func(context.Context, io.Writer, string, EntrypointArgs) (map[string]string, error)
+type EntrypointFunc func(context.Context, EntrypointBundle, EntrypointArgs) (map[string]string, error)
+
+// CreateCustomFunc can be used to create a custom object for the function
+// The custom object must implement the 'Close' method, godriver can use this method to
+// close or release the custom object.
+type CreateCustomFunc func() Custom
+type Custom interface {
+	Close() error
+}
 
 // Func2Name returns the name of the function 'f', it contains the full package name.
 func Func2Name(f EntrypointFunc) string {

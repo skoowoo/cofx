@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/std"
 )
@@ -17,8 +18,9 @@ type GoDriver struct {
 	fname      string
 	version    string
 	manifest   *manifest.Manifest
-	entrypoint manifest.EntrypointFunc
+	entrypoint spec.EntrypointFunc
 	logger     io.Writer
+	bound      spec.Custom
 }
 
 func New(fname, fpath, version string) *GoDriver {
@@ -31,18 +33,27 @@ func New(fname, fpath, version string) *GoDriver {
 
 // load go://function
 func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
-	mf, ep := std.Lookup(d.fname)
+	mf, ep, create := std.Lookup(d.fname)
 	if mf == nil || ep == nil {
 		return errors.New("in std, not found function's manifest or entrypoint: " + d.path)
 	}
 	d.manifest = mf
 	d.entrypoint = ep
 	d.logger = logger
+	if create != nil {
+		d.bound = create()
+	}
 	return nil
 }
 
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
-	out, err := d.entrypoint(ctx, d.logger, d.version, manifest.EntrypointArgs(args))
+	merged := d.mergeArgs(args)
+	bundle := spec.EntrypointBundle{
+		Version: d.version,
+		Logger:  d.logger,
+		Bound:   d.bound,
+	}
+	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +72,12 @@ func (d *GoDriver) Manifest() manifest.Manifest {
 	return *d.manifest
 }
 
-func (d *GoDriver) MergeArgs(args map[string]string) map[string]string {
-	return mergeArgs(d.manifest.Args, args)
-}
-
-func mergeArgs(base, prior map[string]string) map[string]string {
+func (d *GoDriver) mergeArgs(args map[string]string) map[string]string {
 	merged := make(map[string]string)
-	for k, v := range base {
+	for k, v := range d.manifest.Args {
 		merged[k] = v
 	}
-	for k, v := range prior {
+	for k, v := range args {
 		merged[k] = v
 	}
 	return merged

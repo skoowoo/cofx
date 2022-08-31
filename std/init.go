@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/std/command"
 	eventtick "github.com/cofunclabs/cofunc/std/events/event_tick"
@@ -15,55 +16,55 @@ import (
 )
 
 // Lookup returns the manifest object and entrypoint method of the given function name.
-func Lookup(name string) (*manifest.Manifest, manifest.EntrypointFunc) {
+func Lookup(name string) (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 	fc, ok := builtin[name]
 	if ok {
-		return fc, lookupEntrypoint(fc)
+		return fc, entrypoints[fc.Entrypoint], factories[name]
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
-func lookupEntrypoint(mf *manifest.Manifest) manifest.EntrypointFunc {
-	return entrypoints[mf.Name+mf.Entrypoint]
-}
-
-func register(name string, mf *manifest.Manifest, ep manifest.EntrypointFunc) error {
+func register(name string, mf *manifest.Manifest, ep spec.EntrypointFunc, cr spec.CreateCustomFunc) error {
 	_, ok := builtin[name]
 	if ok {
 		return errors.New("repeat register the function name: " + name)
 	}
 	builtin[name] = mf
-	entrypoints[mf.Name+mf.Entrypoint] = ep
+	entrypoints[mf.Entrypoint] = ep
+	factories[name] = cr
 	return nil
 }
 
 var (
 	// builtin store kvs of function name -> manifest.
 	builtin map[string]*manifest.Manifest
-	// entrypoints store kvs of function name + entrypoint name -> entrypoint func.
-	entrypoints map[string]manifest.EntrypointFunc
+	// entrypoints store kvs of entrypoint name -> entrypoint func.
+	entrypoints map[string]spec.EntrypointFunc
+	// factories store kvs of function name -> a func that be used to create a custom object.
+	factories map[string]spec.CreateCustomFunc
 )
 
 func init() {
 	builtin = make(map[string]*manifest.Manifest)
-	entrypoints = make(map[string]manifest.EntrypointFunc)
+	entrypoints = make(map[string]spec.EntrypointFunc)
+	factories = make(map[string]spec.CreateCustomFunc)
 
-	var stds = []func() (*manifest.Manifest, manifest.EntrypointFunc){
+	var stds = []func() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc){
 		sleep.New,
 		print.New,
 		command.New,
 		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
-
 		// event trigger function
 		eventtick.New,
 	}
 
 	for i, New := range stds {
-		mf, ep := New()
+		mf, ep, cr := New()
 		// Get entrypoint name from entrypointfunc, then auto register the entrypoint field of the manifest.
-		mf.Entrypoint = manifest.Func2Name(ep)
+		// NOTE: Automatically getted the entrypoint name is unique
+		mf.Entrypoint = spec.Func2Name(ep)
 
 		if mf.Name == "" {
 			panic(fmt.Errorf("name is empty in manifest %d", i))
@@ -74,7 +75,7 @@ func init() {
 		if ep == nil {
 			panic(fmt.Errorf("entrypoint is nil in %d", i))
 		}
-		if err := register(mf.Name, mf, ep); err != nil {
+		if err := register(mf.Name, mf, ep, cr); err != nil {
 			panic(err)
 		}
 	}

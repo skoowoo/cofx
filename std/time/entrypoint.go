@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"time"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -78,32 +78,26 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	format := args["format"]
 	getts := args["get_timestamp"]
 
 	var (
 		now       string
-		year      int
-		month     string
-		day       int
-		hour      int
-		minute    int
-		second    int
 		timestamp int64
 	)
 
 	current := time.Now()
-	year = current.Year()
-	month = current.Month().String()
-	day = current.Day()
-	hour = current.Hour()
-	minute = current.Minute()
-	second = current.Second()
+	year := current.Year()
+	month := current.Month().String()
+	day := current.Day()
+	hour := current.Hour()
+	minute := current.Minute()
+	second := current.Second()
 
 	switch format {
 	case "YYYY-MM-DD hh:mm:ss":

@@ -3,10 +3,10 @@ package print
 import (
 	"context"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -15,11 +15,11 @@ var _manifest = manifest.Manifest{
 	Driver: "go",
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	var slice []string
 	for k, v := range args {
 		if strings.HasPrefix(k, "_") {
@@ -30,7 +30,7 @@ func Entrypoint(ctx context.Context, out io.Writer, version string, args manifes
 	}
 	sort.Strings(slice)
 	for _, s := range slice {
-		fmt.Fprintln(out, s)
+		fmt.Fprintln(bundle.Logger, s)
 	}
 	return map[string]string{
 		"status": "ok",

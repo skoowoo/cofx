@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/pkg/textline"
 )
@@ -43,11 +44,11 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	bindir := args.GetString(bindirArg.Name)
 	prefix := args.GetString(prefixArg.Name)
 	if prefix == "" {
@@ -63,13 +64,13 @@ func Entrypoint(ctx context.Context, out io.Writer, version string, args manifes
 	}
 
 	// print args
-	fmt.Fprintf(out, "===> prefix      : %s\n", prefix)
-	fmt.Fprintf(out, "===> mainpkg_path: %s\n", mainpkgPath)
-	fmt.Fprintf(out, "===> bindir      : %s\n", bindir)
+	fmt.Fprintf(bundle.Logger, "===> prefix      : %s\n", prefix)
+	fmt.Fprintf(bundle.Logger, "===> mainpkg_path: %s\n", mainpkgPath)
+	fmt.Fprintf(bundle.Logger, "===> bindir      : %s\n", bindir)
 
 	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
-		cmd, err := buildCommands(ctx, prefix, bindir, path, out)
+		cmd, err := buildCommands(ctx, prefix, bindir, path, bundle.Logger)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +80,7 @@ func Entrypoint(ctx context.Context, out io.Writer, version string, args manifes
 		if err := cmd.Wait(); err != nil {
 			return nil, err
 		}
-		fmt.Fprintf(out, "---> %s\n", cmd.String())
+		fmt.Fprintf(bundle.Logger, "---> %s\n", cmd.String())
 	}
 
 	return nil, nil

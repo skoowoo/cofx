@@ -19,9 +19,8 @@ type Driver interface {
 	FunctionName() string
 	// Manifest returns the manifest of the function associated with the driver
 	Manifest() manifest.Manifest
-
+	// Load loads the function to the driver
 	Load(context.Context, io.Writer) error
-	MergeArgs(map[string]string) map[string]string
 	// Run calls the entrypoint of the function associated with the driver to execute the function code
 	Run(context.Context, map[string]string) (map[string]string, error)
 }

@@ -2,9 +2,9 @@ package eventtick
 
 import (
 	"context"
-	"io"
 	"time"
 
+	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -27,11 +27,11 @@ var _manifest = manifest.Manifest{
 	},
 }
 
-func New() (*manifest.Manifest, manifest.EntrypointFunc) {
-	return &_manifest, Entrypoint
+func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
+	return &_manifest, Entrypoint, nil
 }
 
-func Entrypoint(ctx context.Context, out io.Writer, version string, args manifest.EntrypointArgs) (map[string]string, error) {
+func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	s := args.GetString(durationArg.Name)
 	v, err := time.ParseDuration(s)
 	if err != nil {
