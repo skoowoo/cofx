@@ -5,12 +5,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 type getdir func() string
 
 func Init() error {
 	dirs := []getdir{
+		HomeDir,
 		LogDir,
 		LogBucketDir,
 		FlowSourceDir,
@@ -31,16 +34,30 @@ func Init() error {
 	return nil
 }
 
-func LogDir() string {
-	v := os.Getenv("CO_LOG_DIR")
-	if v == "" {
-		v = ".cofunc/logs"
+func HomeDir() string {
+	v := os.Getenv("COFUNC_HOME")
+	if len(v) == 0 {
+		home, err := homedir.Dir()
+		if err != nil {
+			panic(err)
+		}
+		v = filepath.Join(home, ".cofunc")
 	}
+	return v
+}
+
+func LogDir() string {
+	v := filepath.Join(HomeDir(), "logs")
 	return prettyDirPath(v)
 }
 
 func LogBucketDir() string {
 	return path.Join(LogDir(), "buckets")
+}
+
+func FlowSourceDir() string {
+	v := filepath.Join(HomeDir(), "flowls")
+	return prettyDirPath(v)
 }
 
 // LogFunctionDir returns the directory path of the function's logger
@@ -55,14 +72,6 @@ func LogFunctionDir(flowID string, seq int) (string, error) {
 // LogFunctionFile returns the name of function's log file, the argument is the directory where the log file is located
 func LogFunctionFile(dir string) string {
 	return path.Join(dir, "logfile")
-}
-
-func FlowSourceDir() string {
-	v := os.Getenv("CO_FLOW_SOURCE_DIR")
-	if v == "" {
-		v = ".cofunc/flows"
-	}
-	return prettyDirPath(v)
 }
 
 func prettyDirPath(p string) string {
