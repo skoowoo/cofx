@@ -253,7 +253,7 @@ func (r *RunQueue) generateSteps(blocks []*parser.Block) error {
 				// Not configured function, so run directly with default function name
 				var err error
 				if node, err = r.createNode(name, name); err != nil {
-					return wrapErrorf(err, "in parallel run function")
+					return wrapErrorf(err, " use co to run function")
 				}
 			}
 			node.co = b

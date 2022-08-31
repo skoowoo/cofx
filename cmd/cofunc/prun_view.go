@@ -89,6 +89,8 @@ func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fi = msg
 		if m.fi.Done == m.fi.Total {
 			m.done = true
+		} else {
+			m.done = false
 		}
 
 		// Update progress bar

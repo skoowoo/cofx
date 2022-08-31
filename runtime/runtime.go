@@ -41,8 +41,9 @@ func GetDefaultLogger(id nameid.ID) GetLogger {
 
 // Event is from the event trigger, it will be used to make the flow run
 type Event struct {
-	id     nameid.ID
-	result chan error
+	id      nameid.ID
+	result  chan error
+	execute func(id nameid.ID) error
 }
 
 // Runtime
@@ -50,7 +51,6 @@ type Event struct {
 type Runtime struct {
 	store  *flowstore
 	events chan Event
-	cancel context.CancelFunc
 }
 
 func New() *Runtime {
@@ -63,38 +63,20 @@ func New() *Runtime {
 
 	// start a watcher goroutine to waiting and handling event from triggers. The watcher goroutine
 	// don't finished forever.
-	ctx, cancel := context.WithCancel(context.Background())
-	r.cancel = cancel
-	go r.startEventWatcher(ctx)
+	go r.startEventWatcher()
 	return r
 }
 
-func (rt *Runtime) startEventWatcher(ctx context.Context) error {
+func (rt *Runtime) startEventWatcher() error {
 	for {
-		select {
-		case ev := <-rt.events:
-			// Use a goroutine to execute the flow, avoid to block the event trigger, because
-			// the flow may be run for a long time.
-			go func() {
-				if err := rt.MustReady(ctx, ev.id); err != nil {
-					// TODO: log
-					log.Println(err)
-					return
-				}
-				if err := rt.ExecFlow(ctx, ev.id); err != nil {
-					ev.result <- err
-				}
-				close(ev.result)
-			}()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+		ev := <-rt.events
+		// Use a goroutine to execute the flow, avoid to block the event trigger, because
+		// the flow may be run for a long time.
+		go func() {
+			ev.result <- ev.execute(ev.id)
+			close(ev.result)
+		}()
 	}
-}
-
-// ForceStop close the runtime through the context
-func (rt *Runtime) ForceStop() {
-	rt.cancel()
 }
 
 // ParseFlow parse one flowl source file to a flow in runtime, the argument 'rd' is a reader for
@@ -264,6 +246,15 @@ func (rt *Runtime) StartEventTrigger(ctx context.Context, id nameid.ID) error {
 				ev := Event{
 					id:     id,
 					result: make(chan error, 1),
+					execute: func(id nameid.ID) error {
+						if err := rt.MustReady(ctx, id); err != nil {
+							return err
+						}
+						if err := rt.ExecFlow(ctx, id); err != nil {
+							return err
+						}
+						return nil
+					},
 				}
 				select {
 				case rt.events <- ev:
@@ -329,43 +320,35 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 						}
 					})
 
-					// retry if have a error
+					// Retry if have an error
 					if err != nil && err != actuator.ErrConditionIsFalse {
 						continue
 					} else {
 						break
 					}
 				}
-
-				// send the result of the function execution to make it stopped really
-				select {
-				case ch <- fm:
-				case <-ctx.Done():
-				}
+				// Send the result of the function execution to make it stopped really
+				ch <- fm
 			}(n, metrics)
-		}
+		} // End of start batch
 		flow.Refresh()
 
-		// waiting functions at the step to finish running
+		// Waiting functions at the step to finish
 		abortErr := make([]*functionMetrics, 0)
 		for i := 0; i < nodes; i++ {
-			select {
-			case <-ctx.Done():
-				// canced
-				close(ch)
-			case m := <-ch:
-				// Find the function node that executes with an error
-				m.WithLock(func(body *functionMetricsBody) {
-					ignore := body.node.(actuator.Task).IgnoreFailure()
-					if body.err != nil && !ignore {
-						abortErr = append(abortErr, m)
-					}
-				})
-				flow.Refresh()
-			}
+			m := <-ch
+			// Find the function node that executes with an error
+			m.WithLock(func(body *functionMetricsBody) {
+				ignore := body.node.(actuator.Task).IgnoreFailure()
+				if body.err != nil && !ignore && !errors.Is(body.err, context.Canceled) {
+					abortErr = append(abortErr, m)
+				}
+			})
+			flow.Refresh()
 		}
 		flow.Refresh()
 
+		// Have an error at the step, so abort the flow
 		if l := len(abortErr); l != 0 {
 			return errors.New("occurred error at step")
 		}

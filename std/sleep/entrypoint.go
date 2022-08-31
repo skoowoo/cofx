@@ -13,7 +13,7 @@ var _manifest = manifest.Manifest{
 	Description: "Used to pause the program for a period of time",
 	Driver:      "go",
 	Args: map[string]string{
-		"time": "1s",
+		"duration": "1s",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
@@ -27,6 +27,16 @@ func New() (*manifest.Manifest, manifest.EntrypointFunc) {
 }
 
 func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
-	time.Sleep(time.Second)
-	return nil, nil
+	s := args["duration"]
+	v, err := time.ParseDuration(s)
+	if err != nil {
+		return nil, err
+	}
+	ticker := time.NewTicker(v)
+	select {
+	case <-ticker.C:
+		return nil, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }

@@ -3,7 +3,6 @@ package eventtick
 import (
 	"context"
 	"io"
-	"strconv"
 	"time"
 
 	"github.com/cofunclabs/cofunc/manifest"
@@ -14,7 +13,7 @@ var _manifest = manifest.Manifest{
 	Description: "Used to trigger an event every X seconds",
 	Driver:      "go",
 	Args: map[string]string{
-		"seconds": "10",
+		"duration": "10s",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
@@ -28,13 +27,12 @@ func New() (*manifest.Manifest, manifest.EntrypointFunc) {
 }
 
 func Entrypoint(ctx context.Context, out io.Writer, version string, args map[string]string) (map[string]string, error) {
-	var secs int
-	v := args["seconds"]
-	secs, err := strconv.Atoi(v)
+	s := args["duration"]
+	v, err := time.ParseDuration(s)
 	if err != nil {
 		return nil, err
 	}
-	ticker := time.NewTicker(time.Duration(secs) * time.Second)
+	ticker := time.NewTicker(v)
 	select {
 	case <-ticker.C:
 		return nil, nil

@@ -1,16 +1,20 @@
 load "go:print"
 load "go:time"
+load "go:sleep"
 load "go:event_tick"
 
 event {
     co event_tick {
-        "seconds": "3"
+        "duration": "2s"
     }
 }
 
 var t
 var a = "hello world!!!"
 
+co sleep {
+    "duration" : "10s"
+}
 co time -> t
 co print {
     "_" : "$(a) $(t.now)"
