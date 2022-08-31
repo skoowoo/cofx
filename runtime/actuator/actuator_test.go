@@ -11,22 +11,22 @@ import (
 
 func loadTestingdata2(data string) ([]*parser.Block, *parser.AST, *RunQueue, error) {
 	rd := strings.NewReader(data)
-	rq, bl, err := New(rd)
+	rq, ast, err := New(rd)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	err = rq.ForfuncNode(func(n Node) error {
+	err = rq.WalkNode(func(n Node) error {
 		return n.Init(context.TODO())
 	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	var blocks []*parser.Block
-	bl.Foreach(func(b *parser.Block) error {
+	ast.Foreach(func(b *parser.Block) error {
 		blocks = append(blocks, b)
 		return nil
 	})
-	return blocks, bl, rq, nil
+	return blocks, ast, rq, nil
 }
 
 func TestForLoopWithRunq(t *testing.T) {
@@ -113,7 +113,7 @@ func TestParseFullWithRunq(t *testing.T) {
 		assert.Len(t, rq.configured, 1)
 		assert.Len(t, rq.steps, 5)
 
-		rq.ForstepAndExec(context.Background(), func(nodes []Node) error {
+		rq.WalkAndExec(context.Background(), func(nodes []Node) error {
 			node := nodes[0].(*TaskNode)
 			if node.step == 1 {
 				assert.Equal(t, "f1", node.name)

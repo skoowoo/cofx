@@ -171,9 +171,13 @@ func (f *Flow) Refresh() error {
 	if f.status == StatusRunning {
 		f.duration = time.Since(f.begin).Milliseconds()
 	}
+	var isready bool = true
 	f.progress.Reset()
 	for seq, m := range f.metrics {
 		m.WithLock(func(body *functionMetricsBody) {
+			if m.status != StatusReady {
+				isready = false
+			}
 			switch m.status {
 			case StatusStopped:
 				f.progress.PutDone(seq)
@@ -181,6 +185,9 @@ func (f *Flow) Refresh() error {
 				f.progress.PutRunning(seq)
 			}
 		})
+	}
+	if isready {
+		f.status = StatusReady
 	}
 	return nil
 }
@@ -210,6 +217,9 @@ func (f *Flow) IsAdded() bool {
 }
 
 func (f *Flow) ToReady() error {
+	if f.IsReady() {
+		return nil
+	}
 	// The purpose of using a function to execute the code block is to avoid the deadlock,
 	// because the 'f.Refresh()' method will also lock the 'f'
 	err := func() error {

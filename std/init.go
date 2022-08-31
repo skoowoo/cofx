@@ -6,6 +6,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/std/command"
+	eventtick "github.com/cofunclabs/cofunc/std/events/event_tick"
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
 	"github.com/cofunclabs/cofunc/std/print"
@@ -54,6 +55,9 @@ func init() {
 		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
+
+		// event trigger function
+		eventtick.New,
 	}
 
 	for i, New := range stds {

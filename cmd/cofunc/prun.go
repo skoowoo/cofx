@@ -56,7 +56,12 @@ func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 	wg.Add(2)
 	// start the ui in a goroutine
 	go func() {
-		defer wg.Done()
+		defer func() {
+			wg.Done()
+			// cancel() be used to stop the event trigger goroutine
+			cancel()
+		}()
+
 		if err := startRunningView(fullscreen, func() (*exported.FlowRunningInsight, error) {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
@@ -69,11 +74,10 @@ func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 	// start the flow in a goroutine
 	go func() {
 		defer wg.Done()
-		fi, err := svc.StartFlow(ctx, fid)
+		err := svc.StartOrWaitingEvent(ctx, fid)
 		if err != nil {
 			lasterr = err
 		}
-		_ = fi
 		runCmdExited = true
 	}()
 	wg.Wait()

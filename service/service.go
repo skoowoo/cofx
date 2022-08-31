@@ -28,12 +28,14 @@ func Path2Name(path string, trimpath ...string) string {
 	return co.TruncFlowl(path)
 }
 
+// SVC is the service layer, it provides API to access and manage the flows
 type SVC struct {
 	rt *runtime.Runtime
 	// availables store all available flows, the key is the string of flow's id.
 	availables map[string]exported.FlowMetaInsight
 }
 
+// New create a service layer instance
 func New() *SVC {
 	if err := config.Init(); err != nil {
 		panic(err)
@@ -76,13 +78,14 @@ func (s *SVC) GetAvailableMeta(ctx context.Context, id nameid.ID) (exported.Flow
 	return exported.FlowMetaInsight{}, fmt.Errorf("not found meta: flow '%s'", id)
 }
 
+// InsightFlow exports the statistics of the flow
 func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunningInsight, error) {
 	var fi exported.FlowRunningInsight
-	read := func(body *runtime.FlowBody) error {
+	export := func(body *runtime.FlowBody) error {
 		fi = body.Export()
 		return nil
 	}
-	err := s.rt.FetchFlow(ctx, fid, read)
+	err := s.rt.FetchFlow(ctx, fid, export)
 	return fi, err
 }
 
@@ -102,6 +105,7 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 	return nil
 }
 
+// CreateFlow parse a flowl source file, then create a flow instance in runtime
 func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
@@ -112,6 +116,7 @@ func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) er
 	return nil
 }
 
+// ReadyFlow initialize the flow and make it ready to run
 func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (exported.FlowRunningInsight, error) {
 	var get runtime.GetLogger
 	if toStdout {
@@ -129,6 +134,7 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (expor
 	return fi, nil
 }
 
+// StartFlow starts a flow without event triggers and returns the statistics of the flow
 func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowRunningInsight, error) {
 	if err := s.rt.ExecFlow(ctx, id); err != nil {
 		return exported.FlowRunningInsight{}, err
@@ -138,6 +144,26 @@ func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowRunning
 		return exported.FlowRunningInsight{}, err
 	}
 	return fi, nil
+}
+
+// StartOrWaitingEvent don't start the flows directly, it first start triggers of the flows,
+// then execute the flows based on event from trigger. If not found any triggers of the flow, it will
+// start the flow directly.
+func (s *SVC) StartOrWaitingEvent(ctx context.Context, id nameid.ID) error {
+	has, err := s.rt.HasTrigger(id)
+	if err != nil {
+		return err
+	}
+	if !has {
+		_, err := s.StartFlow(ctx, id)
+		return err
+	}
+	// NOTE: call StartEventTrigger will be blocked, that's goroutine will not finish until you cancel it
+	if err := s.rt.StartEventTrigger(ctx, id); err != nil {
+		// TODO: log
+		_ = err
+	}
+	return nil
 }
 
 // ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'
@@ -206,7 +232,7 @@ func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
 		return err
 	}
 	var total int
-	q.ForfuncNode(func(n actuator.Node) error {
+	q.WalkNode(func(n actuator.Node) error {
 		total++
 		return nil
 	})

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"sync"
 	"time"
 
 	"github.com/cofunclabs/cofunc/config"
@@ -37,20 +39,66 @@ func GetDefaultLogger(id nameid.ID) GetLogger {
 	}
 }
 
+// Event is from the event trigger, it will be used to make the flow run
+type Event struct {
+	id     nameid.ID
+	result chan error
+}
+
 // Runtime
 //
 type Runtime struct {
-	store *flowstore
+	store  *flowstore
+	events chan Event
+	cancel context.CancelFunc
 }
 
 func New() *Runtime {
-	r := &Runtime{}
+	r := &Runtime{
+		events: make(chan Event, 64),
+	}
 	r.store = &flowstore{
 		entity: make(map[string]*Flow),
 	}
+
+	// start a watcher goroutine to waiting and handling event from triggers. The watcher goroutine
+	// don't finished forever.
+	ctx, cancel := context.WithCancel(context.Background())
+	r.cancel = cancel
+	go r.startEventWatcher(ctx)
 	return r
 }
 
+func (rt *Runtime) startEventWatcher(ctx context.Context) error {
+	for {
+		select {
+		case ev := <-rt.events:
+			// Use a goroutine to execute the flow, avoid to block the event trigger, because
+			// the flow may be run for a long time.
+			go func() {
+				if err := rt.MustReady(ctx, ev.id); err != nil {
+					// TODO: log
+					log.Println(err)
+					return
+				}
+				if err := rt.ExecFlow(ctx, ev.id); err != nil {
+					ev.result <- err
+				}
+				close(ev.result)
+			}()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// ForceStop close the runtime through the context
+func (rt *Runtime) ForceStop() {
+	rt.cancel()
+}
+
+// ParseFlow parse one flowl source file to a flow in runtime, the argument 'rd' is a reader for
+// a flow source file
 func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) error {
 	rq, ast, err := actuator.New(rd)
 	if err != nil {
@@ -80,7 +128,8 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 		body.status = StatusReady
 		body.metrics = make(map[int]*functionMetrics)
 
-		err := body.runq.ForfuncNode(func(node actuator.Node) error {
+		// Initialize all task nodes
+		err := body.runq.WalkNode(func(node actuator.Node) error {
 			seq := node.(actuator.Task).Seq()
 			body.metrics[seq] = &functionMetrics{
 				functionMetricsBody: functionMetricsBody{
@@ -106,8 +155,21 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 		if err != nil {
 			return err
 		}
+
+		// Initialize all triggers
+		triggers := body.runq.GetTriggers()
+		for _, tg := range triggers {
+			logger, err := getlogger(tg)
+			if err != nil {
+				return err
+			}
+			if err := tg.Init(ctx, actuator.WithLoad(logger)); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
+
 	if err := flow.WithLock(ready); err != nil {
 		return err
 	}
@@ -117,6 +179,112 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 	return nil
 }
 
+// Stopped2Ready will reset the status of the flow and all nodes to ready, but only when all nodes are stopped
+// When re-executing the flow, You need to call this method
+func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
+	flow, err := rt.store.get(id.ID())
+	if err != nil {
+		return err
+	}
+	return flow.ToReady()
+}
+
+// MustReay is a simple wrapper of Stopped2Ready
+func (rt *Runtime) MustReady(ctx context.Context, id nameid.ID) error {
+	return rt.Stopped2Ready(ctx, id)
+}
+
+// FetchFlow get a flow, then access or handle it safety by the callback function
+func (rt *Runtime) FetchFlow(ctx context.Context, id nameid.ID, do func(*FlowBody) error) error {
+	flow, err := rt.store.get(id.ID())
+	if err != nil {
+		return err
+	}
+	return flow.WithLock(do)
+}
+
+func (rt *Runtime) StopFlow(ctx context.Context, id nameid.ID) error {
+	return nil
+}
+
+func (rt *Runtime) DeleteFlow(ctx context.Context, id nameid.ID) error {
+	return nil
+}
+
+// HasTrigger check the flow has a trigger or not
+func (rt *Runtime) HasTrigger(id nameid.ID) (bool, error) {
+	flow, err := rt.store.get(id.ID())
+	if err != nil {
+		return false, err
+	}
+	triggers := flow.GetRunQ().GetTriggers()
+	return len(triggers) != 0, nil
+}
+
+// StartEventTrigger start the event trigger of a flow, every event trigger function will run in a goroutine
+// When a event triggeer returned without an error, will create and send a event to runtime
+func (rt *Runtime) StartEventTrigger(ctx context.Context, id nameid.ID) error {
+	flow, err := rt.store.get(id.ID())
+	if err != nil {
+		return err
+	}
+	triggers := flow.GetRunQ().GetTriggers()
+	n := len(triggers)
+	if n == 0 {
+		return nil
+	}
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for _, tg := range triggers {
+		go func(trigger actuator.Trigger) {
+			defer wg.Done()
+			errNum := 0
+			for {
+				err := trigger.Exec(ctx)
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				if err != nil {
+					// TODO: log
+					log.Println(err)
+					errNum++
+					if errNum <= 5 {
+						time.Sleep(time.Second * time.Duration(errNum))
+					} else if errNum <= 10 {
+						time.Sleep(time.Second * time.Duration(errNum*2))
+					} else if errNum <= 15 {
+						time.Sleep(time.Second * time.Duration(errNum*5))
+					} else {
+						time.Sleep(time.Second * 300)
+					}
+					continue
+				}
+				// trigger returns without an error, it's success
+				errNum = 0
+				ev := Event{
+					id:     id,
+					result: make(chan error, 1),
+				}
+				select {
+				case rt.events <- ev:
+					// wait for the result of the flow execution, avoid to run flow repeated at
+					// the same time
+					err := <-ev.result
+					if err != nil {
+						// TODO:
+						log.Println(err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(tg)
+	}
+	wg.Wait()
+	return nil
+}
+
+// ExecFlow execute a flow step by step.
 func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 	flow, err := rt.store.get(id.ID())
 	if err != nil {
@@ -208,7 +376,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 		body.status = StatusRunning
 		return nil
 	})
-	err = flow.GetRunQ().ForstepAndExec(ctx, execOneStep)
+	err = flow.GetRunQ().WalkAndExec(ctx, execOneStep)
 	flow.WithLock(func(body *FlowBody) error {
 		body.status = StatusStopped
 		body.duration = time.Since(body.begin).Milliseconds()
@@ -217,31 +385,5 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// Stopped2Ready will reset the status of the flow and all nodes to ready, but only when all nodes are stopped
-// When re-executing the flow, You need to call this method
-func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
-	flow, err := rt.store.get(id.ID())
-	if err != nil {
-		return err
-	}
-	return flow.ToReady()
-}
-
-func (rt *Runtime) FetchFlow(ctx context.Context, id nameid.ID, do func(*FlowBody) error) error {
-	flow, err := rt.store.get(id.ID())
-	if err != nil {
-		return err
-	}
-	return flow.WithLock(do)
-}
-
-func (rt *Runtime) StopFlow(ctx context.Context, id nameid.ID) error {
-	return nil
-}
-
-func (rt *Runtime) DeleteFlow(ctx context.Context, id nameid.ID) error {
 	return nil
 }

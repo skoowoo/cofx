@@ -17,7 +17,7 @@ func listFlows() error {
 	availables := svc.ListAvailables(ctx)
 
 	// calculate the max length of flow's source field
-	var max int
+	var max int = 20
 	for _, f := range availables {
 		if max < len(f.Source) {
 			max = len(f.Source)
