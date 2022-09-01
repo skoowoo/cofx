@@ -76,9 +76,9 @@ func TestParseFullWithRunq(t *testing.T) {
 		const testingdata string = `
 	load "go:function1"
 	load "go:function2"
-	load "cmd:/tmp/function3"
-	load "cmd:/tmp/function4"
-	load "cmd:/tmp/function5"
+	load "shell:/tmp/function3"
+	load "shell:/tmp/function4"
+	load "shell:/tmp/function5"
 
 	fn f1 = function1 {
 		args = {

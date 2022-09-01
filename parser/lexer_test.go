@@ -33,7 +33,7 @@ func loadTestingdataForLexer(testingdata string) (*lexer, error) {
 
 func TestLexerLoad(t *testing.T) {
 	testingdata := `
-	load "cmd:root/function1"
+	load "shell:root/function1"
 	`
 	_, err := loadTestingdataForLexer(testingdata)
 	assert.NoError(t, err)

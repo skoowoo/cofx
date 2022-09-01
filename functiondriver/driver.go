@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
-	cmddriver "github.com/cofunclabs/cofunc/functiondriver/cmd"
 	godriver "github.com/cofunclabs/cofunc/functiondriver/go"
+	shelldriver "github.com/cofunclabs/cofunc/functiondriver/shell"
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
@@ -38,8 +38,8 @@ func New(l Location) Driver {
 		} else {
 			dr = d
 		}
-	case cmddriver.Name:
-		if d := cmddriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
+	case shelldriver.Name:
+		if d := shelldriver.New(l.FuncName, l.FuncPath, l.Version); d == nil {
 			return nil
 		} else {
 			dr = d

@@ -24,9 +24,9 @@ func loadTestingdata(data string) ([]*Block, error) {
 func TestParseBlocksFull(t *testing.T) {
 	const testingdata string = `
 	// Here is a comment
-	load "cmd:root/function1"
-	load "cmd:url/function2"
-	load "cmd:path/function3"
+	load "shell:root/function1"
+	load "shell:url/function2"
+	load "shell:path/function3"
 	load "go:function4"
 	 
 	// 这里是一个注释
@@ -111,10 +111,10 @@ func TestParseBlocksFull(t *testing.T) {
 // Only load part
 func TestParseBlocksOnlyLoad(t *testing.T) {
 	const testingdata string = `
-load "cmd:function1"
+load "shell:function1"
   load 			 "go:function2"
 
-load "cmd:function3"
+load "shell:function3"
 
 	load 	"go:function4"
 	`
@@ -127,9 +127,9 @@ load "cmd:function3"
 		assert.Equal(t, path, b.target1.String())
 	}
 	// 0 is global block
-	check(blocks[1], "cmd:function1")
+	check(blocks[1], "shell:function1")
 	check(blocks[2], "go:function2")
-	check(blocks[3], "cmd:function3")
+	check(blocks[3], "shell:function3")
 	check(blocks[4], "go:function4")
 }
 
