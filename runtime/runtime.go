@@ -337,14 +337,14 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 		flow.Refresh()
 
 		// Waiting functions at the step to finish
-		abortErr := make([]*functionMetrics, 0)
+		abortErr := make([]error, 0)
 		for i := 0; i < nodes; i++ {
 			m := <-ch
 			// Find the function node that executes with an error
 			m.WithLock(func(body *functionMetricsBody) {
 				ignore := body.node.(actuator.Task).IgnoreFailure()
 				if body.err != nil && !ignore && !errors.Is(body.err, context.Canceled) {
-					abortErr = append(abortErr, m)
+					abortErr = append(abortErr, body.err)
 				}
 			})
 			flow.Refresh()
@@ -353,7 +353,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 
 		// Have an error at the step, so abort the flow
 		if l := len(abortErr); l != 0 {
-			return errors.New("occurred error at step")
+			return errors.New("occurred error at step: " + fmt.Sprintf("%+v", abortErr))
 		}
 		return nil
 	}

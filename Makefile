@@ -10,7 +10,3 @@ test:
 
 clean:
 	rm -rf bin/
-
-install:
-	rm -f ${HOME}/local/bin/cofunc
-	cp bin/cofunc ${HOME}/local/bin/

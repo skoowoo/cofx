@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -14,21 +15,21 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/textline"
 )
 
-var prefixArg = manifest.UsageDesc{
-	Name: "prefix",
-	Desc: "By default, the module field contents are read from the 'go.mod' file",
-}
-
-var bindirArg = manifest.UsageDesc{
-	Name: "bindir",
-	Desc: "",
-}
-
-var mainpkgArg = manifest.UsageDesc{
-	Name: "mainpkg_path",
-	Desc: `Specifies the path of main package, if there are more than one, separated by ','.
+var (
+	prefixArg = manifest.UsageDesc{
+		Name: "prefix",
+		Desc: "By default, the module field contents are read from the 'go.mod' file",
+	}
+	bindirArg = manifest.UsageDesc{
+		Name: "bindir",
+		Desc: "",
+	}
+	mainpkgArg = manifest.UsageDesc{
+		Name: "mainpkg_path",
+		Desc: `Specifies the path of main package, if there are more than one, separated by ','.
  If not specified, the mainpkg is automatically parsed`,
-}
+	}
+)
 
 var _manifest = manifest.Manifest{
 	Name:        "go_build",
@@ -68,25 +69,36 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	fmt.Fprintf(bundle.Logger, "===> mainpkg_path: %s\n", mainpkgPath)
 	fmt.Fprintf(bundle.Logger, "===> bindir      : %s\n", bindir)
 
+	var (
+		platforms = map[string][]string{
+			"linux":   {"CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64"},
+			"windows": {"CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64"},
+			"darwin":  {"CGO_ENABLED=0", "GOOS=darwin", "GOARCH=amd64"},
+		}
+	)
 	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
-		cmd, err := buildCommands(ctx, prefix, bindir, path, bundle.Logger)
-		if err != nil {
-			return nil, err
+		for p, env := range platforms {
+			dstdir := filepath.Join(bindir, p) + "/"
+			cmd, err := buildCommand(ctx, prefix, dstdir, path, bundle.Logger)
+			if err != nil {
+				return nil, err
+			}
+			cmd.Env = append(os.Environ(), env...)
+			if err := cmd.Start(); err != nil {
+				return nil, err
+			}
+			if err := cmd.Wait(); err != nil {
+				return nil, err
+			}
+			fmt.Fprintf(bundle.Logger, "---> %s\n", cmd.String())
 		}
-		if err := cmd.Start(); err != nil {
-			return nil, err
-		}
-		if err := cmd.Wait(); err != nil {
-			return nil, err
-		}
-		fmt.Fprintf(bundle.Logger, "---> %s\n", cmd.String())
 	}
 
 	return nil, nil
 }
 
-func buildCommands(ctx context.Context, prefix, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
+func buildCommand(ctx context.Context, prefix, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
 	var args []string
 	args = append(args, "build")
 	args = append(args, "-o")

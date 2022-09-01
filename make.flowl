@@ -39,6 +39,6 @@ fn build = go_build {
 
 fn gotest = command {
 	args = {
-		"script" : "go test -v ./..."
+		"cmd" : "go test -v ./..."
 	}
 }
