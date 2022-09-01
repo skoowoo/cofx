@@ -17,7 +17,7 @@ func TestCommandFunction(t *testing.T) {
 		Version: "latest",
 	}
 	_, err := ep(context.Background(), bundle, map[string]string{
-		"script": "echo hello cofunc && sleep 2 && echo hello cofunc2",
+		"cmd": "echo hello cofunc && sleep 2 && echo hello cofunc2",
 	})
 	assert.NoError(t, err)
 }

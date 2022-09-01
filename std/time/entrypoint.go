@@ -11,6 +11,62 @@ import (
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
+var (
+	formatArg = manifest.UsageDesc{
+		Name: "format",
+		OptionalValues: []string{
+			"YYYY-MM-DD hh:mm:ss",
+			"YYYY/MM/DD hh:mm:ss",
+			"MM-DD-YYYY hh:mm:ss",
+			"MM/DD/YYYY hh:mm:ss",
+		},
+		Desc: `Specifies the format for getting the current time, default YYYY-MM-DD hh:mm:ss`,
+	}
+	timestampArg = manifest.UsageDesc{
+		Name: "get_timestamp",
+		OptionalValues: []string{
+			"true",
+			"false",
+		},
+		Desc: `Get timestamp in second, default false`,
+	}
+)
+
+var (
+	nowRet = manifest.UsageDesc{
+		Name: "now",
+		Desc: "Current time",
+	}
+	yearRet = manifest.UsageDesc{
+		Name: "year",
+		Desc: "The number of year",
+	}
+	monthRet = manifest.UsageDesc{
+		Name: "month",
+		Desc: "Month",
+	}
+	dayRet = manifest.UsageDesc{
+		Name: "day",
+		Desc: "The number of day",
+	}
+	hourRet = manifest.UsageDesc{
+		Name: "hour",
+		Desc: "The number of hour",
+	}
+	minuteRet = manifest.UsageDesc{
+		Name: "minute",
+		Desc: "The number of minute",
+	}
+	secondRet = manifest.UsageDesc{
+		Name: "second",
+		Desc: "The number of second",
+	}
+	timestampRet = manifest.UsageDesc{
+		Name: "timestamp",
+		Desc: "The number of timestamp",
+	}
+)
+
 var _manifest = manifest.Manifest{
 	Name:        "time",
 	Description: "Used to get the current time information",
@@ -21,60 +77,8 @@ var _manifest = manifest.Manifest{
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args: []manifest.UsageDesc{
-			{
-				Name: "format",
-				OptionalValues: []string{
-					"YYYY-MM-DD hh:mm:ss",
-					"YYYY/MM/DD hh:mm:ss",
-					"MM-DD-YYYY hh:mm:ss",
-					"MM/DD/YYYY hh:mm:ss",
-				},
-				Desc: `Specifies the format for getting the current time`,
-			},
-			{
-				Name: "get_timestamp",
-				OptionalValues: []string{
-					"true",
-					"false",
-				},
-				Desc: `get timestamp in second`,
-			},
-		},
-		ReturnValues: []manifest.UsageDesc{
-			{
-				Name: "now",
-				Desc: "Current time",
-			},
-			{
-				Name: "year",
-				Desc: "The number of year",
-			},
-			{
-				Name: "month",
-				Desc: "Month",
-			},
-			{
-				Name: "day",
-				Desc: "The number of day",
-			},
-			{
-				Name: "hour",
-				Desc: "The number of hour",
-			},
-			{
-				Name: "minute",
-				Desc: "The number of minute",
-			},
-			{
-				Name: "second",
-				Desc: "The number of second",
-			},
-			{
-				Name: "timestamp",
-				Desc: "The number of timestamp",
-			},
-		},
+		Args:         []manifest.UsageDesc{formatArg, timestampArg},
+		ReturnValues: []manifest.UsageDesc{nowRet, timestampRet, yearRet, monthRet, dayRet, hourRet, minuteRet, secondRet},
 	},
 }
 
@@ -83,8 +87,11 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	format := args["format"]
-	getts := args["get_timestamp"]
+	format := args.GetString(formatArg.Name)
+	getts, err := args.GetBool(timestampArg.Name)
+	if err != nil {
+		return nil, err
+	}
 
 	var (
 		now       string
@@ -113,18 +120,18 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	ret := map[string]string{
-		"now":    now,
-		"year":   strconv.Itoa(year),
-		"month":  month,
-		"day":    strconv.Itoa(day),
-		"hour":   strconv.Itoa(hour),
-		"minute": strconv.Itoa(minute),
-		"second": strconv.Itoa(second),
+		nowRet.Name:    now,
+		yearRet.Name:   strconv.Itoa(year),
+		monthRet.Name:  month,
+		dayRet.Name:    strconv.Itoa(day),
+		hourRet.Name:   strconv.Itoa(hour),
+		minuteRet.Name: strconv.Itoa(minute),
+		secondRet.Name: strconv.Itoa(second),
 	}
 
-	if getts == "true" {
+	if getts {
 		timestamp = current.Unix()
-		ret["timestamp"] = fmt.Sprintf("%d", timestamp)
+		ret[timestampRet.Name] = fmt.Sprintf("%d", timestamp)
 	}
 	return ret, nil
 }

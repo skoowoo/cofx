@@ -10,11 +10,21 @@ import (
 	"github.com/cofunclabs/cofunc/manifest"
 )
 
+var cmdArg = manifest.UsageDesc{
+	Name: "cmd",
+	Desc: "specify a command to run",
+}
+
 var _manifest = manifest.Manifest{
-	Name:   "command",
-	Driver: "go",
-	Args: map[string]string{
-		"script": "",
+	Name:           "command",
+	Description:    "Used to run a command",
+	Driver:         "go",
+	Entrypoint:     "",
+	Args:           map[string]string{},
+	RetryOnFailure: 0,
+	IgnoreFailure:  false,
+	Usage: manifest.Usage{
+		Args: []manifest.UsageDesc{cmdArg},
 	},
 }
 
@@ -23,11 +33,11 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	script := args["script"]
-	if script == "" {
-		return nil, errors.New("command function miss 'script' argument")
+	s := args.GetString(cmdArg.Name)
+	if s == "" {
+		return nil, errors.New("command function miss argument: " + cmdArg.Name)
 	}
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script)
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", s)
 	cmd.Stdout = bundle.Logger
 	cmd.Stderr = bundle.Logger
 	if err := cmd.Start(); err != nil {

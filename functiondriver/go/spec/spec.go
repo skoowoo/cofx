@@ -23,6 +23,9 @@ type EntrypointArgs map[string]string
 
 func (e EntrypointArgs) GetString(name string) string {
 	v, _ := e.Get(name, isString)
+	if v == nil {
+		return ""
+	}
 	return v.(string)
 }
 
