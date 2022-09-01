@@ -14,6 +14,7 @@
 # Dependency directories (remove the comment below to include it)
 bin/
 vendor/
+.tmp/
 .cofunc/
 .vscode/
 .VSCode*/
