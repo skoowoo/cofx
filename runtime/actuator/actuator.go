@@ -206,7 +206,9 @@ func (r *RunQueue) generateEventTriggers(blocks []*parser.Block) error {
 func (r *RunQueue) generateSteps(blocks []*parser.Block) error {
 	var (
 		step = 0
-		seq  = 0
+		// the seq number of function node start from 1000, the choice is only for the seq number to have
+		// the same length.
+		seq = 1000
 	)
 	for _, b := range blocks {
 		// filter out the 'co' blocks in 'event' block

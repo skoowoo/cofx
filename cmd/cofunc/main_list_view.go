@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
@@ -78,7 +80,7 @@ func (f flowItem) Title() string {
 }
 
 func (f flowItem) Description() string {
-	return fmt.Sprintf("%d %s %s", f.Total, f.Source, f.Desc)
+	return fmt.Sprintf("%d %s %s", f.Total, strings.TrimPrefix(f.Source, config.FlowSourceDir()), f.Desc)
 }
 
 func (f flowItem) FilterValue() string {

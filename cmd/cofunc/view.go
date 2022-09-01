@@ -13,7 +13,7 @@ var (
 
 	// node & function
 	stepStyle        = lipgloss.NewStyle().Width(5)
-	seqStyle         = lipgloss.NewStyle().Width(4)
+	seqStyle         = lipgloss.NewStyle().Width(6)
 	runsStyle        = lipgloss.NewStyle().Width(6)
 	driverStyle      = lipgloss.NewStyle().Width(8)
 	nameStyle        = lipgloss.NewStyle().Width(20)

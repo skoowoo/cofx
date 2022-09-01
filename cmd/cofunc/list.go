@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/service"
 )
 
@@ -19,8 +21,9 @@ func listFlows() error {
 	// calculate the max length of flow's source field
 	var max int = 20
 	for _, f := range availables {
-		if max < len(f.Source) {
-			max = len(f.Source)
+		source := strings.TrimPrefix(f.Source, config.FlowSourceDir())
+		if max < len(source) {
+			max = len(source)
 		}
 	}
 	sourceStyle := lipgloss.NewStyle().Width(max + 2)
@@ -34,18 +37,19 @@ func listFlows() error {
 			"DESC"))
 
 	for _, f := range availables {
+		source := strings.TrimPrefix(f.Source, config.FlowSourceDir())
 		var s string
 		if f.Total == -1 {
 			s = iconFailed.String() +
 				flowNameStyle.Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
-				sourceStyle.Render(f.Source) +
+				sourceStyle.Render(source) +
 				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
 			s = iconOK.String() +
 				flowNameStyle.Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
-				sourceStyle.Render(f.Source) +
+				sourceStyle.Render(source) +
 				lipgloss.NewStyle().MaxWidth(30).Render(f.Desc)
 		}
 		fmt.Fprintln(os.Stdout, s)
