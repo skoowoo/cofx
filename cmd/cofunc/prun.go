@@ -35,14 +35,14 @@ func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 		fp = meta.Source
 		fid = id
 	} else {
-		fid = nameid.New(service.Path2Name(fp))
+		fid = nameid.New(co.FlowlPath2Name(fp))
 	}
 	f, err := os.Open(fp)
 	if err != nil {
 		return err
 	}
 
-	if err := svc.CreateFlow(ctx, fid, f); err != nil {
+	if err := svc.AddFlow(ctx, fid, f); err != nil {
 		return err
 	}
 	if _, err := svc.ReadyFlow(ctx, fid, false); err != nil {

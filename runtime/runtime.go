@@ -67,8 +67,9 @@ func New() *Runtime {
 	return r
 }
 
-// ParseFlow parse one flowl source file to a flow in runtime, the argument 'rd' is a reader for
-// a flow source file
+// ParseFlow parse one flowl source file, and add a flow into runtime, the argument 'rd' is a reader for
+// a flow source file.
+// After invoking this method, the flow's status is ADDED.
 func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) error {
 	rq, ast, err := actuator.New(rd)
 	if err != nil {
@@ -85,6 +86,7 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) er
 	return nil
 }
 
+// InitFlow initialize the flow and make it into READY status.
 func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogger) error {
 	flow, err := rt.store.get(id.ID())
 	if err != nil {
@@ -173,7 +175,8 @@ func (rt *Runtime) FetchFlow(ctx context.Context, id nameid.ID, do func(*FlowBod
 	return flow.WithLock(do)
 }
 
-func (rt *Runtime) StopFlow(ctx context.Context, id nameid.ID) error {
+// CancelFlow cancel the flow and make it into CANCELED status.
+func (rt *Runtime) CancelFlow(ctx context.Context, id nameid.ID) error {
 	return nil
 }
 

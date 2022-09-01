@@ -15,11 +15,12 @@ import (
 type StatusType string
 
 const (
-	StatusAdded   = StatusType("ADDED")
-	StatusReady   = StatusType("READY")
-	StatusRunning = StatusType("RUNNING")
-	StatusStopped = StatusType("STOPPED")
-	StatusUpdated = StatusType("UPDATED")
+	StatusAdded    = StatusType("ADDED")
+	StatusReady    = StatusType("READY")
+	StatusRunning  = StatusType("RUNNING")
+	StatusStopped  = StatusType("STOPPED")
+	StatusKilled   = StatusType("KILLED")
+	StatusCanceled = StatusType("CANCELED")
 )
 
 type functionMetricsBody struct {

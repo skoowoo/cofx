@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/config"
@@ -17,16 +16,6 @@ import (
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
-
-// Path2Name be used to convert the path of a flowl source file to the flow's name.
-func Path2Name(path string, trimpath ...string) string {
-	if len(trimpath) > 0 {
-		path = strings.TrimPrefix(path, trimpath[0])
-	} else {
-		path = strings.TrimPrefix(path, config.FlowSourceDir())
-	}
-	return co.TruncFlowl(path)
-}
 
 // SVC is the service layer, it provides API to access and manage the flows
 type SVC struct {
@@ -105,8 +94,8 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 	return nil
 }
 
-// CreateFlow parse a flowl source file, then create a flow instance in runtime
-func (s *SVC) CreateFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
+// AddFlow parse a flowl source file and add a flow instance into runtime
+func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
 		return err
@@ -205,7 +194,7 @@ func restoreAvailables(dir string) (map[string]exported.FlowMetaInsight, error) 
 		return nil, fmt.Errorf("%w: walk dir '%s' to list flows", err, dir)
 	}
 	for _, path := range sources {
-		id := nameid.New(Path2Name(path, dir))
+		id := nameid.New(co.FlowlPath2Name(path, dir))
 		meta := exported.FlowMetaInsight{
 			Name: id.Name(),
 			ID:   id.ID(),
