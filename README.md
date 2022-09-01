@@ -283,20 +283,20 @@ tool
 TODO:
 
 ## :paperclip: Architecture Design
-### Core concepts
+### Runtime Core Concepts
 ![](docs/assets/cofunc-core-concept.png)
 
-There are 4 core concepts in CoFUNC architecture design, namely `Flow`, `Node`, `Driver` and `Function`
+There are 4 core concepts in CoFUNC architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
 
-* Flow is a flow written and defined with a `.flowl` file
-* Node is the entity that constitutes a Flow, the object that actually executes and manages Function
-* Driver is the place where the function code is actually executed at the bottom layer. It defines how a function is developed, how to run, where to run, etc.; for example: when we need to add Rust language to develop functions, then we need to implement a Rust driver first
-* Function is the real function, it can be a Go package code, a binary program, a shell script, or a Docker image, etc.
+* `Flow` is a process that's defined through a `.flowl` file
+* `Node` is the entity that makes up a Flow, the node entity executes and manages a Function
+* `Driver` is the place where the function code is actually executed. It defines how a function is developed, how to run, where to run, etc. For example, when we need to add Rust language to develop functions, then we need to implement a Rust driver first
+* `Function` is the real function, it maybe a Go package code, a binary program, a shell script, or a Docker image, etc.
 
 ### flowl
 ![](docs/assets/flowl-parser.png)
 
-flowl adopts the implementation method of lexical and grammar separation. After the syntax analysis is completed to obtain an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
+flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
 ## :surfer: Contribution
 TODO:
