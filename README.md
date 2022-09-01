@@ -15,8 +15,7 @@ Execute 'cofunc' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-        CO_LOG_DIR=<path of a directory>           // Set the log directory
-        CO_FLOW_SOURCE_DIR=<path of a directory>   // Set the flowl source directory
+        COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
 
 Examples:
         cofunc
