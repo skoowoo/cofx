@@ -72,7 +72,7 @@ func (e EntrypointArgs) Get(name string, typ ArgValType) (interface{}, error) {
 type EntrypointBundle struct {
 	Version string
 	Logger  io.Writer
-	Bound   interface{}
+	Custom  Customer
 }
 
 // EntrypointFunc defines the entrypoint type of the function
@@ -81,8 +81,8 @@ type EntrypointFunc func(context.Context, EntrypointBundle, EntrypointArgs) (map
 // CreateCustomFunc can be used to create a custom object for the function
 // The custom object must implement the 'Close' method, godriver can use this method to
 // close or release the custom object.
-type CreateCustomFunc func() Custom
-type Custom interface {
+type CreateCustomFunc func() Customer
+type Customer interface {
 	Close() error
 }
 

@@ -40,7 +40,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	ticker := time.NewTicker(v)
 	select {
 	case <-ticker.C:
-		return nil, nil
+		return map[string]string{"which": _manifest.Name}, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}

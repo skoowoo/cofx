@@ -3,10 +3,15 @@ load "go:print"
 load "go:time"
 load "go:sleep"
 load "go:event_tick"
+load "go:event_cron"
 
+var ev
 event {
-    co event_tick {
-        "duration": "2s"
+    // co event_tick -> ev {
+    //     "duration": "10s"
+    // }
+    co event_cron -> ev {
+        "expr": "*/5 * * * * *"
     }
 }
 
@@ -18,5 +23,5 @@ co sleep {
 }
 co time -> t
 co print {
-    "_" : "$(s) $(t.now)"
+    "_" : "$(t.now) $(ev.which) $(s)"
 }

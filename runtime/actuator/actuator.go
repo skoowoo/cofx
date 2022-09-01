@@ -13,7 +13,6 @@ import (
 )
 
 // RunQueue
-//
 type RunQueue struct {
 	locations         functiondriver.LocationStore
 	configured        map[string]*TaskNode

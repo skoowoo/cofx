@@ -103,6 +103,7 @@ func TestParseFullWithRunq(t *testing.T) {
 
 		blocks, bl, rq, err := loadTestingdata2(testingdata)
 		if err != nil {
+			t.Logf("%v\n", err)
 			t.FailNow()
 		}
 		assert.NoError(t, err)

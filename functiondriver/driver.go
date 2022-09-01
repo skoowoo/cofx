@@ -19,10 +19,12 @@ type Driver interface {
 	FunctionName() string
 	// Manifest returns the manifest of the function associated with the driver
 	Manifest() manifest.Manifest
-	// Load loads the function to the driver
+	// Load loads the function into the driver
 	Load(context.Context, io.Writer) error
 	// Run calls the entrypoint of the function associated with the driver to execute the function code
 	Run(context.Context, map[string]string) (map[string]string, error)
+	// StopAndRelease stops the driver and releases the resources of the driver
+	StopAndRelease(context.Context) error
 }
 
 // New creates a driver instance based on the 'load' information in flowl source file,

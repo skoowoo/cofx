@@ -38,6 +38,10 @@ func (d *CmdDriver) Run(ctx context.Context, args map[string]string) (map[string
 	return nil, nil
 }
 
+func (d *CmdDriver) StopAndRelease(ctx context.Context) error {
+	return nil
+}
+
 func (d *CmdDriver) FunctionName() string {
 	return d.fname
 }

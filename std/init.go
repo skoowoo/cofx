@@ -7,6 +7,7 @@ import (
 	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/std/command"
+	eventcron "github.com/cofunclabs/cofunc/std/events/event_cron"
 	eventtick "github.com/cofunclabs/cofunc/std/events/event_tick"
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
@@ -58,6 +59,7 @@ func init() {
 		gogenerate.New,
 		// event trigger function
 		eventtick.New,
+		eventcron.New,
 	}
 
 	for i, New := range stds {

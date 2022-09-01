@@ -14,15 +14,23 @@ const Name = "go"
 
 // GoDriver
 type GoDriver struct {
-	path       string
-	fname      string
-	version    string
-	manifest   *manifest.Manifest
+	// path is got from 'load' statement in flowl
+	path string
+	// fname is the function name, got from 'load' statement in flowl.
+	fname string
+	// version is the function version that be expected, got from 'load' statement in flowl.
+	version string
+	// manifest be defined by function
+	manifest *manifest.Manifest
+	// entrypoint is a function that's the entry of the function, it's defined by function.
 	entrypoint spec.EntrypointFunc
-	logger     io.Writer
-	bound      spec.Custom
+	// custom is a custom object for function, used to keep some states, it's created by function.
+	custom spec.Customer
+	// logger used to log the output of function
+	logger io.Writer
 }
 
+// New create a new GoDriver instance, the arguments are got from 'load' statement in flowl.
 func New(fname, fpath, version string) *GoDriver {
 	return &GoDriver{
 		path:    fpath,
@@ -31,7 +39,7 @@ func New(fname, fpath, version string) *GoDriver {
 	}
 }
 
-// load go://function
+// Load loads the expected function into the driver.
 func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 	mf, ep, create := std.Lookup(d.fname)
 	if mf == nil || ep == nil {
@@ -39,19 +47,20 @@ func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 	}
 	d.manifest = mf
 	d.entrypoint = ep
-	d.logger = logger
 	if create != nil {
-		d.bound = create()
+		d.custom = create()
 	}
+	d.logger = logger
 	return nil
 }
 
+// Run make the driver to run, then execute the function through the entrypoint.
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	merged := d.mergeArgs(args)
 	bundle := spec.EntrypointBundle{
 		Version: d.version,
 		Logger:  d.logger,
-		Bound:   d.bound,
+		Custom:  d.custom,
 	}
 	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {
@@ -60,14 +69,25 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	return out, nil
 }
 
+// StopAndRelease closes the custom object of the function.
+func (d *GoDriver) StopAndRelease(ctx context.Context) error {
+	if d.custom != nil {
+		return d.custom.Close()
+	}
+	return nil
+}
+
+// FunctionName returns the function name.
 func (d *GoDriver) FunctionName() string {
 	return d.fname
 }
 
+// Name returns the driver name.
 func (d *GoDriver) Name() string {
 	return Name
 }
 
+// Manifest returns the function manifest.
 func (d *GoDriver) Manifest() manifest.Manifest {
 	return *d.manifest
 }
