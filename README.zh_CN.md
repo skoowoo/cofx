@@ -283,8 +283,12 @@ Driver
 TODO:
 
 ## :paperclip: 架构设计
+
+<div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
+
 ### 核心概念
-![](docs/assets/cofunc-core-concept.png)
+
+<div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
 
 CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` 和 `Function`
 
@@ -294,7 +298,8 @@ CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver`
 * Function 就是真正的函数了，它可以是一个 Go package 代码、一个二进制程序、一个 shell 脚本，或者一个 Docker 镜像等等
 
 ### flowl
-![](docs/assets/flowl-parser.png)
+
+<div align=center><img width="70%" height="70%" src="docs/assets/flowl-parser.png"/></div>
 
 flowl 采用词法和语法分离的实现方式，再语法分析完成得出一颗 AST 树后，再将 AST 转换成函数的运行队列，基于运行队列就可以按序执行函数
 
