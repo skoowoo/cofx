@@ -358,244 +358,75 @@ func (ast *AST) scan(lx *lexer) error {
 				return statementTokensErrorf(ErrStatementUnknow, line)
 			}
 		case _ast_fn_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_global)
-				break
+			block, err := ast.parseFnBody(line, ln, parsingblock)
+			if err != nil {
+				return err
 			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_args:
-				block, err := ast.parseArgs(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_args_body)
-			case _kw_var:
-				return ast.parseVar(line, ln, parsingblock)
-			default:
-				if _parse, err := ast._InferTree.lookup(line); err == nil {
-					if err := _parse(parsingblock, line, ln); err != nil {
-						return statementTokensErrorf(err, line)
-					}
-					return nil
-				}
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			if block == nil {
+				panic("block is nil")
 			}
+			parsingblock = block
 		case _ast_args_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_fn_body)
-				break
-			}
-			for _, t := range line {
-				t.ln = ln
-				t._b = parsingblock
-				if err := t.extractVar(); err != nil {
-					return statementTokensErrorf(err, line)
-				}
-			}
-			if err := parsingblock.body.Append(line); err != nil {
+			block, err := ast.parseArgsBody(line, ln, parsingblock)
+			if err != nil {
 				return err
 			}
+			if block == nil {
+				panic("block is nil")
+			}
+			parsingblock = block
 		case _ast_co_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parent := parsingblock.parent
-				if parent.IsFor() {
-					ast._goto(_ast_for_body)
-				} else if parent.IsIf() {
-					ast._goto(_ast_if_body)
-				} else if parent.IsCase() {
-					ast._goto(_ast_case_body)
-				} else if parent.IsDefault() {
-					ast._goto(_ast_default_body)
-				} else if parent.IsEvent() {
-					ast._goto(_ast_event_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				parsingblock = parent
-				break
-			}
-
-			for _, t := range line {
-				t.ln = ln
-				t._b = parsingblock
-				if err := t.extractVar(); err != nil {
-					return statementTokensErrorf(err, line)
-				}
-
-				if !t.IsEmpty() {
-					ast.cos = append(ast.cos, t.String())
-				}
-			}
-			if err := parsingblock.body.Append(line); err != nil {
+			block, err := ast.parseCoBody(line, ln, parsingblock)
+			if err != nil {
 				return err
 			}
+			if block == nil {
+				panic("block is nil")
+			}
+			parsingblock = block
 		case _ast_for_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				// add a 'btf' block into the child of 'for', it represents the end of the loop
-				btf := &Block{
-					kind: Token{
-						str: "btf",
-						typ: _keyword_t,
-					},
-					parent: parsingblock,
-				}
-				parsingblock.child = append(parsingblock.child, btf)
-
-				// back to global
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_global)
-				break
+			block, err := ast.parseForBody(line, ln, parsingblock)
+			if err != nil {
+				return err
 			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			case _kw_if:
-				block, err := ast.parseIf(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_if_body)
-			case _kw_switch:
-				block, err := ast.parseSwitch(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_switch_body)
-			default:
-				if _parse, err := ast._InferTree.lookup(line); err == nil {
-					if err := _parse(parsingblock, line, ln); err != nil {
-						return statementTokensErrorf(err, line)
-					}
-					return nil
-				}
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			if block == nil {
+				panic("block is nil")
 			}
+			parsingblock = block
 		case _ast_if_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				if parsingblock.IsFor() {
-					ast._goto(_ast_for_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				break
+			block, err := ast.parseIfBody(line, ln, parsingblock)
+			if err != nil {
+				return err
 			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			if block == nil {
+				panic("block is nil")
 			}
+			parsingblock = block
 		case _ast_switch_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				// generate condition expression of the 'default'
-				swb := parsingblock
-				var deft *Block
-				for _, c := range swb.child {
-					if c.IsDefault() {
-						deft = c
-						break
-					}
-				}
-
-				if deft != nil {
-					var cases []string
-					for _, c := range swb.child {
-						if c.IsCase() {
-							cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
-						}
-					}
-					s := strings.Join(cases, "&&")
-					deft.target2 = Token{
-						ln:  deft.target1.ln,
-						_b:  deft.target1._b,
-						str: s,
-						typ: _expr_t,
-					}
-					if err := deft.target2.extractVar(); err != nil {
-						return err
-					}
-				}
-
-				// goto
-				parsingblock = parsingblock.parent
-				if parsingblock.IsFor() {
-					ast._goto(_ast_for_body)
-				} else {
-					ast._goto(_ast_global)
-				}
-				break
+			block, err := ast.parseSwitchBody(line, ln, parsingblock)
+			if err != nil {
+				return err
 			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_case:
-				block, err := ast.parseCase(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_case_body)
-			case _kw_default:
-				block, err := ast.parseDefault(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				parsingblock = block
-				ast._goto(_ast_default_body)
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			if block == nil {
+				panic("block is nil")
 			}
+			parsingblock = block
 		case _ast_case_body, _ast_default_body:
-			if _, err := ast.preparse("closed", line, ln, parsingblock); err == nil {
-				parsingblock = parsingblock.parent
-				ast._goto(_ast_switch_body)
-				break
+			block, err := ast.parseCaseDeafultBody(line, ln, parsingblock)
+			if err != nil {
+				return err
 			}
-
-			kind := line[0]
-			switch kind.String() {
-			case _kw_co:
-				block, err := ast.parseCo(line, ln, parsingblock)
-				if err != nil {
-					return err
-				}
-				if block.body != nil {
-					parsingblock = block
-					ast._goto(_ast_co_body)
-				}
-			default:
-				return statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+			if block == nil {
+				panic("block is nil")
 			}
+			parsingblock = block
 		case _ast_event_body:
 			block, err := ast.parseEventBody(line, ln, parsingblock)
 			if err != nil {
 				return err
+			}
+			if block == nil {
+				panic("block is nil")
 			}
 			parsingblock = block
 		}
@@ -683,7 +514,7 @@ func (ast *AST) preparse(k string, line []*Token, ln int, b *Block) (body, error
 	return body, nil
 }
 
-func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
+func (ast *AST) parseVar(line []*Token, ln int, current *Block) error {
 	var composed []*Token
 	if l := len(line); l > 4 {
 		composed = append(composed, line[0:3]...)
@@ -692,7 +523,7 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 	} else {
 		composed = line
 	}
-	if _, err := ast.preparse("var", composed, ln, b); err != nil {
+	if _, err := ast.preparse("var", composed, ln, current); err != nil {
 		return err
 	}
 
@@ -723,68 +554,99 @@ func (ast *AST) parseVar(line []*Token, ln int, b *Block) error {
 	} else {
 		stm = NewStatement("var").Append(name)
 	}
-	if err := b.initVar(stm); err != nil {
+	if err := current.initVar(stm); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ast *AST) parseLoad(line []*Token, ln int, b *Block) error {
-	nb := &Block{
+func (ast *AST) parseLoad(line []*Token, ln int, parent *Block) error {
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("load", line, ln, nb)
+	body, err := ast.preparse("load", line, ln, b)
 	if err != nil {
 		return err
 	}
-	nb.body = body
-	nb.kind = *line[0]
-	nb.target1 = *line[1]
+	b.body = body
+	b.kind = *line[0]
+	b.target1 = *line[1]
 
-	b.child = append(b.child, nb)
+	parent.child = append(parent.child, b)
 	return nil
 }
 
-func (ast *AST) parseFn(line []*Token, ln int, b *Block) (*Block, error) {
-	nb := &Block{
+func (ast *AST) parseFn(line []*Token, ln int, parent *Block) (*Block, error) {
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("fn", line, ln, nb)
+	body, err := ast.preparse("fn", line, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
+	b.body = body
 
 	kind, target, op, tv := line[0], line[1], line[2], line[3]
 
-	nb.kind = *kind
-	nb.target1 = *target
-	nb.operator = *op
-	nb.target2 = *tv
+	b.kind = *kind
+	b.target1 = *target
+	b.operator = *op
+	b.target2 = *tv
 
 	// validate grammar
-	if nb.Target1().StringEqual(&nb.target2) {
-		s1 := nb.target1.String()
-		s2 := nb.target2.String()
+	if b.Target1().StringEqual(&b.target2) {
+		s1 := b.target1.String()
+		s2 := b.target2.String()
 		return nil, parseErrorf(ln, ErrIdentConflict, "'%s', '%s'", s1, s2)
 	}
 
-	if s, ok := ast.fns[nb.Target1().String()]; ok {
+	if s, ok := ast.fns[b.Target1().String()]; ok {
 		return nil, parseErrorf(ln, ErrIdentConflict, "duplicate definition of fn '%s'", s)
 	} else {
-		ast.fns[nb.Target1().String()] = true
+		ast.fns[b.Target1().String()] = true
 	}
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
-	nb := &Block{
-		parent: b,
+func (ast *AST) parseFnBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		ast._goto(_ast_global)
+		return &ast.global, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_args:
+		block, err := ast.parseArgs(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		ast._goto(_ast_args_body)
+		return block, nil
+	case _kw_var:
+		if err := ast.parseVar(line, ln, current); err != nil {
+			return nil, err
+		}
+	default:
+		if _parse, err := ast._InferTree.lookup(line); err == nil {
+			if err := _parse(current, line, ln); err != nil {
+				return nil, statementTokensErrorf(err, line)
+			}
+			return current, nil
+		}
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+	return current, nil
+}
+
+func (ast *AST) parseCo(line []*Token, ln int, parent *Block) (*Block, error) {
+	b := &Block{
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 
@@ -794,23 +656,23 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	)
 	keys := []string{"co1", "co1+", "co2", "co1->", "co1+->"}
 	for _, k := range keys {
-		body, err = ast.preparse(k, line, ln, nb)
+		body, err = ast.preparse(k, line, ln, b)
 		if err == nil {
-			nb.kind = *line[0]
-			nb.body = body
+			b.kind = *line[0]
+			b.body = body
 			switch k {
 			case "co1": // co sleep
-				nb.target1 = *line[1]
+				b.target1 = *line[1]
 			case "co1+": // co sleep {
-				nb.target1 = *line[1]
+				b.target1 = *line[1]
 			case "co1->": // co sleep -> out
-				nb.target1 = *line[1]
-				nb.operator = *line[2]
-				nb.target2 = *line[3]
+				b.target1 = *line[1]
+				b.operator = *line[2]
+				b.target2 = *line[3]
 			case "co1+->": // co sleep -> out {
-				nb.target1 = *line[1]
-				nb.operator = *line[2]
-				nb.target2 = *line[3]
+				b.target1 = *line[1]
+				b.operator = *line[2]
+				b.target2 = *line[3]
 			case "co2": // co {
 			}
 			break
@@ -821,54 +683,109 @@ func (ast *AST) parseCo(line []*Token, ln int, b *Block) (*Block, error) {
 	}
 
 	// check grammar
-	if nb.Target1().StringEqual(&nb.target2) {
-		s1 := nb.target1.String()
-		s2 := nb.target2.String()
+	if b.Target1().StringEqual(&b.target2) {
+		s1 := b.target1.String()
+		s2 := b.target2.String()
 		return nil, parseErrorf(ln, ErrIdentConflict, "'%s','%s'", s1, s2)
 	}
 
 	// check return value variable
-	if !nb.target2.IsEmpty() {
-		name := nb.target2.String()
-		if v, _ := nb.getVar(name); v == nil {
-			return nil, varErrorf(nb.target2.ln, ErrVariableNotDefined, "'%s'", name)
+	if !b.target2.IsEmpty() {
+		name := b.target2.String()
+		if v, _ := b.getVar(name); v == nil {
+			return nil, varErrorf(b.target2.ln, ErrVariableNotDefined, "'%s'", name)
 		}
 	}
 
 	// when co is in switch, add the condition var statement
-	if nb.IsCo() && (nb.Parent().IsCase() || nb.Parent().IsDefault()) {
-		stm := NewStatement("var").Append(nb.Parent().Target1()).Append(nb.Parent().Target2())
-		if err := nb.initVar(stm); err != nil {
+	if b.IsCo() && (b.Parent().IsCase() || b.Parent().IsDefault()) {
+		stm := NewStatement("var").Append(b.Parent().Target1()).Append(b.Parent().Target2())
+		if err := b.initVar(stm); err != nil {
 			return nil, err
 		}
 	}
 
-	if !nb.Target1().IsEmpty() {
-		ast.cos = append(ast.cos, nb.Target1().String())
+	if !b.Target1().IsEmpty() {
+		ast.cos = append(ast.cos, b.Target1().String())
 	}
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseArgs(line []*Token, ln int, b *Block) (*Block, error) {
-	nb := &Block{
+func (ast *AST) parseCoBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		parent := current.parent
+		if parent.IsFor() {
+			ast._goto(_ast_for_body)
+		} else if parent.IsIf() {
+			ast._goto(_ast_if_body)
+		} else if parent.IsCase() {
+			ast._goto(_ast_case_body)
+		} else if parent.IsDefault() {
+			ast._goto(_ast_default_body)
+		} else if parent.IsEvent() {
+			ast._goto(_ast_event_body)
+		} else {
+			ast._goto(_ast_global)
+		}
+		return parent, nil
+	}
+
+	for _, t := range line {
+		t.ln = ln
+		t._b = current
+		if err := t.extractVar(); err != nil {
+			return nil, statementTokensErrorf(err, line)
+		}
+
+		if !t.IsEmpty() {
+			ast.cos = append(ast.cos, t.String())
+		}
+	}
+	if err := current.body.Append(line); err != nil {
+		return nil, err
+	}
+	return current, nil
+}
+
+func (ast *AST) parseArgs(line []*Token, ln int, parent *Block) (*Block, error) {
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("args", line, ln, nb)
+	body, err := ast.preparse("args", line, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *line[0]
+	b.body = body
+	b.kind = *line[0]
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
+func (ast *AST) parseArgsBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		parent := current.parent
+		ast._goto(_ast_fn_body)
+		return parent, nil
+	}
+	for _, t := range line {
+		t.ln = ln
+		t._b = current
+		if err := t.extractVar(); err != nil {
+			return nil, statementTokensErrorf(err, line)
+		}
+	}
+	if err := current.body.Append(line); err != nil {
+		return nil, err
+	}
+	return current, nil
+}
+
+func (ast *AST) parseFor(line []*Token, ln int, parent *Block) (*Block, error) {
 	var composed []*Token
 	l := len(line)
 	if l > 2 {
@@ -882,47 +799,101 @@ func (ast *AST) parseFor(line []*Token, ln int, b *Block) (*Block, error) {
 		composed = line
 	}
 
-	nb := &Block{
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
 	if len(composed) == 2 {
-		body, err := ast.preparse("for1", composed, ln, nb)
+		body, err := ast.preparse("for1", composed, ln, b)
 		if err != nil {
 			return nil, err
 		}
-		nb.body = body
-		nb.kind = *composed[0]
+		b.body = body
+		b.kind = *composed[0]
 	} else {
-		body, err := ast.preparse("for2", composed, ln, nb)
+		body, err := ast.preparse("for2", composed, ln, b)
 		if err != nil {
 			return nil, err
 		}
-		nb.body = body
-		nb.kind = *composed[0]
-		nb.target1 = Token{
+		b.body = body
+		b.kind = *composed[0]
+		b.target1 = Token{
 			ln:  ln,
-			_b:  nb,
+			_b:  b,
 			str: _condition_expr_var,
 			typ: _varname_t,
 		}
-		nb.target2 = *composed[1]
+		b.target2 = *composed[1]
 
 		// add the condition var statement
-		if !nb.Target1().IsEmpty() && !nb.Target2().IsEmpty() {
-			stm := NewStatement("var").Append(nb.Target1()).Append(nb.Target2())
-			if err := nb.initVar(stm); err != nil {
+		if !b.Target1().IsEmpty() && !b.Target2().IsEmpty() {
+			stm := NewStatement("var").Append(b.Target1()).Append(b.Target2())
+			if err := b.initVar(stm); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
+func (ast *AST) parseForBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		// add a 'btf' block into the child of 'for', it represents the end of the loop
+		btf := &Block{
+			kind: Token{
+				str: "btf",
+				typ: _keyword_t,
+			},
+			parent: current,
+		}
+		current.child = append(current.child, btf)
+
+		// back to global
+		ast._goto(_ast_global)
+		return current.parent, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_co:
+		block, err := ast.parseCo(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		if block.body != nil {
+			ast._goto(_ast_co_body)
+			return block, nil
+		}
+	case _kw_if:
+		block, err := ast.parseIf(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		ast._goto(_ast_if_body)
+		return block, nil
+	case _kw_switch:
+		block, err := ast.parseSwitch(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		ast._goto(_ast_switch_body)
+		return block, nil
+	default:
+		if _parse, err := ast._InferTree.lookup(line); err == nil {
+			if err := _parse(current, line, ln); err != nil {
+				return nil, statementTokensErrorf(err, line)
+			}
+			return current, nil
+		}
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+	return current, nil
+}
+
+func (ast *AST) parseIf(line []*Token, ln int, parent *Block) (*Block, error) {
 	var (
 		composed []*Token
 	)
@@ -937,47 +908,137 @@ func (ast *AST) parseIf(line []*Token, ln int, b *Block) (*Block, error) {
 		composed = line
 	}
 
-	nb := &Block{
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("if", composed, ln, nb)
+	body, err := ast.preparse("if", composed, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *composed[0]
-	nb.target1 = Token{
+	b.body = body
+	b.kind = *composed[0]
+	b.target1 = Token{
 		ln:  ln,
-		_b:  nb,
+		_b:  b,
 		str: _condition_expr_var,
 		typ: _varname_t,
 	}
-	nb.target2 = *composed[1]
+	b.target2 = *composed[1]
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseSwitch(line []*Token, ln int, b *Block) (*Block, error) {
-	nb := &Block{
+func (ast *AST) parseIfBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		parent := current.parent
+		if parent.IsFor() {
+			ast._goto(_ast_for_body)
+		} else {
+			ast._goto(_ast_global)
+		}
+		return parent, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_co:
+		block, err := ast.parseCo(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		if block.body != nil {
+			ast._goto(_ast_co_body)
+			return block, nil
+		}
+	default:
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+	return current, nil
+}
+
+func (ast *AST) parseSwitch(line []*Token, ln int, parent *Block) (*Block, error) {
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("switch", line, ln, nb)
+	body, err := ast.preparse("switch", line, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *line[0]
+	b.body = body
+	b.kind = *line[0]
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
+func (ast *AST) parseSwitchBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		// generate condition expression of the 'default'
+		swb := current
+		var deft *Block
+		for _, c := range swb.child {
+			if c.IsDefault() {
+				deft = c
+				break
+			}
+		}
+
+		if deft != nil {
+			var cases []string
+			for _, c := range swb.child {
+				if c.IsCase() {
+					cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
+				}
+			}
+			s := strings.Join(cases, "&&")
+			deft.target2 = Token{
+				ln:  deft.target1.ln,
+				_b:  deft.target1._b,
+				str: s,
+				typ: _expr_t,
+			}
+			if err := deft.target2.extractVar(); err != nil {
+				return nil, err
+			}
+		}
+
+		// goto
+		parent := current.parent
+		if parent.IsFor() {
+			ast._goto(_ast_for_body)
+		} else {
+			ast._goto(_ast_global)
+		}
+		return parent, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_case:
+		block, err := ast.parseCase(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		ast._goto(_ast_case_body)
+		return block, nil
+	case _kw_default:
+		block, err := ast.parseDefault(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		ast._goto(_ast_default_body)
+		return block, nil
+	default:
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+}
+
+func (ast *AST) parseCase(line []*Token, ln int, parent *Block) (*Block, error) {
 	var composed []*Token
 	if l := len(line); l > 3 {
 		// first
@@ -990,79 +1051,103 @@ func (ast *AST) parseCase(line []*Token, ln int, b *Block) (*Block, error) {
 		composed = line
 	}
 
-	nb := &Block{
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("case", composed, ln, nb)
+	body, err := ast.preparse("case", composed, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *composed[0]
-	nb.target1 = Token{
+	b.body = body
+	b.kind = *composed[0]
+	b.target1 = Token{
 		ln:  ln,
-		_b:  nb,
+		_b:  b,
 		str: _condition_expr_var,
 		typ: _varname_t,
 	}
-	nb.target2 = *composed[1]
+	b.target2 = *composed[1]
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseDefault(line []*Token, ln int, b *Block) (*Block, error) {
+func (ast *AST) parseDefault(line []*Token, ln int, parent *Block) (*Block, error) {
 	// Only one defaul statement inside a switch, so check it
-	for _, c := range b.child {
+	for _, c := range parent.child {
 		if c.IsDefault() {
 			return nil, statementErrorf(ln, ErrStatementTooMany, "default in swith")
 		}
 	}
 
-	nb := &Block{
+	b := &Block{
 		child:  []*Block{},
-		parent: b,
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("default", line, ln, nb)
+	body, err := ast.preparse("default", line, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *line[0]
+	b.body = body
+	b.kind = *line[0]
 
-	nb.target1 = Token{
+	b.target1 = Token{
 		ln:  ln,
-		_b:  nb,
+		_b:  b,
 		str: _condition_expr_var,
 		typ: _varname_t,
 	}
 	// nb.target2 = ? (handle target2 at 'switch body' closed)
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseEvent(line []*Token, ln int, b *Block) (*Block, error) {
-	nb := &Block{
-		parent: b,
+func (ast *AST) parseCaseDeafultBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
+		parent := current.parent
+		ast._goto(_ast_switch_body)
+		return parent, nil
+	}
+
+	kind := line[0]
+	switch kind.String() {
+	case _kw_co:
+		block, err := ast.parseCo(line, ln, current)
+		if err != nil {
+			return nil, err
+		}
+		if block.body != nil {
+			ast._goto(_ast_co_body)
+			return block, nil
+		}
+	default:
+		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
+	}
+	return current, nil
+}
+
+func (ast *AST) parseEvent(line []*Token, ln int, parent *Block) (*Block, error) {
+	b := &Block{
+		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("event", line, ln, nb)
+	body, err := ast.preparse("event", line, ln, b)
 	if err != nil {
 		return nil, err
 	}
-	nb.body = body
-	nb.kind = *line[0]
+	b.body = body
+	b.kind = *line[0]
 
-	b.child = append(b.child, nb)
-	return nb, nil
+	parent.child = append(parent.child, b)
+	return b, nil
 }
 
-func (ast *AST) parseEventBody(line []*Token, ln int, b *Block) (*Block, error) {
-	if _, err := ast.preparse("closed", line, ln, b); err == nil {
+func (ast *AST) parseEventBody(line []*Token, ln int, current *Block) (*Block, error) {
+	if _, err := ast.preparse("closed", line, ln, current); err == nil {
 		ast._goto(_ast_global)
 		return &ast.global, nil
 	}
@@ -1070,7 +1155,7 @@ func (ast *AST) parseEventBody(line []*Token, ln int, b *Block) (*Block, error) 
 	kind := line[0]
 	switch kind.String() {
 	case _kw_co:
-		block, err := ast.parseCo(line, ln, b)
+		block, err := ast.parseCo(line, ln, current)
 		if err != nil {
 			return nil, err
 		}
@@ -1083,7 +1168,7 @@ func (ast *AST) parseEventBody(line []*Token, ln int, b *Block) (*Block, error) 
 		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 	}
 	// don't goto, keep parsing the body of 'event'
-	return b, nil
+	return current, nil
 }
 
 type _FA struct {
