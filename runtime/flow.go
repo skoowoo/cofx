@@ -58,6 +58,30 @@ func (fs *functionStatistics) IsStatus(status StatusType) bool {
 	return fs.status == status
 }
 
+func (fs *functionStatistics) ToRuning() {
+	fs.WithLock(func(body *functionStatisticsBody) {
+		body.begin = time.Now()
+		body.status = StatusRunning
+	})
+}
+
+func (fs *functionStatistics) ToStopped(err error) {
+	fs.WithLock(func(body *functionStatisticsBody) {
+		body.err = err
+		body.end = time.Now()
+		body.duration = body.end.Sub(body.begin).Milliseconds()
+		body.status = StatusStopped
+		body.runs += 1
+
+		if body.err != nil {
+			if body.err == actuator.ErrConditionIsFalse {
+				body.err = nil
+				body.runs -= 1
+			}
+		}
+	})
+}
+
 type progress struct {
 	// Stored seq number of all nodes in a flow
 	nodes []int
@@ -165,6 +189,7 @@ func (f *Flow) WithLock(exec func(body *FlowBody) error) error {
 	return exec(&f.FlowBody)
 }
 
+// Refresh figures out the status and statistics of the flow based on the function statistics.
 func (f *Flow) Refresh() error {
 	f.Lock()
 	defer f.Unlock()
@@ -217,6 +242,7 @@ func (f *Flow) IsAdded() bool {
 	return f.status == StatusAdded
 }
 
+// ToReady set the flow to ready status, when they are stopped.
 func (f *Flow) ToReady() error {
 	if f.IsReady() {
 		return nil
@@ -251,6 +277,30 @@ func (f *Flow) ToReady() error {
 	return f.Refresh()
 }
 
+// ToRunning set the flow to running status and the begin time of the last running
+func (f *Flow) ToRuning() {
+	if f.IsRunning() {
+		return
+	}
+	f.WithLock(func(body *FlowBody) error {
+		body.begin = time.Now()
+		body.status = StatusRunning
+		return nil
+	})
+}
+
+// ToStopped set the flow to stopped status and figure out the duration of the last running
+func (f *Flow) ToStopped() {
+	if f.IsStopped() {
+		return
+	}
+	f.WithLock(func(body *FlowBody) error {
+		body.status = StatusStopped
+		body.duration = time.Since(body.begin).Milliseconds()
+		return nil
+	})
+}
+
 func (f *Flow) GetRunQ() *actuator.RunQueue {
 	f.Lock()
 	defer f.Unlock()
@@ -263,6 +313,7 @@ func (f *Flow) GetAST() *parser.AST {
 	return f.ast
 }
 
+// GetStatistics returns the statistics of the function node, 'seq' is the sequence id of the function node.
 func (f *Flow) GetStatistics(seq int) *functionStatistics {
 	f.Lock()
 	defer f.Unlock()

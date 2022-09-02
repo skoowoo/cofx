@@ -288,40 +288,33 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 		return fmt.Errorf("not ready: flow %s", id.ID())
 	}
 
-	execOneStep := func(batch []actuator.Node) error {
+	flow.ToRuning()
+	defer flow.ToStopped()
+
+	err = flow.GetRunQ().WalkAndExec(ctx, rt.execStepFunc(ctx, flow))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rt *Runtime) execStepFunc(ctx context.Context, f *Flow) func([]actuator.Node) error {
+	return func(batch []actuator.Node) error {
 		ch := make(chan *functionStatistics, len(batch))
 		nodes := len(batch)
 
 		// parallel run functions at the step
 		for _, n := range batch {
-			statistics := flow.GetStatistics(n.(actuator.Task).Seq())
-			statistics.WithLock(func(body *functionStatisticsBody) {
-				body.begin = time.Now()
-				body.status = StatusRunning
-			})
-			flow.Refresh()
+			f.GetStatistics(n.(actuator.Task).Seq()).ToRuning()
+			f.Refresh()
 
-			go func(node actuator.Node, fs *functionStatistics) {
+			go func(node actuator.Node) {
+				fs := f.GetStatistics(node.(actuator.Task).Seq())
 				retries := node.(actuator.Task).RetryOnFailure() + 1
 				// Start to execute the function node, it will call the function driver to execute the function code
 				for i := 0; i < retries; i++ {
 					err := node.Exec(ctx)
-
-					// Update the statistics of the function node execution
-					fs.WithLock(func(body *functionStatisticsBody) {
-						body.err = err
-						body.end = time.Now()
-						body.duration = body.end.Sub(body.begin).Milliseconds()
-						body.status = StatusStopped
-						body.runs += 1
-
-						if body.err != nil {
-							if body.err == actuator.ErrConditionIsFalse {
-								body.err = nil
-								body.runs -= 1
-							}
-						}
-					})
+					fs.ToStopped(err)
 
 					// Retry if have an error
 					if err != nil && err != actuator.ErrConditionIsFalse {
@@ -332,9 +325,8 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 				}
 				// Send the result of the function execution to make it stopped really
 				ch <- fs
-			}(n, statistics)
+			}(n)
 		} // End of start batch
-		flow.Refresh()
 
 		// Waiting functions at the step to finish
 		abortErr := make([]error, 0)
@@ -347,9 +339,8 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 					abortErr = append(abortErr, body.err)
 				}
 			})
-			flow.Refresh()
+			f.Refresh()
 		}
-		flow.Refresh()
 
 		// Have an error at the step, so abort the flow
 		if l := len(abortErr); l != 0 {
@@ -357,19 +348,4 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 		}
 		return nil
 	}
-	flow.WithLock(func(body *FlowBody) error {
-		body.begin = time.Now()
-		body.status = StatusRunning
-		return nil
-	})
-	err = flow.GetRunQ().WalkAndExec(ctx, execOneStep)
-	flow.WithLock(func(body *FlowBody) error {
-		body.status = StatusStopped
-		body.duration = time.Since(body.begin).Milliseconds()
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
