@@ -57,7 +57,7 @@ co print {
 
 Run the code:
 
-<div align=left><img width="80%" height="80%" src="docs/assets/hello.gif"/></div>
+![](./docs/assets/hello.gif)
 
 The flowl source file needs to use the `.flowl` extension to be executed.
 
@@ -285,7 +285,7 @@ TODO:
 ## :paperclip: Architecture Design
 ### Runtime Core Concepts
 
-<div align=center><img width="70%" height="70%" src="docs/assets/cofunc-core-concept.png"/></div>
+<div align=center><img width="60%" height="60%" src="docs/assets/cofunc-core-concept.png"/></div>
 
 There are 4 core concepts in CoFUNC architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
 
