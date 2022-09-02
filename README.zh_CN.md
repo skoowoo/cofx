@@ -283,9 +283,12 @@ Driver
 TODO:
 
 ## :paperclip: 架构设计
+
+<div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
+
 ### 核心概念
 
-<div align=center><img width="60%" height="60%" src="docs/assets/cofunc-core-concept.png"/></div>
+<div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
 
 CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` 和 `Function`
 

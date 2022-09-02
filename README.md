@@ -283,9 +283,12 @@ tool
 TODO:
 
 ## :paperclip: Architecture Design
+
+<div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
+
 ### Runtime Core Concepts
 
-<div align=center><img width="60%" height="60%" src="docs/assets/cofunc-core-concept.png"/></div>
+<div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
 
 There are 4 core concepts in CoFUNC architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
 
