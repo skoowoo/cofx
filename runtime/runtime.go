@@ -98,13 +98,13 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 
 	ready := func(body *FlowBody) error {
 		body.status = StatusReady
-		body.metrics = make(map[int]*functionMetrics)
+		body.statistics = make(map[int]*functionStatistics)
 
 		// Initialize all task nodes
 		err := body.runq.WalkNode(func(node actuator.Node) error {
 			seq := node.(actuator.Task).Seq()
-			body.metrics[seq] = &functionMetrics{
-				functionMetricsBody: functionMetricsBody{
+			body.statistics[seq] = &functionStatistics{
+				functionStatisticsBody: functionStatisticsBody{
 					fid:    body.id,
 					node:   node,
 					status: StatusReady,
@@ -289,26 +289,26 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 	}
 
 	execOneStep := func(batch []actuator.Node) error {
-		ch := make(chan *functionMetrics, len(batch))
+		ch := make(chan *functionStatistics, len(batch))
 		nodes := len(batch)
 
 		// parallel run functions at the step
 		for _, n := range batch {
-			metrics := flow.GetMetrics(n.(actuator.Task).Seq())
-			metrics.WithLock(func(body *functionMetricsBody) {
+			statistics := flow.GetStatistics(n.(actuator.Task).Seq())
+			statistics.WithLock(func(body *functionStatisticsBody) {
 				body.begin = time.Now()
 				body.status = StatusRunning
 			})
 			flow.Refresh()
 
-			go func(node actuator.Node, fm *functionMetrics) {
+			go func(node actuator.Node, fs *functionStatistics) {
 				retries := node.(actuator.Task).RetryOnFailure() + 1
 				// Start to execute the function node, it will call the function driver to execute the function code
 				for i := 0; i < retries; i++ {
 					err := node.Exec(ctx)
 
 					// Update the statistics of the function node execution
-					fm.WithLock(func(body *functionMetricsBody) {
+					fs.WithLock(func(body *functionStatisticsBody) {
 						body.err = err
 						body.end = time.Now()
 						body.duration = body.end.Sub(body.begin).Milliseconds()
@@ -331,17 +331,17 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 					}
 				}
 				// Send the result of the function execution to make it stopped really
-				ch <- fm
-			}(n, metrics)
+				ch <- fs
+			}(n, statistics)
 		} // End of start batch
 		flow.Refresh()
 
 		// Waiting functions at the step to finish
 		abortErr := make([]error, 0)
 		for i := 0; i < nodes; i++ {
-			m := <-ch
+			fs := <-ch
 			// Find the function node that executes with an error
-			m.WithLock(func(body *functionMetricsBody) {
+			fs.WithLock(func(body *functionStatisticsBody) {
 				ignore := body.node.(actuator.Task).IgnoreFailure()
 				if body.err != nil && !ignore && !errors.Is(body.err, context.Canceled) {
 					abortErr = append(abortErr, body.err)

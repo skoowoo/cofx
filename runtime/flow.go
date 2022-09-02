@@ -23,7 +23,7 @@ const (
 	StatusCanceled = StatusType("CANCELED")
 )
 
-type functionMetricsBody struct {
+type functionStatisticsBody struct {
 	// Flow id
 	fid nameid.ID
 	// The start time of the last running
@@ -41,21 +41,21 @@ type functionMetricsBody struct {
 	node   actuator.Node
 }
 
-type functionMetrics struct {
+type functionStatistics struct {
 	sync.Mutex
-	functionMetricsBody
+	functionStatisticsBody
 }
 
-func (fm *functionMetrics) WithLock(exec func(body *functionMetricsBody)) {
-	fm.Lock()
-	defer fm.Unlock()
-	exec(&fm.functionMetricsBody)
+func (fs *functionStatistics) WithLock(exec func(body *functionStatisticsBody)) {
+	fs.Lock()
+	defer fs.Unlock()
+	exec(&fs.functionStatisticsBody)
 }
 
-func (fm *functionMetrics) IsStatus(status StatusType) bool {
-	fm.Lock()
-	defer fm.Unlock()
-	return fm.status == status
+func (fs *functionStatistics) IsStatus(status StatusType) bool {
+	fs.Lock()
+	defer fs.Unlock()
+	return fs.status == status
 }
 
 type progress struct {
@@ -95,9 +95,9 @@ type FlowBody struct {
 	begin time.Time
 	// The duration of the last running
 	duration int64
-	// Save the result metrics of function execution
-	// the map is seq->functionMetrics
-	metrics map[int]*functionMetrics
+	// Save the result statistics of function execution
+	// the map is seq->functionStatistics
+	statistics map[int]*functionStatistics
 	// Saved the execution progress of all nodes
 	progress progress
 
@@ -124,8 +124,8 @@ func (b *FlowBody) Export() exported.FlowRunningInsight {
 		Done:     len(b.progress.done),
 	}
 	for _, seq := range b.progress.nodes {
-		fm := b.metrics[seq]
-		fm.WithLock(func(mb *functionMetricsBody) {
+		fm := b.statistics[seq]
+		fm.WithLock(func(mb *functionStatisticsBody) {
 			insight.Nodes = append(insight.Nodes, exported.NodeRunningInsight{
 				Seq:       seq,
 				Step:      mb.node.(actuator.Task).Step(),
@@ -174,12 +174,12 @@ func (f *Flow) Refresh() error {
 	}
 	var isready bool = true
 	f.progress.Reset()
-	for seq, m := range f.metrics {
-		m.WithLock(func(body *functionMetricsBody) {
-			if m.status != StatusReady {
+	for seq, s := range f.statistics {
+		s.WithLock(func(body *functionStatisticsBody) {
+			if s.status != StatusReady {
 				isready = false
 			}
-			switch m.status {
+			switch s.status {
 			case StatusStopped:
 				f.progress.PutDone(seq)
 			case StatusRunning:
@@ -227,13 +227,13 @@ func (f *Flow) ToReady() error {
 		f.Lock()
 		defer f.Unlock()
 
-		for _, m := range f.metrics {
-			if !m.IsStatus(StatusStopped) {
+		for _, s := range f.statistics {
+			if !s.IsStatus(StatusStopped) {
 				return errors.New("not stopped")
 			}
 		}
-		for _, m := range f.metrics {
-			m.WithLock(func(body *functionMetricsBody) {
+		for _, s := range f.statistics {
+			s.WithLock(func(body *functionStatisticsBody) {
 				body.status = StatusReady
 				body.begin = time.Time{}
 				body.end = time.Time{}
@@ -263,8 +263,8 @@ func (f *Flow) GetAST() *parser.AST {
 	return f.ast
 }
 
-func (f *Flow) GetMetrics(seq int) *functionMetrics {
+func (f *Flow) GetStatistics(seq int) *functionStatistics {
 	f.Lock()
 	defer f.Unlock()
-	return f.metrics[seq]
+	return f.statistics[seq]
 }
