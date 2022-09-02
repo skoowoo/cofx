@@ -57,7 +57,7 @@ co print {
 
 Run the code:
 
-![](./docs/assets/hello.gif)
+<div align=left><img width="80%" height="80%" src="docs/assets/hello.gif"/></div>
 
 The flowl source file needs to use the `.flowl` extension to be executed.
 
@@ -284,7 +284,8 @@ TODO:
 
 ## :paperclip: Architecture Design
 ### Runtime Core Concepts
-![](docs/assets/cofunc-core-concept.png)
+
+<div align=center><img width="70%" height="70%" src="docs/assets/cofunc-core-concept.png"/></div>
 
 There are 4 core concepts in CoFUNC architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
 
@@ -294,7 +295,8 @@ There are 4 core concepts in CoFUNC architecture design when it's running, namel
 * `Function` is the real function, it maybe a Go package code, a binary program, a shell script, or a Docker image, etc.
 
 ### flowl
-![](docs/assets/flowl-parser.png)
+
+<div align=center><img width="70%" height="70%" src="docs/assets/flowl-parser.png"/></div>
 
 flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
