@@ -55,11 +55,6 @@ func (o *Logfile) Read(p []byte) (int, error) {
 	return o.file.Read(p)
 }
 
-// TODO:
-func (o *Logfile) ReadLine() {
-
-}
-
 func (o *Logfile) IsFile() bool {
 	o.Lock()
 	defer o.Unlock()

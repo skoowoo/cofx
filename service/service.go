@@ -96,11 +96,9 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 
 // AddFlow parse a flowl source file and add a flow instance into runtime
 func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
+	defer rd.Close()
 	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
-		rd.Close()
 		return err
-	} else {
-		rd.Close()
 	}
 	return nil
 }

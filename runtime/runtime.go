@@ -46,8 +46,6 @@ type Event struct {
 	execute func(id nameid.ID) error
 }
 
-// Runtime
-//
 type Runtime struct {
 	store  *flowstore
 	events chan Event
@@ -161,7 +159,7 @@ func (rt *Runtime) Stopped2Ready(ctx context.Context, id nameid.ID) error {
 	return flow.ToReady()
 }
 
-// MustReay is a simple wrapper of Stopped2Ready
+// MustReay is a thin wrapper of Stopped2Ready
 func (rt *Runtime) MustReady(ctx context.Context, id nameid.ID) error {
 	return rt.Stopped2Ready(ctx, id)
 }
