@@ -4,31 +4,32 @@
 
 CoFUNC is an automation engine based on function fabric, which can be used to build automated function flows through the combination of functions. FlowL is a `function fabric` language embedded in CoFUNC, which provides some features such as function events, function operation and management from the language.
 
-- [You Can](#-bicyclist--you-can)
-- [Installation Guide](#-beer--installation-guide)
-- [CLI](#-gift--cli)
-- [FlowL](#-rocket--flowl)
-  * [Hello World](#hello-world)
+- [You Can](#you-can)
+- [Installation Guide](#installation-guide)
+- [CLI](#cli)
+- [FlowL - A small language](#flowl---a-small-language)
+  * [Hello World - The first program](#hello-world---the-first-program)
   * [Grammar Introduction](#grammar-introduction)
-    + [Comment](#-balloon--comment)
-    + [load](#-balloon--load)
-    + [variable](#-balloon--variable)
-    + [fn](#-balloon--fn)
-    + [co](#-balloon--co)
-    + [switch](#-balloon--switch)
-    + [for loop](#-balloon--for-loop)
-- [Standard library](#-bullettrain-side--standard-library)
-- [Some important design rules](#-bangbang--some-important-design-rules)
-- [TODOs](#-pushpin--todos)
-- [Architecture Design](#-paperclip--architecture-design)
+    + [Comment](#comment)
+    + [load](#load)
+    + [variable](#variable)
+    + [fn](#fn)
+    + [co](#co)
+    + [switch](#switch)
+    + [for loop](#for-loop)
+- [Standard library](#standard-library)
+- [TODOs](#todos)
+- [Some Important Design Rules](#some-important-design-rules)
+- [Architecture Design](#architecture-design)
   * [Runtime Core Concepts](#runtime-core-concepts)
   * [flowl](#flowl)
-- [Contribution](#-surfer--contribution)
+- [Contribution](#contribution)
+- [Thanks](#thanks)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 
-## :bicyclist: You Can
+## You Can
 * Build CI/CD, DevOps toolchains
 * Build workflows
 * Build a distributed task system
@@ -39,10 +40,10 @@ CoFUNC is an automation engine based on function fabric, which can be used to bu
 * Build personal local automated bots
 * ...
 
-## :beer: Installation Guide
+## Installation Guide
 TODO:
 
-## :gift: CLI
+## CLI
 ```
 // cofunc -h
 
@@ -76,10 +77,10 @@ Flags:
   -h, --help   help for cofunc
 ```
 
-## :rocket: FlowL
+## FlowL - A small language
 Flowl is a small language that be used to `function fabric`; The syntax is very minimal and simple. Currently, it supports function load, function configuration, function operation, variable definition and operation, embedded variable into string, for loop, switch conditional statement, etc.
 
-### Hello World
+### Hello World - The first program
 helloworld.flowl code content:
 ```go
 // cat examples/helloworld.flowl
@@ -100,10 +101,10 @@ Run the code:
 The flowl source file needs to use the `.flowl` extension to be executed.
 
 ### Grammar Introduction
-#### :balloon: Comment
+#### Comment
 Use `//` to add code comments. :warning: Note that only exclusive line comments are provided, not support end-of-line comments.
 
-#### :balloon: load
+#### load
 load is used to load a function, for example: load the function 'print'
 
 ```go
@@ -114,7 +115,7 @@ load go:print
 
 All functions need to be loaded before they can be used.
 
-#### :balloon: variable
+#### variable
 The `var` keyword can define a variable, :warning: Note: The variable itself has no type, but the built-in default distinguishes between strings and numbers, and numeric variables can perform arithmetic operations.
 
 ```go
@@ -137,7 +138,7 @@ a <- "bar
 
 > `<-` can be used in global, fn, for scopes
 
-#### :balloon: fn
+#### fn
 fn configures a function and configures the parameters required for the function to run, such as:
 
 ```go
@@ -155,7 +156,7 @@ args is a built-in function configuration item, which represents the parameters 
 > * In the definition of `fn`, the function alias and the real function name cannot be the same
 > * `fn` can only be used in the global scope
 
-#### :balloon: co
+#### co
 co is taken from the prefix of coroutine, and is also similar to the go keyword of the Go language. The co keyword is to start running a function. For example: use co to run the print function, output Hello World!
 
 ```go
@@ -232,7 +233,7 @@ co {
 
 > `co` can only be used in global, for, switch scopes
 
-#### :balloon: switch
+#### switch
 
 `switch + case` can choose to execute `co` according to the condition. A case statement contains a conditional expression and a co statement. The following switch statement has two cases:
 ```go
@@ -254,7 +255,7 @@ switch {
 
 > `switch` can be used in global and for scopes
 
-#### :balloon: for loop
+#### for loop
 In theory, the `for` statement in flowl, the frequency of using is not too high. In a Flow, we can use the `for` statement to control a function to be executed multiple times.
 
 A for example with condition:
@@ -282,7 +283,7 @@ for {
 }
 ```
 
-## :bullettrain_side: Standard library
+## Standard library
 - :white_check_mark: print
 - :white_check_mark: sleep
 - :white_check_mark: command
@@ -299,10 +300,7 @@ for {
 - :black_square_button: Slack
 - ...
 
-## :bangbang: Some important design rules
-TODO:
-
-## :pushpin: TODOs
+## TODOs
 Language
 * trigger
 * ...
@@ -321,7 +319,10 @@ tool
 * cofunc-server
 * repository
 
-## :paperclip: Architecture Design
+## Some Important Design Rules
+TODO:
+
+## Architecture Design
 
 <div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
 
@@ -342,9 +343,11 @@ There are 4 core concepts in CoFUNC architecture design when it's running, namel
 
 flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
-## :surfer: Contribution
+## Contribution
 
 * [How to build the project from source?]()
 * [How to develop a new driver?]()
 * [How to develop a new std function?]()
 * [How to develop a new event trigger?]()
+
+## Thanks
