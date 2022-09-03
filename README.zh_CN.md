@@ -2,6 +2,20 @@
 
 CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
 
+## :bicyclist: 使用场景
+* 构建 CI/CD、DevOps 工具链
+* 构建 workflow
+* 构建分布式任务系统
+* 构建自动化运维工具
+* 对接、集成外部系统的 api，将一些工作流程自动化
+* 标准化管理自己和团队的大量无序的脚本工具
+* 构建简单实用的 FaaS 工具
+* 构建个人本地的自动化机器人
+* ...
+
+## :beer: 安装及配置
+TODO:
+
 ## :gift: CLI
 ```go
 // cofunc -h
@@ -255,8 +269,6 @@ for {
 - :black_square_button: HTTP Request
 - ...
 
-标准库的支持完全是根据我个人的日常使用工具来安排
-
 ## :bangbang: 一些重要的设计规则
 TODO:
 
@@ -278,9 +290,6 @@ Driver
 * 函数开发架手架
 * cofunc-server
 * repository
-
-## :beer: 安装及配置
-TODO:
 
 ## :paperclip: 架构设计
 

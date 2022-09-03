@@ -4,6 +4,44 @@
 
 CoFUNC is an automation engine based on function fabric, which can be used to build automated function flows through the combination of functions. FlowL is a `function fabric` language embedded in CoFUNC, which provides some features such as function events, function operation and management from the language.
 
+- [You Can](#-bicyclist--you-can)
+- [Installation Guide](#-beer--installation-guide)
+- [CLI](#-gift--cli)
+- [FlowL](#-rocket--flowl)
+  * [Hello World](#hello-world)
+  * [Grammar Introduction](#grammar-introduction)
+    + [Comment](#-balloon--comment)
+    + [load](#-balloon--load)
+    + [variable](#-balloon--variable)
+    + [fn](#-balloon--fn)
+    + [co](#-balloon--co)
+    + [switch](#-balloon--switch)
+    + [for loop](#-balloon--for-loop)
+- [Standard library](#-bullettrain-side--standard-library)
+- [Some important design rules](#-bangbang--some-important-design-rules)
+- [TODOs](#-pushpin--todos)
+- [Architecture Design](#-paperclip--architecture-design)
+  * [Runtime Core Concepts](#runtime-core-concepts)
+  * [flowl](#flowl)
+- [Contribution](#-surfer--contribution)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+
+## :bicyclist: You Can
+* Build CI/CD, DevOps toolchains
+* Build workflows
+* Build a distributed task system
+* Build automated OPS tools
+* Connected and integrated API of external systems to automate some workflows
+* Standardized management of a large number of scripting tools
+* Build simple and useful FaaS tools
+* Build personal local automated bots
+* ...
+
+## :beer: Installation Guide
+TODO:
+
 ## :gift: CLI
 ```
 // cofunc -h
@@ -246,16 +284,20 @@ for {
 
 ## :bullettrain_side: Standard library
 - :white_check_mark: print
-- :black_square_button: sleep
+- :white_check_mark: sleep
 - :white_check_mark: command
 - :white_check_mark: time
 - :black_square_button: git
 - :black_square_button: github
-- :black_square_button: gobuild
+- :white_check_mark: gobuild
 - :black_square_button: HTTP Request
+- :black_square_button: MySQL
+- :black_square_button: PostgreSQL
+- :black_square_button: Redis
+- :black_square_button: DingTalk
+- :black_square_button: Wechat
+- :black_square_button: Slack
 - ...
-
-The standard library support is completely arranged according to my personal daily use tools
 
 ## :bangbang: Some important design rules
 TODO:
@@ -279,9 +321,6 @@ tool
 * cofunc-server
 * repository
 
-## :beer: Installation
-TODO:
-
 ## :paperclip: Architecture Design
 
 <div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
@@ -304,4 +343,8 @@ There are 4 core concepts in CoFUNC architecture design when it's running, namel
 flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
 ## :surfer: Contribution
-TODO:
+
+* [How to build the project from source?]()
+* [How to develop a new driver?]()
+* [How to develop a new std function?]()
+* [How to develop a new event trigger?]()
