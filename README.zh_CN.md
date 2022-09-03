@@ -2,7 +2,21 @@
 
 CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
 
-## :gift: CLI
+## 使用场景
+* 构建 CI/CD、DevOps 工具链
+* 构建 workflow
+* 构建分布式任务系统
+* 构建自动化运维工具
+* 对接、集成外部系统的 api，将一些工作流程自动化
+* 标准化管理自己和团队的大量无序的脚本工具
+* 构建简单实用的 FaaS 工具
+* 构建个人本地的自动化机器人
+* ...
+
+## 安装及配置
+TODO:
+
+## CLI
 ```go
 // cofunc -h
 
@@ -38,7 +52,7 @@ Flags:
 Use "cofunc [command] --help" for more information about a command.
 ```
 
-## :rocket: FlowL
+## FlowL
 Flowl 是一门小语言，专用于函数编织； 语法非常少，也非常简单。目前已经支持函数 load，函数配置 fn，函数运行、变量定义和运算、字符串嵌入变量、for 循环、switch 条件语句等。
 
 ### Hello World
@@ -62,10 +76,10 @@ co print {
 flowl 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
 
 ### 语法介绍
-#### :balloon: 注释
+#### 注释
 使用 `//` 添加代码注释。:warning: 注意，只提供独占行的注释，不能行尾注释。
 
-#### :balloon: load
+#### load
 load 用于加载一个函数，例如：加载打印函数 print
 
 ```go
@@ -76,7 +90,7 @@ load go:print
 
 所有函数在使用前，都需要先 load。
 
-#### :balloon: 变量
+#### 变量
 `var` 关键字可以定义一个变量，:warning: 注意：变量本身是没有类型的，但内置默认区分处理字符串和数字，数字变量能够进行算术运算
 
 ```go
@@ -99,7 +113,7 @@ a <- "bar
 
 > `<-` 能够在 global、fn、for 作用域里使用
 
-#### :balloon: fn
+#### fn
 fn 配置一个函数，配置函数运行时需要的参数等，比如：
 
 ```go
@@ -117,7 +131,7 @@ args 是一个内置的函数配置项，代表函数运行时传给函数的参
 > * 在 `fn` 定义中，函数别名和真实函数名不能够相同
 > * `fn` 只能使用在 全局作用域 内 
 
-#### :balloon: co
+#### co
 co 取自于 coroutine 的前缀，也比较类似于 Go 语言的 go 关键字。co 关键是启动运行一个函数。比如：使用 co 运行 print 函数，输出 Hello World!
 
 ```go
@@ -194,7 +208,7 @@ co {
 
 > `co` 只能使用在 全局作用域, for 作用域，switch 作用域 内 
 
-#### :balloon: switch 条件选择
+#### switch 条件选择
 
 `switch + case` 可以根据条件选择执行 `co`，一个 case 语句包含一个条件表达式和一个 co 语句，如下有两个 case 的 switch 语句：
 ```go
@@ -216,7 +230,7 @@ switch {
 
 > `switch` 能够在 global、for 作用域里使用
 
-#### :balloon: for 循环
+#### for 循环
 `for` 语句在 flowl 适用的场景里面，理论上来说使用频率不会太高。在 一条 Flow 中，我们可以使用 `for` 语句去控制一个函数重复执行多次.
 
 一个带条件的 for 例子：
@@ -244,7 +258,7 @@ for {
 }
 ```
 
-## :bullettrain_side: 标准函数库
+## 标准函数库
 - :white_check_mark: print
 - :black_square_button: sleep
 - :white_check_mark: command
@@ -255,12 +269,10 @@ for {
 - :black_square_button: HTTP Request
 - ...
 
-标准库的支持完全是根据我个人的日常使用工具来安排
-
-## :bangbang: 一些重要的设计规则
+## 一些重要的设计规则
 TODO:
 
-## :pushpin: TODOs
+## TODOs
 语言
 * 支持触发器 trigger
 * ...
@@ -279,10 +291,7 @@ Driver
 * cofunc-server
 * repository
 
-## :beer: 安装及配置
-TODO:
-
-## :paperclip: 架构设计
+## 架构设计
 
 <div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
 
@@ -303,5 +312,5 @@ CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver`
 
 flowl 采用词法和语法分离的实现方式，再语法分析完成得出一颗 AST 树后，再将 AST 转换成函数的运行队列，基于运行队列就可以按序执行函数
 
-## :surfer: 开发贡献
+## 开发贡献
 TODO:

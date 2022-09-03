@@ -46,6 +46,11 @@ func HomeDir() string {
 	return v
 }
 
+func FlowSourceDir() string {
+	v := filepath.Join(HomeDir(), "flowls")
+	return prettyDirPath(v)
+}
+
 func LogDir() string {
 	v := filepath.Join(HomeDir(), "logs")
 	return prettyDirPath(v)
@@ -53,11 +58,6 @@ func LogDir() string {
 
 func LogBucketDir() string {
 	return path.Join(LogDir(), "buckets")
-}
-
-func FlowSourceDir() string {
-	v := filepath.Join(HomeDir(), "flowls")
-	return prettyDirPath(v)
 }
 
 // LogFunctionDir returns the directory path of the function's logger
