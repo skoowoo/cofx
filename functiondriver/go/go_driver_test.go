@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cofunclabs/cofunc/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,9 @@ func TestLoad(t *testing.T) {
 	}
 	assert.Equal(t, "print", dr.fname)
 	assert.Equal(t, "print", dr.path)
-	err := dr.Load(context.Background(), os.Stdout)
+	err := dr.Load(context.Background(), resource.Resources{
+		Logwriter: os.Stdout,
+	})
 	args := dr.mergeArgs(map[string]string{
 		"k1": "v1",
 		"k2": "v2",
@@ -31,7 +34,9 @@ func TestRun(t *testing.T) {
 	if dr == nil {
 		t.FailNow()
 	}
-	err := dr.Load(context.Background(), os.Stdout)
+	err := dr.Load(context.Background(), resource.Resources{
+		Logwriter: os.Stdout,
+	})
 	assert.NoError(t, err)
 	out, err := dr.Run(context.Background(), nil)
 	assert.NoError(t, err)

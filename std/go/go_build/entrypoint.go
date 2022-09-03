@@ -65,9 +65,9 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	// print args
-	fmt.Fprintf(bundle.Logwriter, "===> prefix      : %s\n", prefix)
-	fmt.Fprintf(bundle.Logwriter, "===> mainpkg_path: %s\n", mainpkgPath)
-	fmt.Fprintf(bundle.Logwriter, "===> bindir      : %s\n", bindir)
+	fmt.Fprintf(bundle.Resources.Logwriter, "===> prefix      : %s\n", prefix)
+	fmt.Fprintf(bundle.Resources.Logwriter, "===> mainpkg_path: %s\n", mainpkgPath)
+	fmt.Fprintf(bundle.Resources.Logwriter, "===> bindir      : %s\n", bindir)
 
 	var (
 		platforms = map[string][]string{
@@ -80,7 +80,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	for _, path := range paths {
 		for p, env := range platforms {
 			dstdir := filepath.Join(bindir, p) + "/"
-			cmd, err := buildCommand(ctx, prefix, dstdir, path, bundle.Logwriter)
+			cmd, err := buildCommand(ctx, prefix, dstdir, path, bundle.Resources.Logwriter)
 			if err != nil {
 				return nil, err
 			}
@@ -91,7 +91,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			if err := cmd.Wait(); err != nil {
 				return nil, err
 			}
-			fmt.Fprintf(bundle.Logwriter, "---> %s\n", cmd.String())
+			fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
 		}
 	}
 

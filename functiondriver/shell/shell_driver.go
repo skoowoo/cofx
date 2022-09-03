@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 const Name = "shell"
@@ -24,7 +25,7 @@ func New(fname, fpath, version string) *ShellDriver {
 	}
 }
 
-func (d *ShellDriver) Load(ctx context.Context, logger io.Writer) error {
+func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) error {
 	// todo
 	return nil
 }

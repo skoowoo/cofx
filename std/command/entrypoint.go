@@ -38,14 +38,14 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		return nil, errors.New("command function miss argument: " + cmdArg.Name)
 	}
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", s)
-	cmd.Stdout = bundle.Logwriter
-	cmd.Stderr = bundle.Logwriter
+	cmd.Stdout = bundle.Resources.Logwriter
+	cmd.Stderr = bundle.Resources.Logwriter
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(bundle.Logwriter, "---> %s\n", cmd.String())
+	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
 	return nil, nil
 }
