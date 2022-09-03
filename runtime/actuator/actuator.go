@@ -528,12 +528,12 @@ func withArgs() func(context.Context, Node) error {
 	}
 }
 
-func WithLoad(logger io.Writer) func(context.Context, Node) error {
+func WithLoad(logwriter io.Writer) func(context.Context, Node) error {
 	return func(ctx context.Context, n Node) error {
 		funcnode, ok := n.(*TaskNode)
 		if !ok {
 			return nil
 		}
-		return funcnode.driver.Load(ctx, logger)
+		return funcnode.driver.Load(ctx, logwriter)
 	}
 }

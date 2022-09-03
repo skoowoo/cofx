@@ -30,7 +30,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 	sort.Strings(slice)
 	for _, s := range slice {
-		fmt.Fprintln(bundle.Logger, s)
+		fmt.Fprintln(bundle.Logwriter, s)
 	}
 	return map[string]string{
 		"status": "ok",
