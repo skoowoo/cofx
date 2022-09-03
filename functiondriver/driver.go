@@ -3,13 +3,13 @@ package functiondriver
 import (
 	"context"
 	"errors"
-	"io"
 	"path"
 	"strings"
 
 	godriver "github.com/cofunclabs/cofunc/functiondriver/go"
 	shelldriver "github.com/cofunclabs/cofunc/functiondriver/shell"
 	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 type Driver interface {
@@ -20,7 +20,7 @@ type Driver interface {
 	// Manifest returns the manifest of the function associated with the driver
 	Manifest() manifest.Manifest
 	// Load loads the function into the driver
-	Load(context.Context, io.Writer) error
+	Load(context.Context, resource.Resources) error
 	// Run calls the entrypoint of the function associated with the driver to execute the function code
 	Run(context.Context, map[string]string) (map[string]string, error)
 	// StopAndRelease stops the driver and releases the resources of the driver

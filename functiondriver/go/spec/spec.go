@@ -3,11 +3,12 @@ package spec
 import (
 	"context"
 	"errors"
-	"io"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 const (
@@ -74,8 +75,8 @@ func (e EntrypointArgs) Get(name string, typ ArgValType) (interface{}, error) {
 // EntrypointBundle
 type EntrypointBundle struct {
 	Version   string
-	Logwriter io.Writer
 	Custom    Customer
+	Resources resource.Resources
 }
 
 // EntrypointFunc defines the entrypoint type of the function

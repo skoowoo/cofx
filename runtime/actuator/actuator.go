@@ -9,6 +9,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/functiondriver"
 	"github.com/cofunclabs/cofunc/parser"
+	"github.com/cofunclabs/cofunc/service/resource"
 	"github.com/sirupsen/logrus"
 )
 
@@ -528,12 +529,12 @@ func withArgs() func(context.Context, Node) error {
 	}
 }
 
-func WithLoad(logwriter io.Writer) func(context.Context, Node) error {
+func WithResources(resources resource.Resources) func(context.Context, Node) error {
 	return func(ctx context.Context, n Node) error {
 		funcnode, ok := n.(*TaskNode)
 		if !ok {
 			return nil
 		}
-		return funcnode.driver.Load(ctx, logwriter)
+		return funcnode.driver.Load(ctx, resources)
 	}
 }
