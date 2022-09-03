@@ -6,38 +6,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 )
-
-type GetLogger func(actuator.Node) (*logfile.Logfile, error)
-
-// GetStdoutLogger returns a stdout logger to use
-func GetStdoutLogger(node actuator.Node) (*logfile.Logfile, error) {
-	return logfile.Stdout(), nil
-}
-
-// GetDefaultLogger returns a default logger to use, the defualt logger is output to a file
-func GetDefaultLogger(id nameid.ID) GetLogger {
-	return func(node actuator.Node) (*logfile.Logfile, error) {
-		seq := node.(actuator.Task).Seq()
-		// Initialize the local logdir directory for the function/node in the flow
-		logdir, err := config.LogFunctionDir(id.ID(), seq)
-		if err != nil {
-			return nil, fmt.Errorf("%w: create function's log directory", err)
-		}
-		logger, err := logfile.TruncFile(config.LogFunctionFile(logdir))
-		if err != nil {
-			return nil, fmt.Errorf("%w: create function's logger", err)
-		}
-		return logger, nil
-	}
-}
 
 // Event is from the event trigger, it will be used to make the flow run
 type Event struct {
@@ -77,15 +52,11 @@ func (rt *Runtime) ParseFlow(ctx context.Context, id nameid.ID, rd io.Reader) er
 	if err := rt.store.store(id.ID(), flow); err != nil {
 		return err
 	}
-	flow.WithLock(func(b *FlowBody) error {
-		b.status = StatusAdded
-		return nil
-	})
 	return nil
 }
 
 // InitFlow initialize the flow and make it into READY status.
-func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogger) error {
+func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOption) error {
 	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
@@ -94,30 +65,31 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 		return fmt.Errorf("not added: flow %s", id.ID())
 	}
 
-	ready := func(body *FlowBody) error {
-		body.status = StatusReady
-		body.statistics = make(map[int]*functionStatistics)
+	ready := func(fb *FlowBody) error {
+		// Initialize options of the flow
+		for _, opt := range opts {
+			opt(fb)
+		}
 
 		// Initialize all task nodes
-		err := body.runq.WalkNode(func(node actuator.Node) error {
+		err := fb.runq.WalkNode(func(node actuator.Node) error {
 			seq := node.(actuator.Task).Seq()
-			body.statistics[seq] = &functionStatistics{
+
+			fb.statistics[seq] = &functionStatistics{
 				functionStatisticsBody: functionStatisticsBody{
-					fid:    body.id,
+					fid:    fb.id,
 					node:   node,
 					status: StatusReady,
 				},
 			}
-			body.progress.nodes = append(body.progress.nodes, seq)
+			fb.progress.nodes = append(fb.progress.nodes, seq)
 
-			logger, err := getlogger(node)
+			// Initialize the function node, it will Load&Init the function driver
+			logwriter, err := fb.createLogwriter(strconv.Itoa(seq))
 			if err != nil {
 				return err
 			}
-			body.logger = logger
-
-			// Initialize the function node, it will Load&Init the function driver
-			if err := node.Init(ctx, actuator.WithLoad(logger)); err != nil {
+			if err := node.Init(ctx, actuator.WithLoad(logwriter)); err != nil {
 				return err
 			}
 			return nil
@@ -127,9 +99,9 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 		}
 
 		// Initialize all triggers
-		triggers := body.runq.GetTriggers()
+		triggers := fb.runq.GetTriggers()
 		for _, tg := range triggers {
-			logger, err := getlogger(tg)
+			logger, err := fb.createLogwriter(strconv.Itoa(tg.(actuator.Task).Seq()))
 			if err != nil {
 				return err
 			}
@@ -137,6 +109,8 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, getlogger GetLogg
 				return err
 			}
 		}
+
+		fb.status = StatusReady
 		return nil
 	}
 
@@ -188,7 +162,7 @@ func (rt *Runtime) HasTrigger(id nameid.ID) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	triggers := flow.GetRunQ().GetTriggers()
+	triggers := flow.RunQ().GetTriggers()
 	return len(triggers) != 0, nil
 }
 
@@ -199,7 +173,7 @@ func (rt *Runtime) StartEventTrigger(ctx context.Context, id nameid.ID) error {
 	if err != nil {
 		return err
 	}
-	triggers := flow.GetRunQ().GetTriggers()
+	triggers := flow.RunQ().GetTriggers()
 	n := len(triggers)
 	if n == 0 {
 		return nil
@@ -277,7 +251,7 @@ func (rt *Runtime) startEventWatcher() error {
 }
 
 // ExecFlow execute a flow step by step.
-func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
+func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) (err0 error) {
 	flow, err := rt.store.get(id.ID())
 	if err != nil {
 		return err
@@ -287,9 +261,16 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) error {
 	}
 
 	flow.ToRuning()
-	defer flow.ToStopped()
-
-	err = flow.GetRunQ().WalkAndExec(ctx, rt.execStepFunc(ctx, flow))
+	if err := flow.beforeFunc(id); err != nil {
+		return err
+	}
+	defer func() {
+		flow.ToStopped()
+		if err := flow.afterFunc(id); err != nil {
+			err0 = err
+		}
+	}()
+	err = flow.RunQ().WalkAndExec(ctx, rt.execStepFunc(ctx, flow))
 	if err != nil {
 		return err
 	}

@@ -26,8 +26,8 @@ type GoDriver struct {
 	entrypoint spec.EntrypointFunc
 	// custom is a custom object for function, used to keep some states, it's created by function.
 	custom spec.Customer
-	// logger used to log the output of function
-	logger io.Writer
+	// logwriter used to log the output of function
+	logwriter io.Writer
 }
 
 // New create a new GoDriver instance, the arguments are got from 'load' statement in flowl.
@@ -40,7 +40,7 @@ func New(fname, fpath, version string) *GoDriver {
 }
 
 // Load loads the expected function into the driver.
-func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
+func (d *GoDriver) Load(ctx context.Context, logwriter io.Writer) error {
 	mf, ep, create := std.Lookup(d.fname)
 	if mf == nil || ep == nil {
 		return errors.New("in std, not found function's manifest or entrypoint: " + d.path)
@@ -50,7 +50,7 @@ func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 	if create != nil {
 		d.custom = create()
 	}
-	d.logger = logger
+	d.logwriter = logwriter
 	return nil
 }
 
@@ -58,9 +58,9 @@ func (d *GoDriver) Load(ctx context.Context, logger io.Writer) error {
 func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	merged := d.mergeArgs(args)
 	bundle := spec.EntrypointBundle{
-		Version: d.version,
-		Logger:  d.logger,
-		Custom:  d.custom,
+		Version:   d.version,
+		Logwriter: d.logwriter,
+		Custom:    d.custom,
 	}
 	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {

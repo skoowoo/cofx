@@ -45,7 +45,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 	}
 
 	{
-		err := sd.InitFlow(ctx, id, GetStdoutLogger)
+		err := sd.InitFlow(ctx, id)
 		assert.NoError(t, err)
 
 		var status StatusType

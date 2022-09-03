@@ -7,14 +7,15 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/logfile"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
+	"github.com/cofunclabs/cofunc/service/logset"
 )
 
 // SVC is the service layer, it provides API to access and manage the flows
@@ -22,6 +23,8 @@ type SVC struct {
 	rt *runtime.Runtime
 	// availables store all available flows, the key is the string of flow's id.
 	availables map[string]exported.FlowMetaInsight
+	// log service for flow and function
+	log *logset.Logset
 }
 
 // New create a service layer instance
@@ -33,9 +36,14 @@ func New() *SVC {
 	if err != nil {
 		panic(err)
 	}
+	log := logset.New(logset.WithAddr(config.LogDir()))
+	if err := log.Restore(); err != nil {
+		panic(err)
+	}
 	return &SVC{
 		rt:         runtime.New(),
 		availables: all,
+		log:        log,
 	}
 }
 
@@ -85,7 +93,7 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 	} else {
 		rd.Close()
 	}
-	if err := s.rt.InitFlow(ctx, id, runtime.GetStdoutLogger); err != nil {
+	if err := s.rt.InitFlow(ctx, id); err != nil {
 		return err
 	}
 	if err := s.rt.ExecFlow(ctx, id); err != nil {
@@ -105,13 +113,14 @@ func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 
 // ReadyFlow initialize the flow and make it ready to run
 func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (exported.FlowRunningInsight, error) {
-	var get runtime.GetLogger
-	if toStdout {
-		get = runtime.GetStdoutLogger
-	} else {
-		get = runtime.GetDefaultLogger(id)
+	createLogWriter := func(writerid string) (io.Writer, error) {
+		return s.log.CreateBucket(id.ID()).CreateWriter(writerid)
 	}
-	if err := s.rt.InitFlow(ctx, id, get); err != nil {
+	var opts []runtime.FlowOption
+	if !toStdout {
+		opts = append(opts, runtime.WithCreateLogwriter(createLogWriter))
+	}
+	if err := s.rt.InitFlow(ctx, id, opts...); err != nil {
 		return exported.FlowRunningInsight{}, err
 	}
 	fi, err := s.InsightFlow(ctx, id)
@@ -156,16 +165,17 @@ func (s *SVC) StartOrWaitingEvent(ctx context.Context, id nameid.ID) error {
 // ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'
 // is the sequence of the function, the 'w' argument is the output destination of the log.
 func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) error {
-	dir, err := config.LogFunctionDir(id.ID(), seq)
+	bucket, err := s.log.GetBucket(id.ID())
 	if err != nil {
 		return err
 	}
-	logger, err := logfile.File(config.LogFunctionFile(dir))
+	rd, err := bucket.CreateReader(strconv.Itoa(seq))
 	if err != nil {
 		return err
 	}
-	defer logger.Close()
-	if _, err := io.Copy(w, logger); err != nil {
+	defer rd.Close()
+
+	if _, err := io.Copy(w, rd); err != nil {
 		return err
 	}
 	return nil

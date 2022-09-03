@@ -73,9 +73,9 @@ func (e EntrypointArgs) Get(name string, typ ArgValType) (interface{}, error) {
 
 // EntrypointBundle
 type EntrypointBundle struct {
-	Version string
-	Logger  io.Writer
-	Custom  Customer
+	Version   string
+	Logwriter io.Writer
+	Custom    Customer
 }
 
 // EntrypointFunc defines the entrypoint type of the function

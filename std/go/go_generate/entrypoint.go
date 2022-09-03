@@ -27,7 +27,7 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	cmd, err := buildCommands(ctx, bundle.Logger)
+	cmd, err := buildCommands(ctx, bundle.Logwriter)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	if err := cmd.Wait(); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(bundle.Logger, "---> %s\n", cmd.String())
+	fmt.Fprintf(bundle.Logwriter, "---> %s\n", cmd.String())
 
 	return nil, nil
 }
