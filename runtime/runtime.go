@@ -12,7 +12,6 @@ import (
 
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
-	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 // Event is from the event trigger, it will be used to make the flow run
@@ -90,9 +89,9 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 			if err != nil {
 				return err
 			}
-			return node.Init(ctx, actuator.WithResources(resource.Resources{
-				Logwriter: logwriter,
-			}))
+			resources := fb.copyResources()
+			resources.Logwriter = logwriter
+			return node.Init(ctx, actuator.WithResources(resources))
 		})
 		if err != nil {
 			return err
@@ -105,9 +104,9 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 			if err != nil {
 				return err
 			}
-			if err := tg.Init(ctx, actuator.WithResources(resource.Resources{
-				Logwriter: logwriter,
-			})); err != nil {
+			resources := fb.copyResources()
+			resources.Logwriter = logwriter
+			if err := tg.Init(ctx, actuator.WithResources(resources)); err != nil {
 				return err
 			}
 		}

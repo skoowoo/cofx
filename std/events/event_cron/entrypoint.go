@@ -2,10 +2,11 @@ package eventcron
 
 import (
 	"context"
+	"time"
 
 	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
-	cron "github.com/robfig/cron/v3"
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 var exprArg = manifest.UsageDesc{
@@ -28,28 +29,24 @@ var _manifest = manifest.Manifest{
 }
 
 func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
-	return &_manifest, Entrypoint, func() spec.Customer { return &custom{waiting: make(chan struct{})} }
+	return &_manifest, Entrypoint, func() spec.Customer { return &custom{waiting: make(chan time.Time)} }
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	expr := args.GetString(exprArg.Name)
 	custom := bundle.Custom.(*custom)
-	if custom.c == nil {
-		c := cron.New(cron.WithSeconds())
-		id, err := c.AddFunc(expr, func() {
-			custom.waiting <- struct{}{}
-		})
+	if custom.entity == nil && custom.cron == nil {
+		cron := bundle.Resources.CronTrigger
+		entity, err := cron.Add(expr, custom.waiting)
 		if err != nil {
 			return nil, err
 		}
-		custom.c = c
-		custom.id = id
+		custom.entity = entity
+		custom.cron = cron
 	}
-	custom.c.Start()
 
 	select {
 	case <-custom.waiting:
-		custom.c.Stop()
 		return map[string]string{"which": _manifest.Name}, nil
 	case <-ctx.Done():
 		custom.Close()
@@ -58,15 +55,15 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 }
 
 type custom struct {
-	id      cron.EntryID
-	c       *cron.Cron
-	waiting chan struct{}
+	entity  interface{}
+	cron    resource.CronTrigger
+	waiting chan time.Time
 }
 
 func (c *custom) Close() error {
-	c.c.Stop()
-	c.c.Remove(c.id)
-	c.c = nil
 	close(c.waiting)
+	c.cron.Remove(c.entity)
+	c.entity = nil
+	c.cron = nil
 	return nil
 }

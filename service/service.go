@@ -14,8 +14,10 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
+	"github.com/cofunclabs/cofunc/service/crontrigger"
 	"github.com/cofunclabs/cofunc/service/exported"
 	"github.com/cofunclabs/cofunc/service/logset"
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 // SVC is the service layer, it provides API to access and manage the flows
@@ -25,6 +27,8 @@ type SVC struct {
 	availables map[string]exported.FlowMetaInsight
 	// log service for flow and function
 	log *logset.Logset
+	// cron service for flow and function
+	cron *crontrigger.CronTrigger
 }
 
 // New create a service layer instance
@@ -36,14 +40,21 @@ func New() *SVC {
 	if err != nil {
 		panic(err)
 	}
+	// Create log service
 	log := logset.New(logset.WithAddr(config.LogDir()))
 	if err := log.Restore(); err != nil {
 		panic(err)
 	}
+	// Create cron trigger service
+	cron := crontrigger.New()
+	cron.Start()
+	// Create http trigger service
+
 	return &SVC{
 		rt:         runtime.New(),
 		availables: all,
 		log:        log,
+		cron:       cron,
 	}
 }
 
@@ -116,7 +127,20 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (expor
 	createLogWriter := func(writerid string) (io.Writer, error) {
 		return s.log.CreateBucket(id.ID()).CreateWriter(writerid)
 	}
-	var opts []runtime.FlowOption
+	beforeExec := func(id nameid.ID) error {
+		// TODO:
+		return nil
+	}
+	afterExec := func(id nameid.ID) error {
+		// TODO:
+		return nil
+	}
+	copy := func() resource.Resources {
+		return resource.Resources{
+			CronTrigger: s.cron,
+		}
+	}
+	var opts = []runtime.FlowOption{runtime.WithBeforeFunc(beforeExec), runtime.WithAfterFunc(afterExec), runtime.WithCopyResources(copy)}
 	if !toStdout {
 		opts = append(opts, runtime.WithCreateLogwriter(createLogWriter))
 	}
