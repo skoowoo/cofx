@@ -26,7 +26,7 @@ type GoDriver struct {
 	entrypoint spec.EntrypointFunc
 	// custom is a custom object for function, used to keep some states, it's created by function.
 	custom spec.Customer
-
+	// resources contains some services that can be used by function.
 	resources resource.Resources
 }
 

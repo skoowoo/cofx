@@ -11,6 +11,7 @@ import (
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
 	"github.com/cofunclabs/cofunc/service/exported"
+	"github.com/cofunclabs/cofunc/service/resource"
 )
 
 type StatusType string
@@ -50,6 +51,9 @@ func newflow(id nameid.ID, runq *actuator.RunQueue, ast *parser.AST) *Flow {
 			createLogwriter: func(fileid string) (io.Writer, error) {
 				return os.Stdout, nil
 			},
+			copyResources: func() resource.Resources {
+				return resource.Resources{}
+			},
 		},
 	}
 }
@@ -72,6 +76,13 @@ func WithAfterFunc(_func func(nameid.ID) error) FlowOption {
 func WithCreateLogwriter(_func func(string) (io.Writer, error)) FlowOption {
 	return func(fb *FlowBody) {
 		fb.createLogwriter = _func
+	}
+}
+
+// WithCopyResources initializes the resources of the flow & function.
+func WithCopyResources(copy func() resource.Resources) FlowOption {
+	return func(fb *FlowBody) {
+		fb.copyResources = copy
 	}
 }
 
@@ -224,11 +235,13 @@ type FlowBody struct {
 	statistics map[int]*functionStatistics
 	// Saved the execution progress of all nodes
 	progress progress
-
+	// The status of the flow, the value is one of the following:
+	// StatusAdded, StatusReady, StatusRunning, StatusStopped
+	// Added: The flow is added to the flow store, parsed flowl only, not initialized.
+	// Ready: The flow is initialized inlcude node and driver, but not running.
+	// Running: The flow is running.
+	// Stopped: The flow is stopped, if need to start again, it must be changed to Ready first.
 	status StatusType
-
-	runq *actuator.RunQueue
-	ast  *parser.AST
 
 	// beforeFunc will be invoked beforeFunc the flow is started.
 	beforeFunc func(id nameid.ID) error
@@ -236,6 +249,11 @@ type FlowBody struct {
 	afterFunc func(id nameid.ID) error
 	// createLogwriter creates a log writer for the function node.
 	createLogwriter func(fileid string) (io.Writer, error)
+	// copyResources copy the resources to every function node.
+	copyResources func() resource.Resources
+
+	runq *actuator.RunQueue
+	ast  *parser.AST
 }
 
 // Export exports some statistics of the flow running to the service layer.
