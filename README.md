@@ -324,7 +324,7 @@ TODO:
 
 ## Architecture Design
 
-<div align=center><img width="70%" height="70%" src="docs/assets/arch.png"/></div>
+<div align=center><img width="50%" height="50%" src="docs/assets/arch.png"/></div>
 
 ### Runtime Core Concepts
 
