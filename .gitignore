@@ -20,3 +20,4 @@ vendor/
 .VSCode*/
 *_string.go
 *DS_Store
+.idea/
