@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cofunclabs/cofunc/config"
@@ -18,10 +19,22 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		items = append(items, flowItem(f))
 	}
 
-	model := listFlowModel{
-		list: list.New(items, list.NewDefaultDelegate(), 0, 0),
+	keys := newAdditionalKeyMap()
+	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	l.Title = "All Available Flows"
+	l.Styles.Title = list.DefaultStyles().Title
+	l.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			keys.toggleQuit,
+			keys.toggleRun,
+			keys.toggleEdit,
+		}
 	}
-	model.list.Title = "All Available Flows"
+
+	model := listFlowModel{
+		list: l,
+		keys: keys,
+	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	ret, err := p.StartReturningModel()
@@ -37,6 +50,7 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 
 type listFlowModel struct {
 	list     list.Model
+	keys     keyMap
 	selected exported.FlowMetaInsight
 }
 
@@ -47,14 +61,14 @@ func (m listFlowModel) Init() tea.Cmd {
 func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
+		if key.Matches(msg, m.keys.toggleQuit) {
 			return m, tea.Quit
 		}
-		if msg.String() == "ctrl+r" {
+		if key.Matches(msg, m.keys.toggleRun) {
 			m.selected = exported.FlowMetaInsight(m.list.SelectedItem().(flowItem))
 			return m, tea.Quit
 		}
-		if msg.String() == "ctrl+e" {
+		if key.Matches(msg, m.keys.toggleEdit) {
 			return m, openEditor(m.list.SelectedItem().(flowItem).Source)
 		}
 	case editorFinishedMsg:
@@ -100,4 +114,27 @@ func openEditor(file string) tea.Cmd {
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return editorFinishedMsg{err}
 	})
+}
+
+type keyMap struct {
+	toggleQuit key.Binding
+	toggleRun  key.Binding
+	toggleEdit key.Binding
+}
+
+func newAdditionalKeyMap() keyMap {
+	return keyMap{
+		toggleQuit: key.NewBinding(
+			key.WithKeys("ctrl+c"),
+			key.WithHelp("ctrl+c", "quit"),
+		),
+		toggleRun: key.NewBinding(
+			key.WithKeys("ctrl+r"),
+			key.WithHelp("ctrl+r", "run flow"),
+		),
+		toggleEdit: key.NewBinding(
+			key.WithKeys("ctrl+e"),
+			key.WithHelp("ctrl+e", "edit flow"),
+		),
+	}
 }
