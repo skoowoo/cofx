@@ -25,6 +25,15 @@ func Lookup(name string) (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCu
 	return nil, nil, nil
 }
 
+// ListAll returns all the function manifest of the standard library.
+func ListAll() []manifest.Manifest {
+	var mfs []manifest.Manifest
+	for _, m := range builtin {
+		mfs = append(mfs, *m)
+	}
+	return mfs
+}
+
 func register(name string, mf *manifest.Manifest, ep spec.EntrypointFunc, cr spec.CreateCustomFunc) error {
 	_, ok := builtin[name]
 	if ok {

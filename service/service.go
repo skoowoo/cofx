@@ -11,6 +11,7 @@ import (
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/config"
+	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
@@ -18,6 +19,7 @@ import (
 	"github.com/cofunclabs/cofunc/service/exported"
 	"github.com/cofunclabs/cofunc/service/logset"
 	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofunclabs/cofunc/std"
 )
 
 // SVC is the service layer, it provides API to access and manage the flows
@@ -58,7 +60,12 @@ func New() *SVC {
 	}
 }
 
-// LookupID be used to lookup 'nameid.ID' by the string of flow's id or name
+// ListStdFunctions returns the list of the manifests of all standard functions.
+func (s *SVC) ListStdFunctions(ctx context.Context) []manifest.Manifest {
+	return std.ListAll()
+}
+
+// LookupID be used to lookup 'nameid.ID' by the string of flow's id or name.
 func (s *SVC) LookupID(ctx context.Context, nameorid nameid.NameOrID) (nameid.ID, error) {
 	return nameid.Guess(nameorid, func(id string) *nameid.NameID {
 		if v, ok := s.availables[id]; ok {
