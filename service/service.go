@@ -11,7 +11,6 @@ import (
 
 	co "github.com/cofunclabs/cofunc"
 	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/manifest"
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/cofunclabs/cofunc/runtime"
 	"github.com/cofunclabs/cofunc/runtime/actuator"
@@ -61,8 +60,25 @@ func New() *SVC {
 }
 
 // ListStdFunctions returns the list of the manifests of all standard functions.
-func (s *SVC) ListStdFunctions(ctx context.Context) []manifest.Manifest {
-	return std.ListAll()
+func (s *SVC) ListStdFunctions(ctx context.Context) []exported.ListStdFunctions {
+	var list []exported.ListStdFunctions
+	all := std.ListAll()
+	for _, m := range all {
+		list = append(list, exported.ListStdFunctions{
+			Name: m.Name,
+			Desc: m.Description,
+		})
+	}
+	return list
+}
+
+// InspectStdFunction returns the manifest of the standard function
+func (s *SVC) InspectStdFunction(ctx context.Context, name string) exported.InspectStdFunction {
+	m, _, _ := std.Lookup(name)
+	if m == nil {
+		return exported.InspectStdFunction{}
+	}
+	return exported.InspectStdFunction(*m)
 }
 
 // LookupID be used to lookup 'nameid.ID' by the string of flow's id or name.

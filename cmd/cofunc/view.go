@@ -7,6 +7,9 @@ type viewErrorMessage error
 var (
 	docStyle = lipgloss.NewStyle().MarginTop(1).MarginBottom(0).MarginLeft(2).MarginRight(0)
 
+	// function
+	funcNameStyle = lipgloss.NewStyle().Width(20)
+
 	// flow
 	flowNameStyle = lipgloss.NewStyle().Width(20)
 	flowIDStyle   = lipgloss.NewStyle().Width(35)
