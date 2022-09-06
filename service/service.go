@@ -100,12 +100,12 @@ func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunn
 		fi = body.Export()
 		return nil
 	}
-	err := s.rt.FetchFlow(fid, export)
+	err := s.rt.FetchFlow(ctx, fid, export)
 	return fi, err
 }
 
 func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
-	if err := s.rt.ParseFlow(id, rd); err != nil {
+	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		rd.Close()
 		return err
 	} else {
@@ -122,13 +122,13 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 
 // CancelRunningFlow cancels a running flow, the canceled flow not be started again automatically.
 func (s *SVC) CancelRunningFlow(ctx context.Context, id nameid.ID) error {
-	return s.rt.CancelFlow(id)
+	return s.rt.CancelFlow(ctx, id)
 }
 
 // AddFlow parse a flowl source file and add a flow instance into runtime
 func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	defer rd.Close()
-	if err := s.rt.ParseFlow(id, rd); err != nil {
+	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
 		return err
 	}
 	return nil
@@ -174,7 +174,7 @@ func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) chan error {
 		defer close(wait)
 		// NOTE: here used a new context to avoid the context be canceled by others
 		ctx, cancel := context.WithCancel(context.Background())
-		s.rt.FetchFlow(id, func(fb *runtime.FlowBody) error {
+		s.rt.FetchFlow(ctx, id, func(fb *runtime.FlowBody) error {
 			fb.SetCancel(cancel)
 			return nil
 		})
@@ -195,7 +195,7 @@ func (s *SVC) StartEventFlow(ctx context.Context, id nameid.ID) chan error {
 	go func() {
 		// NOTE: here used a new context to avoid the context be canceled by others
 		ctx, cancel := context.WithCancel(context.Background())
-		s.rt.FetchFlow(id, func(fb *runtime.FlowBody) error {
+		s.rt.FetchFlow(ctx, id, func(fb *runtime.FlowBody) error {
 			fb.SetCancel(cancel)
 			return nil
 		})

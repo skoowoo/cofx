@@ -32,11 +32,11 @@ func TestAddReadyStartFlow(t *testing.T) {
 	id := nameid.New("testingdata.flowl")
 
 	{
-		err := sd.ParseFlow(id, strings.NewReader(testingdata))
+		err := sd.ParseFlow(ctx, id, strings.NewReader(testingdata))
 		assert.NoError(t, err)
 
 		var status StatusType
-		err = sd.FetchFlow(id, func(b *FlowBody) error {
+		err = sd.FetchFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
@@ -49,7 +49,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		var status StatusType
-		err = sd.FetchFlow(id, func(b *FlowBody) error {
+		err = sd.FetchFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
@@ -64,7 +64,7 @@ func TestAddReadyStartFlow(t *testing.T) {
 		time.Sleep(time.Second * 5)
 
 		var status StatusType
-		err = sd.FetchFlow(id, func(b *FlowBody) error {
+		err = sd.FetchFlow(ctx, id, func(b *FlowBody) error {
 			status = b.status
 			return nil
 		})
