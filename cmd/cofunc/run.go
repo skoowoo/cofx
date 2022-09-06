@@ -45,7 +45,7 @@ func runflowl(nameorid nameid.NameOrID) error {
 	if _, err := svc.ReadyFlow(ctx, fid, true); err != nil {
 		return err
 	}
-	if err := svc.StartOrWaitingEvent(ctx, fid); err != nil {
+	if err := svc.StartFlowOrEventFlow(ctx, fid); err != nil {
 		return err
 	}
 	return nil

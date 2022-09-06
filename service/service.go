@@ -100,12 +100,12 @@ func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunn
 		fi = body.Export()
 		return nil
 	}
-	err := s.rt.FetchFlow(ctx, fid, export)
+	err := s.rt.FetchFlow(fid, export)
 	return fi, err
 }
 
 func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
-	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
+	if err := s.rt.ParseFlow(id, rd); err != nil {
 		rd.Close()
 		return err
 	} else {
@@ -120,10 +120,15 @@ func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 	return nil
 }
 
+// CancelRunningFlow cancels a running flow, the canceled flow not be started again automatically.
+func (s *SVC) CancelRunningFlow(ctx context.Context, id nameid.ID) error {
+	return s.rt.CancelFlow(id)
+}
+
 // AddFlow parse a flowl source file and add a flow instance into runtime
 func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
 	defer rd.Close()
-	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
+	if err := s.rt.ParseFlow(id, rd); err != nil {
 		return err
 	}
 	return nil
@@ -161,36 +166,62 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (expor
 	return fi, nil
 }
 
-// StartFlow starts a flow without event triggers and returns the statistics of the flow
-func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) (exported.FlowRunningInsight, error) {
-	if err := s.rt.ExecFlow(ctx, id); err != nil {
-		return exported.FlowRunningInsight{}, err
-	}
-	fi, err := s.InsightFlow(ctx, id)
-	if err != nil {
-		return exported.FlowRunningInsight{}, err
-	}
-	return fi, nil
+// StartFlow starts a flow without event triggers, it will return a channel that can be used to
+// wait for the flow to be finished.
+func (s *SVC) StartFlow(ctx context.Context, id nameid.ID) chan error {
+	wait := make(chan error, 1)
+	go func() {
+		defer close(wait)
+		// NOTE: here used a new context to avoid the context be canceled by others
+		ctx, cancel := context.WithCancel(context.Background())
+		s.rt.FetchFlow(id, func(fb *runtime.FlowBody) error {
+			fb.SetCancel(cancel)
+			return nil
+		})
+		wait <- s.rt.ExecFlow(ctx, id)
+	}()
+	return wait
 }
 
-// StartOrWaitingEvent don't start the flows directly, it first start triggers of the flows,
+// StartFlowAndWait starts a flow without event triggers and wait for it to be finished.
+func (s *SVC) StartFlowAndWait(ctx context.Context, id nameid.ID) error {
+	return <-s.StartFlow(ctx, id)
+}
+
+// StartEventFlow starts a flow with event triggers, it will run in a goroutine,
+// so the invoking will return immediately.
+func (s *SVC) StartEventFlow(ctx context.Context, id nameid.ID) chan error {
+	wait := make(chan error, 1)
+	go func() {
+		// NOTE: here used a new context to avoid the context be canceled by others
+		ctx, cancel := context.WithCancel(context.Background())
+		s.rt.FetchFlow(id, func(fb *runtime.FlowBody) error {
+			fb.SetCancel(cancel)
+			return nil
+		})
+		wait <- s.rt.StartEventTrigger(ctx, id)
+	}()
+	return wait
+}
+
+// StartEventFlowAndWait starts a flow with event triggers and wait for it to be finished.
+func (s *SVC) StartEventFlowAndWait(ctx context.Context, id nameid.ID) error {
+	return <-s.StartEventFlow(ctx, id)
+}
+
+// StartFlowOrEventFlow don't start the flows directly, it first start triggers of the flows,
 // then execute the flows based on event from trigger. If not found any triggers of the flow, it will
 // start the flow directly.
-func (s *SVC) StartOrWaitingEvent(ctx context.Context, id nameid.ID) error {
+func (s *SVC) StartFlowOrEventFlow(ctx context.Context, id nameid.ID) error {
 	has, err := s.rt.HasTrigger(id)
 	if err != nil {
 		return err
 	}
 	if !has {
-		_, err := s.StartFlow(ctx, id)
-		return err
+		return s.StartFlowAndWait(ctx, id)
 	}
 	// NOTE: call StartEventTrigger will be blocked, that's goroutine will not finish until you cancel it
-	if err := s.rt.StartEventTrigger(ctx, id); err != nil {
-		// TODO: log
-		_ = err
-	}
-	return nil
+	return s.StartEventFlowAndWait(ctx, id)
 }
 
 // ViewLog be used to view the log of a flow or a function, the argument 'id' is the flow's id, the 'seq'

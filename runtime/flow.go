@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -251,9 +252,16 @@ type FlowBody struct {
 	createLogwriter func(fileid string) (io.Writer, error)
 	// copyResources copy the resources to every function node.
 	copyResources func() resource.Resources
+	// cancel is used to cancel the flow through the context.
+	cancel context.CancelFunc
 
 	runq *actuator.RunQueue
 	ast  *parser.AST
+}
+
+// SetCancel set the context cancel function to the flow.
+func (b *FlowBody) SetCancel(cancel context.CancelFunc) {
+	b.cancel = cancel
 }
 
 // Export exports some statistics of the flow running to the service layer.

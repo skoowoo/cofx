@@ -53,6 +53,12 @@ func LogDir() string {
 	return prettyDirPath(v)
 }
 
+// ShellDir store all functions that's based on shell driver.
+func ShellDir() string {
+	v := filepath.Join(HomeDir(), "shell")
+	return prettyDirPath(v)
+}
+
 func prettyDirPath(p string) string {
 	return filepath.Clean(p) + "/"
 }
