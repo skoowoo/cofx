@@ -118,4 +118,22 @@ func initCmd() {
 		}
 		rootCmd.AddCommand(listCmd)
 	}
+
+	{
+		stdCmd := &cobra.Command{
+			Use:          "std",
+			Short:        "List all functions in the standard library",
+			Example:      "cofunc std",
+			SilenceUsage: true,
+			Args:         cobra.MaximumNArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				if len(args) == 0 {
+					return listStd()
+				} else {
+					return inspectStd(args[0])
+				}
+			},
+		}
+		rootCmd.AddCommand(stdCmd)
+	}
 }

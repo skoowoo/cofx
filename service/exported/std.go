@@ -1,0 +1,27 @@
+package exported
+
+import (
+	"encoding/json"
+	"io"
+
+	"github.com/cofunclabs/cofunc/manifest"
+)
+
+type ListStdFunctions struct {
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+}
+
+func (l ListStdFunctions) JsonWrite(w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(l)
+}
+
+type InspectStdFunction manifest.Manifest
+
+func (i InspectStdFunction) JsonWrite(w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(i)
+}
