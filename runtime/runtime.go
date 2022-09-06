@@ -305,11 +305,13 @@ func (rt *Runtime) execStepFunc(ctx context.Context, f *Flow) func([]actuator.No
 				for i := 0; i < retries; i++ {
 					err := node.Exec(ctx)
 					fs.ToStopped(err)
-
-					// Retry if have an error
-					if err != nil && err != actuator.ErrConditionIsFalse {
-						continue
-					} else {
+					if err == nil {
+						break
+					}
+					if err == actuator.ErrConditionIsFalse {
+						break
+					}
+					if errors.Is(err, context.Canceled) {
 						break
 					}
 				}
@@ -325,7 +327,7 @@ func (rt *Runtime) execStepFunc(ctx context.Context, f *Flow) func([]actuator.No
 			// Find the function node that executes with an error
 			fs.WithLock(func(body *functionStatisticsBody) {
 				ignore := body.node.(actuator.Task).IgnoreFailure()
-				if body.err != nil && !ignore && !errors.Is(body.err, context.Canceled) {
+				if body.err != nil && !ignore {
 					abortErr = append(abortErr, body.err)
 				}
 			})
