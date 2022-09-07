@@ -336,7 +336,7 @@ func (rt *Runtime) execStepFunc(ctx context.Context, f *Flow) func([]actuator.No
 
 		// Have an error at the step, so abort the flow
 		if l := len(abortErr); l != 0 {
-			return errors.New("occurred error at step: " + fmt.Sprintf("%+v", abortErr))
+			return errors.New("encounters an error: " + fmt.Sprintf("%+v", abortErr))
 		}
 		return nil
 	}

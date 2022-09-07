@@ -59,8 +59,8 @@ Environment variables:
 Examples:
         cofunc
         cofunc list
-        cofunc parse ./helloworld.flowl
-        cofunc run ./helloworld.flowl
+        cofunc run   helloworld.flowl
+        cofunc prun  helloworld.flowl
 
 Usage:
   cofunc [flags]
@@ -283,7 +283,7 @@ for {
 }
 ```
 
-## Standard library
+## Standard Library
 - :white_check_mark: print
 - :white_check_mark: sleep
 - :white_check_mark: command
@@ -318,9 +318,6 @@ tool
 * function development rack
 * cofunc-server
 * repository
-
-## Some Important Design Rules
-TODO:
 
 ## Architecture Design
 

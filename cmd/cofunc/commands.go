@@ -24,8 +24,8 @@ Environment variables:
 Examples:
 	cofunc
 	cofunc list
-	cofunc parse ./helloworld.flowl
-	cofunc run ./helloworld.flowl
+	cofunc run  helloworld.flowl
+	cofunc prun helloworld.flowl
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return mainList()

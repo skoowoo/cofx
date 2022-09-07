@@ -32,8 +32,8 @@ Environment variables:
 Examples:
         cofunc
         cofunc list
-        cofunc parse ./helloworld.flowl
-        cofunc run ./helloworld.flowl
+        cofunc run   helloworld.flowl
+        cofunc prun  helloworld.flowl
 
 Usage:
   cofunc [flags]
@@ -268,9 +268,6 @@ for {
 - :black_square_button: gobuild
 - :black_square_button: HTTP Request
 - ...
-
-## 一些重要的设计规则
-TODO:
 
 ## TODOs
 语言
