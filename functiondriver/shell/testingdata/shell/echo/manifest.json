@@ -1,0 +1,16 @@
+{
+    "name": "echo",
+    "description": "for testing",
+    "driver": "shell",
+    "entrypoint": "entry.sh",
+    "retry_on_failure": 0,
+    "ignore_failure": false,
+    "usage": {
+      "args": [
+        {
+          "name": "message",
+          "desc": "for testing"
+        }
+      ]
+    }
+}

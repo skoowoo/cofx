@@ -11,7 +11,6 @@ import (
 
 	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/output"
 	"github.com/cofunclabs/cofunc/service/resource"
 )
 
@@ -72,18 +71,17 @@ func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[stri
 	program := filepath.Join(functionDir, d.manifest.Entrypoint)
 
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", program)
-	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Dir = functionDir
 	cmd.Env = append(cmd.Env, d.toEnv(merged)...)
 
 	retValues := make(map[string]string)
-	out := &output.Output{
-		W: d.resources.Logwriter,
-		HandleFunc: func(line []byte) {
-			// TODO:
-		},
-	}
+	// out := &output.Output{
+	// 	W: d.resources.Logwriter,
+	// 	HandleFunc: func(line []byte) {
+	// 	},
+	// }
 	cmd.Stderr = d.resources.Logwriter
-	cmd.Stdout = out
+	cmd.Stdout = d.resources.Logwriter
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
