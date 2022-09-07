@@ -1,0 +1,36 @@
+package shelldriver
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestShellDriver(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		assert.FailNow(t, err.Error())
+	}
+	os.Setenv("COFUNC_HOME", filepath.Join(wd, "testingdata"))
+	defer os.Unsetenv("COFUNC_HOME")
+
+	var buf bytes.Buffer
+	ctx := context.Background()
+
+	driver := New("echo", "echo", "lastest")
+	if err := driver.Load(ctx, resource.Resources{
+		Logwriter: &buf,
+	}); err != nil {
+		assert.FailNow(t, err.Error())
+	}
+	rets, err := driver.Run(ctx, map[string]string{"message": "testing shell driver"})
+	_ = rets
+	assert.NoError(t, err)
+	assert.Equal(t, "testing shell driver", strings.TrimSpace(buf.String()))
+}

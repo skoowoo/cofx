@@ -1,7 +1,9 @@
 package output
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,5 +38,33 @@ func TestOutput(t *testing.T) {
 		out.Close()
 
 		assert.Equal(t, 4, lines)
+	}
+}
+
+func TestOutput2(t *testing.T) {
+	{
+		expected := map[string]struct{}{
+			"hello":      {},
+			"world":      {},
+			"helloworld": {},
+			"foo":        {},
+		}
+		data1 := "hello\n"
+
+		var buf bytes.Buffer
+		lines := 0
+		out := &Output{
+			W: &buf,
+			HandleFunc: func(line []byte) {
+				lines++
+				_, ok := expected[string(line)]
+				assert.Equal(t, true, ok)
+			},
+		}
+		out.Write([]byte(data1))
+		out.Close()
+
+		assert.Equal(t, 1, lines)
+		assert.Equal(t, "hello", strings.TrimSpace(buf.String()))
 	}
 }
