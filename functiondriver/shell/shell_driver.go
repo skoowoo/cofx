@@ -68,6 +68,12 @@ func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) er
 
 // Run executes the shell script function, Please note that 'args' will be converted to environment
 func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
+	defer func() {
+		reseter, ok := d.resources.Logwriter.(resource.LogWriteReseter)
+		if ok {
+			reseter.Reset()
+		}
+	}()
 	merged := d.mergeArgs(args)
 	functionDir := filepath.Join(config.ShellDir(), d.fpath)
 	program := filepath.Join(functionDir, d.manifest.Entrypoint)

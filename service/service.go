@@ -155,11 +155,11 @@ func (s *SVC) AddFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error
 
 // ReadyFlow initialize the flow and make it ready to run
 func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (exported.FlowRunningInsight, error) {
-	createLogWriter := func(writerid string) (io.Writer, error) {
+	createLogWriter := func(writerid, desc string) (io.Writer, error) {
 		if toStdout {
-			return s.stdout.CreateBucket(id.ID()).CreateWriter(writerid)
+			return s.stdout.CreateBucket(id.ID()).CreateWriter(writerid, desc)
 		} else {
-			return s.logfile.CreateBucket(id.ID()).CreateWriter(writerid)
+			return s.logfile.CreateBucket(id.ID()).CreateWriter(writerid, desc)
 		}
 	}
 	beforeExec := func(id nameid.ID) error {

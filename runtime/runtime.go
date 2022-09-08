@@ -85,7 +85,7 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 			fb.progress.nodes = append(fb.progress.nodes, seq)
 
 			// Initialize the function node, it will Load&Init the function driver
-			logwriter, err := fb.createLogwriter(strconv.Itoa(seq))
+			logwriter, err := fb.createLogwriter(strconv.Itoa(seq), node.FormatString())
 			if err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 		// Initialize all triggers
 		triggers := fb.runq.GetTriggers()
 		for _, tg := range triggers {
-			logwriter, err := fb.createLogwriter(strconv.Itoa(tg.(actuator.Task).Seq()))
+			logwriter, err := fb.createLogwriter(strconv.Itoa(tg.(actuator.Task).Seq()), tg.FormatString())
 			if err != nil {
 				return err
 			}

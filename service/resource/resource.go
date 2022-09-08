@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+// LogWriteReseter be used to reset the log writer, when a function finished.
+type LogWriteReseter interface {
+	Reset() error
+}
+
 // Resources contains some services that can be used by the driver and function.
 // .e.g. logset service, cron service, httpserver service etc.
 type Resources struct {

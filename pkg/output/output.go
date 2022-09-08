@@ -30,7 +30,11 @@ func (o *Output) Write(p []byte) (n int, err error) {
 		o.buffer = p[i:]
 		break
 	}
-	return o.W.Write(p)
+	if o.W != nil {
+		return o.W.Write(p)
+	} else {
+		return l, nil
+	}
 }
 
 func (o *Output) Close() {
