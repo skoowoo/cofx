@@ -19,6 +19,13 @@ func WithAddr(addr string) LogsetOption {
 	}
 }
 
+func WithStdout() LogsetOption {
+	return func(ls *Logset) {
+		ls.addr = "Stdout"
+		ls.typ = "Stdout"
+	}
+}
+
 func New(opts ...LogsetOption) *Logset {
 	ls := &Logset{
 		buckets: make(map[string]*LogBucket),
@@ -101,6 +108,10 @@ func (b *LogBucket) IsFile() bool {
 	return b.set.typ == "File"
 }
 
+func (b *LogBucket) IsStdout() bool {
+	return b.set.typ == "Stdout"
+}
+
 func (b *LogBucket) Reset() error {
 	for _, w := range b.writers {
 		if lf, ok := w.(*logFile); ok {
@@ -125,6 +136,14 @@ func (b *LogBucket) CreateWriter(id string) (io.Writer, error) {
 		b.writers[id] = lf
 		return lf, nil
 	}
+	if b.IsStdout() {
+		lout := newLogStdout()
+		if _, ok := b.writers[id]; ok {
+			return nil, errors.New("writer already exists: " + id)
+		}
+		b.writers[id] = lout
+		return lout, nil
+	}
 	return nil, nil
 }
 
@@ -136,6 +155,9 @@ func (b *LogBucket) CreateReader(id string) (io.ReadCloser, error) {
 			return nil, fmt.Errorf("%w: create reader", err)
 		}
 		return lf, nil
+	}
+	if b.IsStdout() {
+		return nil, errors.New("stdout can not create reader")
 	}
 	return nil, nil
 }
@@ -224,4 +246,18 @@ func (lf *logFile) Reset() error {
 	lf.Unlock()
 
 	return nil
+}
+
+type logStdout struct {
+	w io.Writer
+}
+
+func newLogStdout() *logStdout {
+	return &logStdout{
+		w: os.Stdout,
+	}
+}
+
+func (l *logStdout) Write(p []byte) (int, error) {
+	return l.w.Write(p)
 }
