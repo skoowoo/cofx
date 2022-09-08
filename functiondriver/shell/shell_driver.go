@@ -11,6 +11,7 @@ import (
 
 	"github.com/cofunclabs/cofunc/config"
 	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofunclabs/cofunc/pkg/output"
 	"github.com/cofunclabs/cofunc/service/resource"
 )
 
@@ -38,6 +39,7 @@ func New(fname, fpath, version string) *ShellDriver {
 	}
 }
 
+// Load loads the shell script function from $COFUNC_HOME/shell directory.
 func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) error {
 	functionDir := filepath.Join(config.ShellDir(), d.fpath)
 	mfPath := filepath.Join(functionDir, "manifest.json")
@@ -64,7 +66,7 @@ func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) er
 	return nil
 }
 
-// Run executes the shell script function, Please note that 'args' will be
+// Run executes the shell script function, Please note that 'args' will be converted to environment
 func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[string]string, error) {
 	merged := d.mergeArgs(args)
 	functionDir := filepath.Join(config.ShellDir(), d.fpath)
@@ -75,13 +77,14 @@ func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[stri
 	cmd.Env = append(cmd.Env, d.toEnv(merged)...)
 
 	retValues := make(map[string]string)
-	// out := &output.Output{
-	// 	W: d.resources.Logwriter,
-	// 	HandleFunc: func(line []byte) {
-	// 	},
-	// }
-	cmd.Stderr = d.resources.Logwriter
-	cmd.Stdout = d.resources.Logwriter
+	out := &output.Output{
+		W: d.resources.Logwriter,
+		HandleFunc: func(line []byte) {
+			// TODO:
+		},
+	}
+	cmd.Stderr = out
+	cmd.Stdout = out
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -91,17 +94,22 @@ func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[stri
 	return retValues, nil
 }
 
+// StopAndReslease is used to stop and release the all resources.
 func (d *ShellDriver) StopAndRelease(ctx context.Context) error {
 	return nil
 }
 
+// FunctionName returns the name of the shell script function.
 func (d *ShellDriver) FunctionName() string {
 	return d.fname
 }
 
+// Name returns the name of the shell driver.
 func (d *ShellDriver) Name() string {
 	return Name
 }
+
+// Manifest returns the manifest of the shell script function.
 func (d *ShellDriver) Manifest() manifest.Manifest {
 	return *d.manifest
 }
