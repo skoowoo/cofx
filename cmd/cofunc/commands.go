@@ -12,20 +12,19 @@ import (
 var rootCmd = &cobra.Command{
 	Use: "cofunc",
 	Long: `
-An automation engine based on function fabric, can used to parse, create, run
-and manage flow
+An automation engine based on function fabric, can be used to build automated workflows.
 
-Execute 'cofunc' command directly and no any args or sub-command, will list
-all flows in interactive mode
+Execute 'cofunc' command directly without any args and sub-commands, will output
+all available flows in interactive mode.
 
 Environment variables:
-	COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
 
 Examples:
-	cofunc
-	cofunc list
-	cofunc run  helloworld.flowl
-	cofunc prun helloworld.flowl
+  cofunc
+  cofunc list
+  cofunc run  helloworld.flowl
+  cofunc prun helloworld.flowl
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return mainList()
@@ -44,8 +43,8 @@ func initCmd() {
 		var showAll bool
 
 		parseCmd := &cobra.Command{
-			Use:          "parse [path of flowl file]",
-			Short:        "Parse a flowl source file",
+			Use:          "parse [path to flowl file]",
+			Short:        "Parse a flowl",
 			Example:      "cofunc parse [-a] ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
@@ -59,8 +58,8 @@ func initCmd() {
 
 	{
 		runCmd := &cobra.Command{
-			Use:          "run [path of flowl file] or [flow name or id]",
-			Short:        "Run a flowl file",
+			Use:          "run [path to flowl file] or [flow name or id]",
+			Short:        "Run a flowl",
 			Example:      "cofunc run ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
@@ -73,8 +72,8 @@ func initCmd() {
 
 	{
 		prunCmd := &cobra.Command{
-			Use:          "prun [path of flowl file] or [flow name or id]",
-			Short:        "Prettily run a flowl file",
+			Use:          "prun [path to flowl file] or [flow name or id]",
+			Short:        "Prettily run a flowl",
 			Example:      "cofunc prun ./example.flowl",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
@@ -89,8 +88,8 @@ func initCmd() {
 	{
 		logCmd := &cobra.Command{
 			Use:          "log [flow name or id] [function seq]",
-			Short:        "View the execution log of the flow or function",
-			Example:      "cofunc run b0804ec967f48520697662a204f5fe72 1",
+			Short:        "View the execution log of the function",
+			Example:      "cofunc run b0804ec967f48520697662a204f5fe72 1000",
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -121,8 +120,8 @@ func initCmd() {
 
 	{
 		stdCmd := &cobra.Command{
-			Use:          "std",
-			Short:        "List all functions in the standard library",
+			Use:          "std [function name]",
+			Short:        "List all functions in the standard library or show the manifest of a function",
 			Example:      "cofunc std",
 			SilenceUsage: true,
 			Args:         cobra.MaximumNArgs(1),

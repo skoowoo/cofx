@@ -26,8 +26,7 @@ var (
 	}
 	mainpkgArg = manifest.UsageDesc{
 		Name: "mainpkg_path",
-		Desc: `Specifies the path of main package, if there are more than one, separated by ','.
- If not specified, the mainpkg is automatically parsed`,
+		Desc: `Specifies the path of main package, if there are more than one, separated by ','. If not specified, the mainpkg is automatically parsed`,
 	}
 )
 
