@@ -29,6 +29,6 @@ var (
 
 	iconStyle  = lipgloss.NewStyle().Width(2)
 	iconSpace  = lipgloss.NewStyle().Width(2).SetString(" ")
-	iconOK     = colorGreen.Copy().Width(2).SetString("✓")
-	iconFailed = colorRed.Copy().Width(2).SetString("✗")
+	iconOK     = colorGreen.Copy().Bold(true).Width(2).SetString("✓")
+	iconFailed = colorRed.Copy().Bold(true).Width(2).SetString("✗")
 )

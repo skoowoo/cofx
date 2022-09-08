@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/cofunclabs/cofunc/pkg/output"
 )
 
 type LogsetOption func(*Logset)
@@ -123,7 +126,7 @@ func (b *LogBucket) Reset() error {
 	return nil
 }
 
-func (b *LogBucket) CreateWriter(id string) (io.Writer, error) {
+func (b *LogBucket) CreateWriter(id, desc string) (io.Writer, error) {
 	if b.IsFile() {
 		path := filepath.Join(b.set.addr, "buckets", b.id, id, "logfile")
 		lf, err := newLogFile2Write(path)
@@ -137,7 +140,7 @@ func (b *LogBucket) CreateWriter(id string) (io.Writer, error) {
 		return lf, nil
 	}
 	if b.IsStdout() {
-		lout := newLogStdout()
+		lout := newLogStdout(id, desc)
 		if _, ok := b.writers[id]; ok {
 			return nil, errors.New("writer already exists: " + id)
 		}
@@ -249,15 +252,54 @@ func (lf *logFile) Reset() error {
 }
 
 type logStdout struct {
+	sync.Mutex
 	w io.Writer
+	// Usually, the id is the seq of this function
+	id string
+	// Usually, the desc is the name of this function
+	desc string
+	// Theis is a control flag, will print the title message only once
+	printedTitle bool
 }
 
-func newLogStdout() *logStdout {
+func newLogStdout(id, desc string) *logStdout {
 	return &logStdout{
-		w: os.Stdout,
+		w:            os.Stdout,
+		id:           id,
+		desc:         desc,
+		printedTitle: false,
 	}
 }
 
+// Reset reset the 'logStdout' object, will clear the 'printedTitle' flag
+func (l *logStdout) Reset() error {
+	l.Lock()
+	defer l.Unlock()
+	l.printedTitle = false
+	return nil
+}
+
 func (l *logStdout) Write(p []byte) (int, error) {
-	return l.w.Write(p)
+	l.Lock()
+	defer l.Unlock()
+
+	l.printTitle()
+	out := &output.Output{
+		W: l.w,
+		HandleFunc: func(line []byte) {
+		},
+	}
+	// s := lipgloss.NewStyle().MarginLeft(5).Render(string(p))
+	return out.Write(p)
+}
+
+func (l *logStdout) printTitle() {
+	if l.printedTitle {
+		return
+	}
+	l.printedTitle = true
+	s := "\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).SetString("●●● ").String() +
+		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("169")).Render(l.desc+"  seq:"+l.id) +
+		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).SetString(" ●●●").String()
+	fmt.Fprintln(l.w, s)
 }

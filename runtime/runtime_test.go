@@ -163,7 +163,7 @@ func newTestingFlowCase(t *testing.T, rt *Runtime, testingdata string, id nameid
 	}
 
 	{
-		createLogWriter := func(writerid string) (io.Writer, error) {
+		createLogWriter := func(writerid, desc string) (io.Writer, error) {
 			return &out, nil
 		}
 		beforeExec := func(id nameid.ID) error {
