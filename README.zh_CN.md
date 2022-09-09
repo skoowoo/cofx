@@ -113,7 +113,7 @@ var d = $(c) * 2
 
 ```go
 var a = "foo"
-a <- "bar
+a <- "bar"
 // <- 重写变量后，a 变量的值就变成了 bar
 ```
 

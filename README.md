@@ -140,7 +140,7 @@ The `<-` operator is used for variable rewriting (usually called assignment in o
 
 ```go
 var a = "foo"
-a <- "bar
+a <- "bar"
 // <- Rewriting the variable, the value of the variable 'a' becomes bar
 ```
 
