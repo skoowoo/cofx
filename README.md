@@ -4,6 +4,8 @@
 
 CoFUNC is an automation engine based on function fabric, which can be used to build automated function flows through the combination of functions. FlowL is a `function fabric` language embedded in CoFUNC, which provides some features such as function events, function operation and management from the language.
 
+![](./docs/assets/demo.gif)
+
 - [You Can](#you-can)
 - [Installation Guide](#installation-guide)
 - [CLI](#cli)
