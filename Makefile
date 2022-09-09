@@ -1,12 +1,12 @@
 .PHONY: all build clean install
 all:
-	BUILD=true TEST=true cofunc run make.flowl
+	cofunc run make.flowl -e BUILD=true -e TEST=true
 
 build:
-	BUILD=true cofunc run make.flowl
+	cofunc run make.flowl -e BUILD=true 
 
 test:
-	TEST=true cofunc run make.flowl
+	cofunc run make.flowl -e TEST=true 
 
 clean:
 	rm -rf bin/
