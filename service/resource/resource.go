@@ -6,8 +6,9 @@ import (
 	"time"
 )
 
-// LogWriteReseter be used to reset the log writer, when a function finished.
-type LogWriteReseter interface {
+type LogStdoutPrinter interface {
+	PrintTitle()
+	PrintSummary()
 	Reset() error
 }
 

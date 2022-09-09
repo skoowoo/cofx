@@ -62,12 +62,14 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 		Custom:    d.custom,
 		Resources: d.resources,
 	}
-	defer func() {
-		reseter, ok := d.resources.Logwriter.(resource.LogWriteReseter)
-		if ok {
-			reseter.Reset()
-		}
-	}()
+	printer, ok := d.resources.Logwriter.(resource.LogStdoutPrinter)
+	if ok {
+		defer func() {
+			printer.PrintSummary()
+			printer.Reset()
+		}()
+		printer.PrintTitle()
+	}
 	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {
 		return nil, err

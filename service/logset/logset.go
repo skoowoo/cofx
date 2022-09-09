@@ -253,53 +253,50 @@ func (lf *logFile) Reset() error {
 
 type logStdout struct {
 	sync.Mutex
-	w io.Writer
+	w   io.Writer
+	out *output.Output
 	// Usually, the id is the seq of this function
 	id string
 	// Usually, the desc is the name of this function
 	desc string
-	// Theis is a control flag, will print the title message only once
-	printedTitle bool
 }
 
 func newLogStdout(id, desc string) *logStdout {
-	return &logStdout{
-		w:            os.Stdout,
-		id:           id,
-		desc:         desc,
-		printedTitle: false,
+	ls := &logStdout{
+		w:    os.Stdout,
+		id:   id,
+		desc: desc,
 	}
+	ls.out = &output.Output{
+		W: nil,
+		HandleFunc: func(line []byte) {
+			ls.w.Write([]byte("  "))
+			ls.w.Write(line)
+		},
+	}
+	return ls
 }
 
 // Reset reset the 'logStdout' object, will clear the 'printedTitle' flag
 func (l *logStdout) Reset() error {
 	l.Lock()
 	defer l.Unlock()
-	l.printedTitle = false
 	return nil
+}
+
+func (l *logStdout) PrintTitle() {
+	s := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
+		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("222")).Render("Running function: "+l.desc+" seq:"+l.id)
+	fmt.Fprintln(l.w, s)
+}
+
+func (l *logStdout) PrintSummary() {
+
 }
 
 func (l *logStdout) Write(p []byte) (int, error) {
 	l.Lock()
 	defer l.Unlock()
 
-	l.printTitle()
-	out := &output.Output{
-		W: nil,
-		HandleFunc: func(line []byte) {
-			l.w.Write([]byte("  "))
-			l.w.Write(line)
-		},
-	}
-	return out.Write(p)
-}
-
-func (l *logStdout) printTitle() {
-	if l.printedTitle {
-		return
-	}
-	l.printedTitle = true
-	s := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
-		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("222")).Render("Running function: "+l.desc+" seq:"+l.id)
-	fmt.Fprintln(l.w, s)
+	return l.out.Write(p)
 }
