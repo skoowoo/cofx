@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/cofunclabs/cofunc/pkg/nameid"
 	"github.com/spf13/cobra"
@@ -57,6 +58,7 @@ func initCmd() {
 	}
 
 	{
+		var envs []string
 		runCmd := &cobra.Command{
 			Use:          "run [path to flowl file] or [flow name or id]",
 			Short:        "Run a flowl",
@@ -64,13 +66,21 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
+				for _, env := range envs {
+					kv := strings.Split(env, "=")
+					if len(kv) == 2 {
+						os.Setenv(kv[0], kv[1])
+					}
+				}
 				return runflowl(nameid.NameOrID(args[0]))
 			},
 		}
 		rootCmd.AddCommand(runCmd)
+		runCmd.Flags().StringSliceVarP(&envs, "env", "e", nil, "Set environment variables, e.g. -e FOO=bar -e BAZ=qux")
 	}
 
 	{
+		var envs []string
 		prunCmd := &cobra.Command{
 			Use:          "prun [path to flowl file] or [flow name or id]",
 			Short:        "Prettily run a flowl",
@@ -78,11 +88,18 @@ func initCmd() {
 			SilenceUsage: true,
 			Args:         cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
+				for _, env := range envs {
+					kv := strings.Split(env, "=")
+					if len(kv) == 2 {
+						os.Setenv(kv[0], kv[1])
+					}
+				}
 				fullscreen := false
 				return prunflowl(nameid.NameOrID(args[0]), fullscreen)
 			},
 		}
 		rootCmd.AddCommand(prunCmd)
+		prunCmd.Flags().StringSliceVarP(&envs, "env", "e", nil, "Set environment variables, e.g. -e FOO=bar -e BAZ=qux")
 	}
 
 	{
