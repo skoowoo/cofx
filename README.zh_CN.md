@@ -2,9 +2,12 @@
 
 CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（function）的组合使用从而可以构建出各种能力的自动化函数流。flowl 是 CoFUNC 内嵌的一门函数编织语言，从语言层面提供函数事件、函数运行以及管理等功能。
 
+![](./docs/assets/demo.gif)
+
 ## 使用场景
 * 构建 CI/CD、DevOps 工具链
 * 构建 workflow
+* 构建数据 ETL
 * 构建分布式任务系统
 * 构建自动化运维工具
 * 对接、集成外部系统的 api，将一些工作流程自动化
@@ -14,7 +17,12 @@ CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（functio
 * ...
 
 ## 安装及配置
-TODO:
+目前，暂时还没有提供一个安装包，不过你可以通过自己构建源代码的方式去试用。
+
+源码构建执行一下命令：
+```
+make first
+```
 
 ## CLI
 ```go
@@ -27,13 +35,13 @@ Execute 'cofunc' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-        COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
 
 Examples:
-        cofunc
-        cofunc list
-        cofunc run   helloworld.flowl
-        cofunc prun  helloworld.flowl
+  cofunc
+  cofunc list
+  cofunc run   helloworld.flowl
+  cofunc prun  helloworld.flowl
 
 Usage:
   cofunc [flags]
@@ -48,8 +56,6 @@ Available Commands:
 
 Flags:
   -h, --help   help for cofunc
-
-Use "cofunc [command] --help" for more information about a command.
 ```
 
 ## FlowL
@@ -90,7 +96,7 @@ load go:print
 
 所有函数在使用前，都需要先 load。
 
-#### 变量
+#### 变量 var
 `var` 关键字可以定义一个变量，:warning: 注意：变量本身是没有类型的，但内置默认区分处理字符串和数字，数字变量能够进行算术运算
 
 ```go
@@ -230,6 +236,21 @@ switch {
 
 > `switch` 能够在 global、for 作用域里使用
 
+#### event 
+`event` 语句用来定义事件触发器，当触发器产生事件后，就会触发整个 flowl 被执行。
+```go
+event {
+    co event_tick -> ev {
+        "duration": "10s"
+    }
+    co event_cron -> ev {
+        "expr": "*/5 * * * * *"
+    }
+}
+```
+
+event 语句里，就是使用 co 语句启动一个或者多个事件函数，它们将会一直等待事件发生。
+
 #### for 循环
 `for` 语句在 flowl 适用的场景里面，理论上来说使用频率不会太高。在 一条 Flow 中，我们可以使用 `for` 语句去控制一个函数重复执行多次.
 
@@ -259,23 +280,23 @@ for {
 ```
 
 ## 标准函数库
-- :white_check_mark: print
-- :black_square_button: sleep
-- :white_check_mark: command
-- :white_check_mark: time
-- :black_square_button: git
-- :black_square_button: github
-- :black_square_button: gobuild
-- :black_square_button: HTTP Request
+
+![](./docs/assets/std.png)
+
+TODOs:
+-  git
+-  github
+-  HTTP Request
+-  MySQL
+-  PostgreSQL
+-  Redis
+-  DingTalk
+-  Wechat
+-  Slack
 - ...
 
 ## TODOs
-语言
-* 支持触发器 trigger
-* ...
-
 Driver
-* 支持 shell driver
 * 支持 Javascript driver
 * 支持 Rust driver
 * 支持 Docker driver
@@ -283,7 +304,6 @@ Driver
 * ...
 
 工具
-* 函数用法
 * 函数开发架手架
 * cofunc-server
 * repository

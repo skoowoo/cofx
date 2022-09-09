@@ -10,3 +10,7 @@ test:
 
 clean:
 	rm -rf bin/
+
+first:
+	go generate ./...
+	go build -o bin/cofunc github.com/cofunclabs/cofunc/cmd/cofunc
