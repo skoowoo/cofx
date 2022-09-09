@@ -8,7 +8,8 @@ var test = $(env.TEST)
 switch { 
 	case $(build) == "true" { 
 		co go_generate
-		co build
+		co build_local
+		// co build_cross
 	}
 
 	case $(test) == "true" {
@@ -16,9 +17,18 @@ switch {
 	}
 }
 
-fn build = go_build {
+fn build_local = go_build {
 	args = {
 		"mainpkg_path": "cmd/cofunc"
+	}
+}
+
+fn build_cross = go_build {
+	args = {
+		"mainpkg_path": "cmd/cofunc"
+		"bin_out":      "bin/darwin/
+                         bin/linux/
+                         bin/windows/"
 	}
 }
 

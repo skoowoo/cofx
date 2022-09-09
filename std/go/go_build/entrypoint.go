@@ -20,9 +20,9 @@ var (
 		Name: "prefix",
 		Desc: "By default, the module field contents are read from the 'go.mod' file",
 	}
-	bindirArg = manifest.UsageDesc{
-		Name: "bindir",
-		Desc: "",
+	binoutArg = manifest.UsageDesc{
+		Name: "bin_out",
+		Desc: "Specifies the format of the binary file that to be built",
 	}
 	mainpkgArg = manifest.UsageDesc{
 		Name: "mainpkg_path",
@@ -35,11 +35,11 @@ var _manifest = manifest.Manifest{
 	Description: "For building go project that based on 'go mod'",
 	Driver:      "go",
 	Args: map[string]string{
-		"bindir": "bin/",
+		"bin_out": "bin/",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{prefixArg, bindirArg, mainpkgArg},
+		Args:         []manifest.UsageDesc{prefixArg, binoutArg, mainpkgArg},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
@@ -49,7 +49,18 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	bindir := args.GetString(bindirArg.Name)
+	binouts := strings.FieldsFunc(args.GetString(binoutArg.Name), func(r rune) bool {
+		return r == ',' || r == '\n'
+	})
+	var bins []binaryOutFormat
+	for _, binout := range binouts {
+		bf, err := parseBinout(strings.TrimSpace(binout))
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", err, binout)
+		}
+		bins = append(bins, bf)
+	}
+
 	prefix := args.GetString(prefixArg.Name)
 	if prefix == "" {
 		var err error
@@ -57,33 +68,22 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			return nil, err
 		}
 	}
+
 	mainpkgPath := args.GetString(mainpkgArg.Name)
 	if mainpkgPath == "" {
 		// TODO:
 		_ = mainpkgPath
 	}
 
-	// print args
-	fmt.Fprintf(bundle.Resources.Logwriter, "===> prefix      : %s\n", prefix)
-	fmt.Fprintf(bundle.Resources.Logwriter, "===> mainpkg_path: %s\n", mainpkgPath)
-	fmt.Fprintf(bundle.Resources.Logwriter, "===> bindir      : %s\n", bindir)
-
-	var (
-		platforms = map[string][]string{
-			"linux":   {"CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64"},
-			"windows": {"CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64"},
-			"darwin":  {"CGO_ENABLED=0", "GOOS=darwin", "GOARCH=amd64"},
-		}
-	)
 	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
-		for p, env := range platforms {
-			dstdir := filepath.Join(bindir, p) + "/"
-			cmd, err := buildCommand(ctx, prefix, dstdir, path, bundle.Resources.Logwriter)
+		for _, bin := range bins {
+			dstbin := bin.bin(filepath.Base(path))
+			cmd, err := buildCommand(ctx, prefix, dstbin, path, bundle.Resources.Logwriter)
 			if err != nil {
 				return nil, err
 			}
-			cmd.Env = append(os.Environ(), env...)
+			cmd.Env = append(os.Environ(), bin.envs()...)
 			if err := cmd.Start(); err != nil {
 				return nil, err
 			}
