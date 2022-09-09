@@ -16,9 +16,9 @@ type binaryOutFormat struct {
 	isDir   bool
 }
 
-func (b binaryOutFormat) bin(name string) string {
+func (b binaryOutFormat) fullBinPath(name string) string {
 	if b.isDir {
-		return b.dir
+		return filepath.Join(b.dir, name)
 	}
 	if b.addname {
 		return filepath.Join(b.dir, name+b.name)
@@ -30,10 +30,11 @@ func (b binaryOutFormat) bin(name string) string {
 func (b binaryOutFormat) envs() []string {
 	var s []string
 	if b.os != "" {
+		s = append(s, "CGO_ENABLED=0")
 		s = append(s, "GOOS="+b.os)
-	}
-	if b.arch != "" {
-		s = append(s, "GOARCH="+b.arch)
+		if b.arch != "" {
+			s = append(s, "GOARCH="+b.arch)
+		}
 	}
 	return s
 }
@@ -55,9 +56,17 @@ func parseBinout(binout string) (binaryOutFormat, error) {
 		}
 	}
 	ospattern := map[string]string{
-		`\Wdarwin\W`:  "darwin",
-		`\Wlinux\W`:   "linux",
+		`\Wdarwin\W`: "darwin",
+		`^darwin\W`:  "darwin",
+		`\Wdarwin$`:  "darwin",
+
+		`\Wlinux\W`: "linux",
+		`\Wlinux$`:  "linux",
+		`^linux\W`:  "linux",
+
 		`\Wwindows\W`: "windows",
+		`^windows\W`:  "windows",
+		`\Wwindows$`:  "windows",
 	}
 	for pattern, os := range ospattern {
 		if match, err := regexp.MatchString(pattern, binout); err != nil {
@@ -69,8 +78,16 @@ func parseBinout(binout string) (binaryOutFormat, error) {
 	}
 	archpattern := map[string]string{
 		`\Wamd64\W`: "amd64",
-		`\W386\W`:   "386",
-		`\Warm\W`:   "arm",
+		`^amd64\W`:  "amd64",
+		`\Wamd64$`:  "amd64",
+
+		`\W386\W`: "386",
+		`^386\W`:  "386",
+		`\W386$`:  "386",
+
+		`\Warm\W`: "arm",
+		`^arm\W`:  "arm",
+		`\Warm$`:  "arm",
 	}
 	for pattern, arch := range archpattern {
 		if match, err := regexp.MatchString(pattern, binout); err != nil {
@@ -79,6 +96,9 @@ func parseBinout(binout string) (binaryOutFormat, error) {
 			f.arch = arch
 			break
 		}
+	}
+	if f.os != "" && f.arch == "" {
+		f.arch = "amd64"
 	}
 	return f, nil
 }

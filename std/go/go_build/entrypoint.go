@@ -30,6 +30,12 @@ var (
 	}
 )
 
+var (
+	outcomeRet = manifest.UsageDesc{
+		Name: "outcome",
+	}
+)
+
 var _manifest = manifest.Manifest{
 	Name:        "go_build",
 	Description: "For building go project that based on 'go mod'",
@@ -40,7 +46,7 @@ var _manifest = manifest.Manifest{
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
 		Args:         []manifest.UsageDesc{prefixArg, binoutArg, mainpkgArg},
-		ReturnValues: []manifest.UsageDesc{},
+		ReturnValues: []manifest.UsageDesc{outcomeRet},
 	},
 }
 
@@ -75,10 +81,11 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		_ = mainpkgPath
 	}
 
+	var outcomes []string
 	paths := strings.Split(mainpkgPath, ",")
 	for _, path := range paths {
 		for _, bin := range bins {
-			dstbin := bin.bin(filepath.Base(path))
+			dstbin := bin.fullBinPath(filepath.Base(path))
 			cmd, err := buildCommand(ctx, prefix, dstbin, path, bundle.Resources.Logwriter)
 			if err != nil {
 				return nil, err
@@ -91,10 +98,13 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 				return nil, err
 			}
 			fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
+			outcomes = append(outcomes, dstbin)
 		}
 	}
 
-	return nil, nil
+	return map[string]string{
+		outcomeRet.Name: strings.Join(outcomes, ","),
+	}, nil
 }
 
 func buildCommand(ctx context.Context, prefix, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
