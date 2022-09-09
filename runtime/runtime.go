@@ -178,7 +178,7 @@ func (rt *Runtime) HasTrigger(id nameid.ID) (bool, error) {
 }
 
 // StartEventTrigger start the event trigger of a flow, every event trigger function will run in a goroutine
-// When a event triggeer returned without an error, will create and send a event to runtime
+// When a event trigger returned without an error, will create and send a event to runtime
 func (rt *Runtime) StartEventTrigger(ctx context.Context, id nameid.ID) error {
 	flow, err := rt.store.get(id.ID())
 	if err != nil {
@@ -271,7 +271,7 @@ func (rt *Runtime) ExecFlow(ctx context.Context, id nameid.ID) (err0 error) {
 		return fmt.Errorf("not ready: flow %s", id.ID())
 	}
 
-	flow.ToRuning()
+	flow.ToRunning()
 	if err := flow.beforeFunc(id); err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func (rt *Runtime) execStepFunc(ctx context.Context, f *Flow) func([]actuator.No
 
 		// parallel run functions at the step
 		for _, n := range batch {
-			f.GetStatistics(n.(actuator.Task).Seq()).ToRuning()
+			f.GetStatistics(n.(actuator.Task).Seq()).ToRunning()
 			f.Refresh()
 
 			go func(node actuator.Node) {
