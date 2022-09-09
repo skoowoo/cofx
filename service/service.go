@@ -123,22 +123,6 @@ func (s *SVC) InsightFlow(ctx context.Context, fid nameid.ID) (exported.FlowRunn
 	return fi, err
 }
 
-func (s *SVC) RunFlow(ctx context.Context, id nameid.ID, rd io.ReadCloser) error {
-	if err := s.rt.ParseFlow(ctx, id, rd); err != nil {
-		rd.Close()
-		return err
-	} else {
-		rd.Close()
-	}
-	if err := s.rt.InitFlow(ctx, id); err != nil {
-		return err
-	}
-	if err := s.rt.ExecFlow(ctx, id); err != nil {
-		return err
-	}
-	return nil
-}
-
 // CancelRunningFlow cancels a running flow, the canceled flow not be started again automatically.
 func (s *SVC) CancelRunningFlow(ctx context.Context, id nameid.ID) error {
 	return s.rt.CancelFlow(ctx, id)
