@@ -285,11 +285,12 @@ func (l *logStdout) Write(p []byte) (int, error) {
 
 	l.printTitle()
 	out := &output.Output{
-		W: l.w,
+		W: nil,
 		HandleFunc: func(line []byte) {
+			l.w.Write([]byte("  "))
+			l.w.Write(line)
 		},
 	}
-	// s := lipgloss.NewStyle().MarginLeft(5).Render(string(p))
 	return out.Write(p)
 }
 
@@ -298,8 +299,7 @@ func (l *logStdout) printTitle() {
 		return
 	}
 	l.printedTitle = true
-	s := "\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).SetString("●●● ").String() +
-		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("169")).Render(l.desc+"  seq:"+l.id) +
-		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).SetString(" ●●●").String()
+	s := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
+		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("222")).Render("Running function: "+l.desc+" seq:"+l.id)
 	fmt.Fprintln(l.w, s)
 }

@@ -16,7 +16,7 @@ func (o *Output) Write(p []byte) (n int, err error) {
 	for i := 0; i < l; {
 		end := bytes.IndexByte(p[i:], '\n')
 		if end != -1 {
-			line := p[i : i+end]
+			line := p[i : i+end+1]
 			if len(o.buffer) > 0 {
 				line = append(o.buffer, line...)
 				o.buffer = nil

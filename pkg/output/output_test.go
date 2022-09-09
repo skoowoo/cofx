@@ -12,10 +12,10 @@ import (
 func TestOutput(t *testing.T) {
 	{
 		expected := map[string]struct{}{
-			"hello":      {},
-			"world":      {},
-			"helloworld": {},
-			"foo":        {},
+			"hello\n":      {},
+			"world\n":      {},
+			"helloworld\n": {},
+			"foo":          {},
 		}
 		data1 := "hello\nworld\n"
 		data2 := "hello"
@@ -44,10 +44,10 @@ func TestOutput(t *testing.T) {
 func TestOutput2(t *testing.T) {
 	{
 		expected := map[string]struct{}{
-			"hello":      {},
-			"world":      {},
-			"helloworld": {},
-			"foo":        {},
+			"hello\n":      {},
+			"world\n":      {},
+			"helloworld\n": {},
+			"foo":          {},
 		}
 		data1 := "hello\n"
 

@@ -1,4 +1,3 @@
-load "go:print"
 load "go:command"
 load "go:go_build"
 load "go:go_generate"
@@ -6,29 +5,15 @@ load "go:go_generate"
 var build = $(env.BUILD)
 var test = $(env.TEST)
 
-co print {
-	"STARING": "build \"cofunc\""
-}
-
 switch { 
 	case $(build) == "true" { 
-		co print {
-			"go build": "starting to run ..."
-		}
 		co go_generate
 		co build
 	}
 
 	case $(test) == "true" {
-		co print {
-			"go test": "starting to run ..."
-		}
 		co gotest
 	}
-}
-
-co print {
-	"END": "build \"cofunc\""
 }
 
 fn build = go_build {

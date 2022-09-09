@@ -428,7 +428,7 @@ func (n *TaskNode) RetryOnFailure() int {
 }
 
 func (n *TaskNode) FormatString() string {
-	return fmt.Sprintf("%s->%s", n.name, n.driver.FunctionName())
+	return n.name + " ➜ " + n.driver.Name() + ":" + n.driver.FunctionName()
 }
 
 func (n *TaskNode) Name() string {
