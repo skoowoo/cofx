@@ -8,18 +8,18 @@ CoFUNC is an automation engine based on function fabric, which can be used to bu
 - [Installation Guide](#installation-guide)
 - [CLI](#cli)
 - [FlowL - A small language](#flowl---a-small-language)
-  * [Hello World - The first program](#hello-world---the-first-program)
+  * [Hello World](#hello-world)
   * [Grammar Introduction](#grammar-introduction)
     + [Comment](#comment)
     + [load](#load)
-    + [variable](#variable)
+    + [var](#var)
     + [fn](#fn)
     + [co](#co)
     + [switch](#switch)
+    + [event](#event)
     + [for loop](#for-loop)
-- [Standard library](#standard-library)
+- [Standard Library](#standard-library)
 - [TODOs](#todos)
-- [Some Important Design Rules](#some-important-design-rules)
 - [Architecture Design](#architecture-design)
   * [Runtime Core Concepts](#runtime-core-concepts)
   * [flowl](#flowl)
@@ -32,6 +32,7 @@ CoFUNC is an automation engine based on function fabric, which can be used to bu
 ## You Can
 * Build CI/CD, DevOps toolchains
 * Build workflows
+* Build data ETL
 * Build a distributed task system
 * Build automated OPS tools
 * Connected and integrated API of external systems to automate some workflows
@@ -41,7 +42,12 @@ CoFUNC is an automation engine based on function fabric, which can be used to bu
 * ...
 
 ## Installation Guide
-TODO:
+Currently, an installation package is not provided yet, but you can try it through building the source code by yourself.
+
+To build the source code, execute the following command:
+````
+make first
+````
 
 ## CLI
 ```
@@ -54,13 +60,13 @@ Execute 'cofunc' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-        COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
 
 Examples:
-        cofunc
-        cofunc list
-        cofunc run   helloworld.flowl
-        cofunc prun  helloworld.flowl
+  cofunc
+  cofunc list
+  cofunc run   helloworld.flowl
+  cofunc prun  helloworld.flowl
 
 Usage:
   cofunc [flags]
@@ -80,7 +86,7 @@ Flags:
 ## FlowL - A small language
 Flowl is a small language that be used to `function fabric`; The syntax is very minimal and simple. Currently, it supports function load, function configuration, function operation, variable definition and operation, embedded variable into string, for loop, switch conditional statement, etc.
 
-### Hello World - The first program
+### Hello World
 helloworld.flowl code content:
 ```go
 // cat examples/helloworld.flowl
@@ -115,7 +121,7 @@ load go:print
 
 All functions need to be loaded before they can be used.
 
-#### variable
+#### var
 The `var` keyword can define a variable, :warning: Note: The variable itself has no type, but the built-in default distinguishes between strings and numbers, and numeric variables can perform arithmetic operations.
 
 ```go
@@ -238,22 +244,38 @@ co {
 `switch + case` can choose to execute `co` according to the condition. A case statement contains a conditional expression and a co statement. The following switch statement has two cases:
 ```go
 switch { 
-	case $(build) == "true" { 
-		co print {
-			"go build": "starting to run ..."
-		}
-	}
-	case $(test) == "true" {
-		co print {
-			"go test": "starting to run ..."
-		}
-	}
+    case $(build) == "true" { 
+        co print {
+            "go build": "starting to run ..."
+        }
+    }
+    case $(test) == "true" {
+        co print {
+            "go test": "starting to run ..."
+        }
+    }
 }
 ```
 
 :warning: Note: As long as the case condition in switch is true, it will be executed, which means that multiple case statements may be executed at one time, or even all of them; it does not stop when matching a case.
 
 > `switch` can be used in global and for scopes
+
+#### event
+The `event` statement is used to define an event trigger. When the trigger generates an event, it will trigger the entire flowl to be executed.
+
+```go
+event {
+    co event_tick -> ev {
+        "duration": "10s"
+    }
+    co event_cron -> ev {
+        "expr": "*/5 * * * * *"
+    }
+}
+```
+
+In the event statement, use the co statement to start one or more event functions, which will always wait for the event to occur.
 
 #### for loop
 In theory, the `for` statement in flowl, the frequency of using is not too high. In a Flow, we can use the `for` statement to control a function to be executed multiple times.
@@ -341,10 +363,10 @@ There are 4 core concepts in CoFUNC architecture design when it's running, namel
 flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
 
 ## Contribution
-
-* [How to build the project from source?]()
+TODO:
 * [How to develop a new driver?]()
 * [How to develop a new std function?]()
 * [How to develop a new event trigger?]()
 
 ## Thanks
+TODO:

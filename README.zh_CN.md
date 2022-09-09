@@ -5,6 +5,7 @@ CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（functio
 ## 使用场景
 * 构建 CI/CD、DevOps 工具链
 * 构建 workflow
+* 构建数据 ETL
 * 构建分布式任务系统
 * 构建自动化运维工具
 * 对接、集成外部系统的 api，将一些工作流程自动化
@@ -14,7 +15,12 @@ CoFUNC 是一个基于函数编织的自动化引擎，它通过函数（functio
 * ...
 
 ## 安装及配置
-TODO:
+目前，暂时还没有提供一个安装包，不过你可以通过自己构建源代码的方式去试用。
+
+源码构建执行一下命令：
+```
+make first
+```
 
 ## CLI
 ```go
@@ -27,13 +33,13 @@ Execute 'cofunc' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-        COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
 
 Examples:
-        cofunc
-        cofunc list
-        cofunc run   helloworld.flowl
-        cofunc prun  helloworld.flowl
+  cofunc
+  cofunc list
+  cofunc run   helloworld.flowl
+  cofunc prun  helloworld.flowl
 
 Usage:
   cofunc [flags]
@@ -48,8 +54,6 @@ Available Commands:
 
 Flags:
   -h, --help   help for cofunc
-
-Use "cofunc [command] --help" for more information about a command.
 ```
 
 ## FlowL
@@ -90,7 +94,7 @@ load go:print
 
 所有函数在使用前，都需要先 load。
 
-#### 变量
+#### 变量 var
 `var` 关键字可以定义一个变量，:warning: 注意：变量本身是没有类型的，但内置默认区分处理字符串和数字，数字变量能够进行算术运算
 
 ```go
@@ -229,6 +233,19 @@ switch {
 :warning: 注意：switch 中的 case 条件只要为真，就会被执行，也就是说一次可能会执行多条 case 语句，甚至是全部执行；并不是匹配一个 case 为真后就停止。
 
 > `switch` 能够在 global、for 作用域里使用
+
+#### event 
+`event` 语句用来定义事件触发器，当触发器产生事件后，就会触发整个 flowl 被执行。
+```go
+event {
+    co event_tick -> ev {
+        "duration": "10s"
+    }
+    co event_cron -> ev {
+        "expr": "*/5 * * * * *"
+    }
+}
+```
 
 #### for 循环
 `for` 语句在 flowl 适用的场景里面，理论上来说使用频率不会太高。在 一条 Flow 中，我们可以使用 `for` 语句去控制一个函数重复执行多次.
