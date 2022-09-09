@@ -23,7 +23,7 @@ func listStd() error {
 			"DESC"))
 
 	for _, f := range all {
-		s := iconOK.String() +
+		s := iconCircleOk.String() +
 			funcNameStyle.Render(f.Name) +
 			lipgloss.NewStyle().MaxWidth(100).Render(f.Desc)
 		fmt.Fprintln(os.Stdout, s)

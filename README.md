@@ -306,29 +306,23 @@ for {
 ```
 
 ## Standard Library
-- :white_check_mark: print
-- :white_check_mark: sleep
-- :white_check_mark: command
-- :white_check_mark: time
-- :black_square_button: git
-- :black_square_button: github
-- :white_check_mark: gobuild
-- :black_square_button: HTTP Request
-- :black_square_button: MySQL
-- :black_square_button: PostgreSQL
-- :black_square_button: Redis
-- :black_square_button: DingTalk
-- :black_square_button: Wechat
-- :black_square_button: Slack
+
+![](./docs/assets/std.png)
+
+TODOs:
+-  git
+-  github
+-  HTTP Request
+-  MySQL
+-  PostgreSQL
+-  Redis
+-  DingTalk
+-  Wechat
+-  Slack
 - ...
 
 ## TODOs
-Language
-* trigger
-* ...
-
 Driver
-* Support shell driver
 * Support Javascript driver
 * Support Rust driver
 * Support Docker driver
@@ -336,8 +330,7 @@ Driver
 * ...
 
 tool
-* function usage
-* function development rack
+* function development helper
 * cofunc-server
 * repository
 

@@ -11,8 +11,9 @@ import (
 )
 
 var _manifest = manifest.Manifest{
-	Name:   "print",
-	Driver: "go",
+	Name:        "print",
+	Driver:      "go",
+	Description: "Output string to stdout",
 }
 
 func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {

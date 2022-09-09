@@ -40,13 +40,13 @@ func listFlows() error {
 		source := strings.TrimPrefix(f.Source, config.FlowSourceDir())
 		var s string
 		if f.Total == -1 {
-			s = iconFailed.String() +
+			s = iconCircleFailed.String() +
 				flowNameStyle.Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(source) +
 				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
-			s = iconOK.String() +
+			s = iconCircleOk.String() +
 				flowNameStyle.Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(source) +

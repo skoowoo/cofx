@@ -247,6 +247,8 @@ event {
 }
 ```
 
+event 语句里，就是使用 co 语句启动一个或者多个事件函数，它们将会一直等待事件发生。
+
 #### for 循环
 `for` 语句在 flowl 适用的场景里面，理论上来说使用频率不会太高。在 一条 Flow 中，我们可以使用 `for` 语句去控制一个函数重复执行多次.
 
@@ -276,23 +278,23 @@ for {
 ```
 
 ## 标准函数库
-- :white_check_mark: print
-- :black_square_button: sleep
-- :white_check_mark: command
-- :white_check_mark: time
-- :black_square_button: git
-- :black_square_button: github
-- :black_square_button: gobuild
-- :black_square_button: HTTP Request
+
+![](./docs/assets/std.png)
+
+TODOs:
+-  git
+-  github
+-  HTTP Request
+-  MySQL
+-  PostgreSQL
+-  Redis
+-  DingTalk
+-  Wechat
+-  Slack
 - ...
 
 ## TODOs
-语言
-* 支持触发器 trigger
-* ...
-
 Driver
-* 支持 shell driver
 * 支持 Javascript driver
 * 支持 Rust driver
 * 支持 Docker driver
@@ -300,7 +302,6 @@ Driver
 * ...
 
 工具
-* 函数用法
 * 函数开发架手架
 * cofunc-server
 * repository
