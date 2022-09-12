@@ -11,6 +11,7 @@ import (
 	eventtick "github.com/cofunclabs/cofunc/std/events/event_tick"
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
+	"github.com/cofunclabs/cofunc/std/outcome"
 	"github.com/cofunclabs/cofunc/std/print"
 	"github.com/cofunclabs/cofunc/std/sleep"
 	stdtime "github.com/cofunclabs/cofunc/std/time"
@@ -66,6 +67,7 @@ func init() {
 		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
+		outcome.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,
