@@ -75,18 +75,26 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		}
 	}
 
+	var mainpkgs []string
 	mainpkgPath := args.GetString(mainpkgArg.Name)
-	if mainpkgPath == "" {
-		// TODO:
-		_ = mainpkgPath
+	if mainpkgPath != "" {
+		mainpkgs = strings.Split(mainpkgPath, ",")
+		for i, mainpkg := range mainpkgs {
+			mainpkgs[i] = filepath.Join(prefix, strings.TrimSpace(mainpkg))
+		}
+	} else {
+		var err error
+		mainpkgs, err = findMainPkg(prefix, ".")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var outcomes []string
-	paths := strings.Split(mainpkgPath, ",")
-	for _, path := range paths {
+	for _, mainpkg := range mainpkgs {
 		for _, bin := range bins {
-			dstbin := bin.fullBinPath(filepath.Base(path))
-			cmd, err := buildCommand(ctx, prefix, dstbin, path, bundle.Resources.Logwriter)
+			dstbin := bin.fullBinPath(filepath.Base(mainpkg))
+			cmd, err := buildCommand(ctx, dstbin, mainpkg, bundle.Resources.Logwriter)
 			if err != nil {
 				return nil, err
 			}
@@ -107,12 +115,12 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}, nil
 }
 
-func buildCommand(ctx context.Context, prefix, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
+func buildCommand(ctx context.Context, binpath, mainpath string, w io.Writer) (*exec.Cmd, error) {
 	var args []string
 	args = append(args, "build")
 	args = append(args, "-o")
 	args = append(args, binpath)
-	args = append(args, filepath.Join(prefix, mainpath))
+	args = append(args, mainpath)
 
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Stdout = w
@@ -129,10 +137,5 @@ func getPrefix(fields []string) (string, bool) {
 	if len(fields) == 2 && fields[0] == "module" {
 		return fields[1], true
 	}
-	return "", false
-}
-
-// getMainpkgPath search the main package
-func getMainpkgPath(fields []string) (string, bool) {
 	return "", false
 }

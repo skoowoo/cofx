@@ -6,34 +6,29 @@ var build = $(env.BUILD)
 var test = $(env.TEST)
 
 switch { 
-	case $(build) == "true" { 
-		co go_generate
-		co build_local
-		// co build_cross
-	}
+    case $(build) == "true" { 
+        co go_generate
+        co build_local
+        // co build_cross
+    }
 
-	case $(test) == "true" {
-		co gotest
-	}
+    case $(test) == "true" {
+        co gotest
+    }
 }
 
 fn build_local = go_build {
-	args = {
-		"mainpkg_path": "cmd/cofunc"
-	}
 }
 
 fn build_cross = go_build {
-	args = {
+    args = {
 		"mainpkg_path": "cmd/cofunc"
-		"bin_out":      "bin/darwin/
-                         bin/linux/
-                         bin/windows/"
-	}
+        "bin_out":      "bin/darwin/,bin/linux/,bin/windows/"
+    }
 }
 
 fn gotest = command {
-	args = {
-		"cmd" : "go test -v ./..."
-	}
+    args = {
+        "cmd" : "go test -v ./..."
+    }
 }
