@@ -64,19 +64,30 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	if upstream == "" {
 		return map[string]string{"outcome": "no sync: not found upstream"}, nil
 	}
-	// git fetch upstream
-	if err := fetchUpstream(ctx); err != nil {
+	// git fetch --all
+	if err := fetchRemotes(ctx); err != nil {
 		return nil, err
 	}
-	// git merge-base branch upstream/branch
-	// git merge-tree branch upstream/branch
-	state, err := checkMergeBase(ctx, currentBranch)
+	// git merge-base
+	// git merge-tree
+	state1, err := checkUpstreamDiff(ctx, currentBranch)
 	if err != nil {
 		return nil, err
 	}
-	switch state {
+	state2, err := checkOriginDiff(ctx, currentBranch)
+	if err != nil {
+		return nil, err
+	}
+	switch state1 {
 	case consistent:
-		return map[string]string{"outcome": "no sync: branches are consistent"}, nil
+		if state2 == consistent {
+			return map[string]string{"outcome": "no sync: three branches are consistent"}, nil
+		} else {
+			if err := pushOrigin(ctx, currentBranch); err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
 	case conflict:
 		return map[string]string{"outcome": "no sync: branches are conflict"}, nil
 	case noConflict:
@@ -96,12 +107,17 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 }
 
 func pushOrigin(ctx context.Context, branch string) error {
-	cmd := exec.CommandContext(ctx, "git", "push", "origin", branch)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, string(out))
+	var lasterr error
+	for i := 0; i < 3; i++ {
+		cmd := exec.CommandContext(ctx, "git", "push", "origin", branch)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			lasterr = fmt.Errorf("%w: %s", err, string(out))
+			continue
+		}
+		return nil
 	}
-	return nil
+	return lasterr
 }
 
 func rebaseUpstream(ctx context.Context, branch string) error {
@@ -122,10 +138,18 @@ const (
 	noConflict
 )
 
-func checkMergeBase(ctx context.Context, branch string) (mergeBaseState, error) {
+func checkUpstreamDiff(ctx context.Context, branch string) (mergeBaseState, error) {
+	return checkMergeBase(ctx, branch, "upstream/"+branch)
+}
+
+func checkOriginDiff(ctx context.Context, branch string) (mergeBaseState, error) {
+	return checkMergeBase(ctx, "origin/"+branch, branch)
+}
+
+func checkMergeBase(ctx context.Context, toBranch, fromBranch string) (mergeBaseState, error) {
 	var commitId string
 	{
-		cmd := exec.CommandContext(ctx, "git", "merge-base", branch, "upstream/"+branch)
+		cmd := exec.CommandContext(ctx, "git", "merge-base", toBranch, fromBranch)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return unknow, fmt.Errorf("%w: %s", err, string(out))
@@ -133,7 +157,7 @@ func checkMergeBase(ctx context.Context, branch string) (mergeBaseState, error) 
 		commitId = strings.TrimSpace(string(out))
 	}
 	{
-		cmd := exec.CommandContext(ctx, "git", "merge-tree", commitId, branch, "upstream/"+branch)
+		cmd := exec.CommandContext(ctx, "git", "merge-tree", commitId, toBranch, fromBranch)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return unknow, fmt.Errorf("%w: %s", err, string(out))
@@ -148,13 +172,18 @@ func checkMergeBase(ctx context.Context, branch string) (mergeBaseState, error) 
 	return noConflict, nil
 }
 
-func fetchUpstream(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "git", "fetch", "upstream")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, string(out))
+func fetchRemotes(ctx context.Context) error {
+	var lasterr error
+	for i := 0; i < 3; i++ {
+		cmd := exec.CommandContext(ctx, "git", "fetch", "--all")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			lasterr = fmt.Errorf("%w: %s", err, string(out))
+			continue
+		}
+		return nil
 	}
-	return nil
+	return lasterr
 }
 
 func getCurrentBranch(ctx context.Context) (string, error) {
