@@ -24,12 +24,15 @@ co print_outcome
 
 // ---
 fn build_local = go_build {
+    args = {
+        "find_mainpkg_dirs": "cmd"
+    }
 }
 
 fn build_cross = go_build {
     args = {
-		"mainpkg_path": "cmd/cofunc"
-        "bin_out":      "bin/darwin/,bin/linux/,bin/windows/"
+		"find_mainpkg_dirs": "cmd"
+        "bin_format":        "bin/darwin/,bin/linux/,bin/windows/"
     }
 }
 

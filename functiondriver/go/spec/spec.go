@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cofunclabs/cofunc/pkg/stringutil"
 	"github.com/cofunclabs/cofunc/service/resource"
 )
 
@@ -21,6 +22,10 @@ type ArgValType int
 
 // EntrypointArgs is the 'Args' argument of the entrypoint
 type EntrypointArgs map[string]string
+
+func (e EntrypointArgs) GetStringSlice(name string) []string {
+	return stringutil.String2Slice(e.GetString(name))
+}
 
 func (e EntrypointArgs) GetString(name string) string {
 	v, _ := e.Get(name, isString)
