@@ -1,0 +1,8 @@
+load "go:git_sync_upstream"
+load "go:outcome"
+
+var out
+co git_sync_upstream ->out
+co outcome {
+    "auto sync upstream": "$(out.outcome)"
+}

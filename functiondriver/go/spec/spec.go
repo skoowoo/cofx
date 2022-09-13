@@ -23,6 +23,12 @@ type ArgValType int
 // EntrypointArgs is the 'Args' argument of the entrypoint
 type EntrypointArgs map[string]string
 
+func (e EntrypointArgs) GetURL(name string) (string, error) {
+	s := e.GetString(name)
+	// TODO: check s
+	return s, nil
+}
+
 func (e EntrypointArgs) GetStringSlice(name string) []string {
 	return stringutil.String2Slice(e.GetString(name))
 }
