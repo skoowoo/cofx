@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"io"
+	"strings"
 )
 
 type Output struct {
@@ -42,4 +43,27 @@ func (o *Output) Close() {
 		o.HandleFunc(o.buffer)
 	}
 	o.buffer = nil
+}
+
+func ColumnFunc(values *[][]string, sep string, filterFunc func(fields []string) bool, cols ...int) func([]byte) {
+	return func(line []byte) {
+		var res []string
+		s := string(line)
+		fields := strings.Fields(s)
+		l := len(fields)
+		for _, col := range cols {
+			if col < l {
+				res = append(res, fields[col])
+			} else {
+				res = append(res, "")
+			}
+		}
+		if filterFunc != nil {
+			if filterFunc(res) {
+				*values = append(*values, res)
+			}
+		} else {
+			*values = append(*values, res)
+		}
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/cofunclabs/cofunc/std/command"
 	eventcron "github.com/cofunclabs/cofunc/std/events/event_cron"
 	eventtick "github.com/cofunclabs/cofunc/std/events/event_tick"
+	syncupstream "github.com/cofunclabs/cofunc/std/git/sync_upstream"
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
 	"github.com/cofunclabs/cofunc/std/outcome"
@@ -68,6 +69,7 @@ func init() {
 		gobuild.New,
 		gogenerate.New,
 		outcome.New,
+		syncupstream.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,

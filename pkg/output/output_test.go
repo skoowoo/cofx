@@ -68,3 +68,27 @@ func TestOutput2(t *testing.T) {
 		assert.Equal(t, "hello", strings.TrimSpace(buf.String()))
 	}
 }
+
+func TestColumnFunc(t *testing.T) {
+	testingdata := `
+origin  https://github.com/skoo87/cofunc.git (fetch)
+origin  https://github.com/skoo87/cofunc.git (push)
+upstream        https://github.com/cofunclabs/cofunc.git (fetch)
+upstream        https://github.com/cofunclabs/cofunc.git (push)	
+`
+
+	var (
+		rows [][]string
+		sep  = " "
+	)
+	out := &Output{
+		W: nil,
+		HandleFunc: ColumnFunc(&rows, sep, func(fields []string) bool {
+			return fields[0] == "upstream" && strings.Contains(fields[2], "fetch")
+		}, 0, 1, 2),
+	}
+	out.Write([]byte(testingdata))
+	out.Close()
+
+	assert.Len(t, rows, 1)
+}
