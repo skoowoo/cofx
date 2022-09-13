@@ -17,7 +17,7 @@ func TestShellDriver(t *testing.T) {
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	os.Setenv("COFUNC_HOME", filepath.Join(wd, "testingdata"))
+	os.Setenv("COFUNC_HOME", filepath.Join(wd, "testdata"))
 	defer os.Unsetenv("COFUNC_HOME")
 
 	var buf bytes.Buffer

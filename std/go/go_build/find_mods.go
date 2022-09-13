@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/cofunclabs/cofunc/pkg/textline"
 )
@@ -87,4 +88,16 @@ func findMainPkg(mods map[string]*modinfo, dir string) error {
 		return fmt.Errorf("%w: find main package", err)
 	}
 	return nil
+}
+
+func splitSpace(c rune) bool {
+	return unicode.IsSpace(c)
+}
+
+// getPrefix read 'module' field from go.mod file
+func getPrefix(fields []string) (string, bool) {
+	if len(fields) == 2 && fields[0] == "module" {
+		return fields[1], true
+	}
+	return "", false
 }
