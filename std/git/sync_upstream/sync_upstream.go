@@ -165,7 +165,7 @@ func checkMergeBase(ctx context.Context, toBranch, fromBranch string) (mergeBase
 		if len(out) == 0 {
 			return consistent, nil
 		}
-		if bytes.Contains(out, []byte("changed in both")) {
+		if bytes.Contains(out, []byte("\nchanged in both")) {
 			return conflict, nil
 		}
 	}
