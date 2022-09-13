@@ -42,6 +42,7 @@ var _manifest = manifest.Manifest{
 	Driver:      "go",
 	Args: map[string]string{
 		binFormatArg.Name: "bin/",
+		mainpkgArg.Name:   ".",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
@@ -55,16 +56,9 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	binouts := strings.FieldsFunc(args.GetString(binFormatArg.Name), func(r rune) bool {
-		return r == ',' || r == '\n'
-	})
-	var bins []binaryOutFormat
-	for _, binout := range binouts {
-		bf, err := parseBinout(strings.TrimSpace(binout))
-		if err != nil {
-			return nil, fmt.Errorf("%w: %s", err, binout)
-		}
-		bins = append(bins, bf)
+	bins, err := parseBinFormats(args.GetStringSlice(binFormatArg.Name))
+	if err != nil {
+		return nil, err
 	}
 
 	module := args.GetString(prefixArg.Name)
@@ -76,9 +70,6 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	mainpkgDirs := args.GetStringSlice(mainpkgArg.Name)
-	if len(mainpkgDirs) == 0 {
-		mainpkgDirs = []string{"."}
-	}
 	var mainpkgs []string
 	for _, dir := range mainpkgDirs {
 		pkgs, err := findMainPkg(module, dir)

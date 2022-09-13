@@ -21,7 +21,7 @@ func TestParseBinOut(t *testing.T) {
 			"bin/darwin/hello":   "bin/darwin/hello",
 		}
 		for k, v := range testingdata {
-			bin, err := parseBinout(k)
+			bin, err := parseBinFormat(k)
 			if err != nil {
 				assert.FailNow(t, err.Error())
 			}
@@ -29,7 +29,7 @@ func TestParseBinOut(t *testing.T) {
 		}
 	}
 	{
-		bin, err := parseBinout("bin/darwin/*.hello")
+		bin, err := parseBinFormat("bin/darwin/*.hello")
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
@@ -39,7 +39,7 @@ func TestParseBinOut(t *testing.T) {
 		assert.Equal(t, "GOARCH=amd64", envs[2])
 	}
 	{
-		bin, err := parseBinout("bin/*.linux")
+		bin, err := parseBinFormat("bin/*.linux")
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
@@ -49,7 +49,7 @@ func TestParseBinOut(t *testing.T) {
 		assert.Equal(t, "GOARCH=amd64", envs[2])
 	}
 	{
-		bin, err := parseBinout("bin/*.windows.386")
+		bin, err := parseBinFormat("bin/*.windows.386")
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
@@ -59,7 +59,7 @@ func TestParseBinOut(t *testing.T) {
 		assert.Equal(t, "GOARCH=386", envs[2])
 	}
 	{
-		bin, err := parseBinout("bindarwin/*.hello")
+		bin, err := parseBinFormat("bindarwin/*.hello")
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}

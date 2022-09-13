@@ -2,6 +2,7 @@ package gobuild
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -39,14 +40,26 @@ func (b binaryOutFormat) envs() []string {
 	return s
 }
 
-func parseBinout(binout string) (binaryOutFormat, error) {
+func parseBinFormats(formats []string) ([]binaryOutFormat, error) {
+	var bins []binaryOutFormat
+	for _, format := range formats {
+		if bin, err := parseBinFormat(format); err != nil {
+			return nil, fmt.Errorf("%w: %s", err, format)
+		} else {
+			bins = append(bins, bin)
+		}
+	}
+	return bins, nil
+}
+
+func parseBinFormat(format string) (binaryOutFormat, error) {
 	f := binaryOutFormat{}
-	if strings.HasSuffix(binout, "/") {
-		f.dir = binout
+	if strings.HasSuffix(format, "/") {
+		f.dir = format
 		f.isDir = true
 	} else {
-		f.dir = filepath.Dir(binout)
-		f.name = filepath.Base(binout)
+		f.dir = filepath.Dir(format)
+		f.name = filepath.Base(format)
 		if f.name == "" || f.name == "." || f.name == "/" {
 			return binaryOutFormat{}, errors.New("invalid binout format")
 		}
@@ -69,7 +82,7 @@ func parseBinout(binout string) (binaryOutFormat, error) {
 		`\Wwindows$`:  "windows",
 	}
 	for pattern, os := range ospattern {
-		if match, err := regexp.MatchString(pattern, binout); err != nil {
+		if match, err := regexp.MatchString(pattern, format); err != nil {
 			return binaryOutFormat{}, err
 		} else if match {
 			f.os = os
@@ -90,7 +103,7 @@ func parseBinout(binout string) (binaryOutFormat, error) {
 		`\Warm$`:  "arm",
 	}
 	for pattern, arch := range archpattern {
-		if match, err := regexp.MatchString(pattern, binout); err != nil {
+		if match, err := regexp.MatchString(pattern, format); err != nil {
 			return binaryOutFormat{}, err
 		} else if match {
 			f.arch = arch
