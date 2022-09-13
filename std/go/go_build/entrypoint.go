@@ -12,7 +12,6 @@ import (
 
 	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/textline"
 )
 
 var (
@@ -42,6 +41,7 @@ var _manifest = manifest.Manifest{
 	Driver:      "go",
 	Args: map[string]string{
 		binFormatArg.Name: "bin/",
+		mainpkgArg.Name:   ".",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
@@ -55,56 +55,41 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	binouts := strings.FieldsFunc(args.GetString(binFormatArg.Name), func(r rune) bool {
-		return r == ',' || r == '\n'
-	})
-	var bins []binaryOutFormat
-	for _, binout := range binouts {
-		bf, err := parseBinout(strings.TrimSpace(binout))
-		if err != nil {
-			return nil, fmt.Errorf("%w: %s", err, binout)
-		}
-		bins = append(bins, bf)
+	bins, err := parseBinFormats(args.GetStringSlice(binFormatArg.Name))
+	if err != nil {
+		return nil, err
 	}
 
-	module := args.GetString(prefixArg.Name)
-	if module == "" {
-		var err error
-		if module, err = textline.FindFileLine("go.mod", splitSpace, getPrefix); err != nil {
-			return nil, err
-		}
+	mods, err := findMods(".", args.GetStringSlice(mainpkgArg.Name))
+	if err != nil {
+		return nil, err
 	}
-
-	mainpkgDirs := args.GetStringSlice(mainpkgArg.Name)
-	if len(mainpkgDirs) == 0 {
-		mainpkgDirs = []string{"."}
-	}
-	var mainpkgs []string
-	for _, dir := range mainpkgDirs {
-		pkgs, err := findMainPkg(module, dir)
-		if err != nil {
-			return nil, err
-		}
-		mainpkgs = append(mainpkgs, pkgs...)
+	for _, m := range mods {
+		fmt.Fprintf(bundle.Resources.Logwriter, "mod %s in %s\n", m.name, m.dir)
 	}
 
 	var outcomes []string
-	for _, pkg := range mainpkgs {
-		for _, bin := range bins {
-			dstbin := bin.fullBinPath(filepath.Base(pkg))
-			cmd, err := buildCommand(ctx, dstbin, pkg, bundle.Resources.Logwriter)
-			if err != nil {
-				return nil, err
+	for _, mod := range mods {
+		for _, pkg := range mod.mainpkgs {
+			for _, bin := range bins {
+				dstbin := bin.fullBinPath(filepath.Base(pkg))
+				cmd, err := buildCommand(ctx, dstbin, pkg, bundle.Resources.Logwriter)
+				if err != nil {
+					return nil, err
+				}
+				cmd.Env = append(os.Environ(), bin.envs()...)
+				cmd.Dir = mod.dir
+
+				fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
+
+				if err := cmd.Start(); err != nil {
+					return nil, err
+				}
+				if err := cmd.Wait(); err != nil {
+					return nil, err
+				}
+				outcomes = append(outcomes, filepath.Join(mod.dir, dstbin))
 			}
-			cmd.Env = append(os.Environ(), bin.envs()...)
-			if err := cmd.Start(); err != nil {
-				return nil, err
-			}
-			if err := cmd.Wait(); err != nil {
-				return nil, err
-			}
-			fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
-			outcomes = append(outcomes, dstbin)
 		}
 	}
 
