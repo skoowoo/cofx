@@ -20,13 +20,13 @@ var (
 		Name: "prefix",
 		Desc: "By default, the module field contents are read from the 'go.mod' file",
 	}
-	binoutArg = manifest.UsageDesc{
-		Name: "bin_out",
+	binFormatArg = manifest.UsageDesc{
+		Name: "bin_format",
 		Desc: "Specifies the format of the binary file that to be built",
 	}
 	mainpkgArg = manifest.UsageDesc{
-		Name: "mainpkg_path",
-		Desc: `Specifies the path of main package, if there are more than one, separated by ','. If not specified, the mainpkg is automatically parsed`,
+		Name: "find_mainpkg_dirs",
+		Desc: `Specifies the dirs to find main package, if there are more than one, separated by ','. If not specified, it will find it from current dir.`,
 	}
 )
 
@@ -41,11 +41,11 @@ var _manifest = manifest.Manifest{
 	Description: "For building go project that based on 'go mod'",
 	Driver:      "go",
 	Args: map[string]string{
-		"bin_out": "bin/",
+		binFormatArg.Name: "bin/",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{prefixArg, binoutArg, mainpkgArg},
+		Args:         []manifest.UsageDesc{prefixArg, binFormatArg, mainpkgArg},
 		ReturnValues: []manifest.UsageDesc{outcomeRet},
 	},
 }
@@ -55,7 +55,7 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	binouts := strings.FieldsFunc(args.GetString(binoutArg.Name), func(r rune) bool {
+	binouts := strings.FieldsFunc(args.GetString(binFormatArg.Name), func(r rune) bool {
 		return r == ',' || r == '\n'
 	})
 	var bins []binaryOutFormat
@@ -67,34 +67,32 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		bins = append(bins, bf)
 	}
 
-	prefix := args.GetString(prefixArg.Name)
-	if prefix == "" {
+	module := args.GetString(prefixArg.Name)
+	if module == "" {
 		var err error
-		if prefix, err = textline.FindFileLine("go.mod", splitSpace, getPrefix); err != nil {
+		if module, err = textline.FindFileLine("go.mod", splitSpace, getPrefix); err != nil {
 			return nil, err
 		}
 	}
 
+	mainpkgDirs := args.GetStringSlice(mainpkgArg.Name)
+	if len(mainpkgDirs) == 0 {
+		mainpkgDirs = []string{"."}
+	}
 	var mainpkgs []string
-	mainpkgPath := args.GetString(mainpkgArg.Name)
-	if mainpkgPath != "" {
-		mainpkgs = strings.Split(mainpkgPath, ",")
-		for i, mainpkg := range mainpkgs {
-			mainpkgs[i] = filepath.Join(prefix, strings.TrimSpace(mainpkg))
-		}
-	} else {
-		var err error
-		mainpkgs, err = findMainPkg(prefix, ".")
+	for _, dir := range mainpkgDirs {
+		pkgs, err := findMainPkg(module, dir)
 		if err != nil {
 			return nil, err
 		}
+		mainpkgs = append(mainpkgs, pkgs...)
 	}
 
 	var outcomes []string
-	for _, mainpkg := range mainpkgs {
+	for _, pkg := range mainpkgs {
 		for _, bin := range bins {
-			dstbin := bin.fullBinPath(filepath.Base(mainpkg))
-			cmd, err := buildCommand(ctx, dstbin, mainpkg, bundle.Resources.Logwriter)
+			dstbin := bin.fullBinPath(filepath.Base(pkg))
+			cmd, err := buildCommand(ctx, dstbin, pkg, bundle.Resources.Logwriter)
 			if err != nil {
 				return nil, err
 			}

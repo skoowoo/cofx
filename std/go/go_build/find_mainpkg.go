@@ -9,7 +9,7 @@ import (
 )
 
 // findMainPkg finds the main package in the given directory automatically.
-func findMainPkg(prefix string, dir string) ([]string, error) {
+func findMainPkg(module string, dir string) ([]string, error) {
 	var mains []string
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -24,7 +24,7 @@ func findMainPkg(prefix string, dir string) ([]string, error) {
 			if len(pkgs) > 0 {
 				for name := range pkgs {
 					if name == "main" {
-						mains = append(mains, filepath.Join(prefix, path))
+						mains = append(mains, filepath.Join(module, path))
 						break
 					}
 				}
