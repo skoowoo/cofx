@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
 	"github.com/cofunclabs/cofunc/manifest"
@@ -109,16 +108,4 @@ func buildCommand(ctx context.Context, binpath, mainpath string, w io.Writer) (*
 	cmd.Stdout = w
 	cmd.Stderr = w
 	return cmd, nil
-}
-
-func splitSpace(c rune) bool {
-	return unicode.IsSpace(c)
-}
-
-// getPrefix read 'module' field from go.mod file
-func getPrefix(fields []string) (string, bool) {
-	if len(fields) == 2 && fields[0] == "module" {
-		return fields[1], true
-	}
-	return "", false
 }

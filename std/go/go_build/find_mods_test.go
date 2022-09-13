@@ -12,5 +12,5 @@ func TestFindModAndMainPkg(t *testing.T) {
 		assert.FailNow(t, err.Error())
 	}
 	assert.Len(t, mods, 1)
-	assert.Equal(t, "testing/testingmain", mods["testingdata"].mainpkgs[0])
+	assert.Equal(t, "testing/testingmain", mods["testdata"].mainpkgs[0])
 }

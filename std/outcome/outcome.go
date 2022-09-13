@@ -30,7 +30,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		fmt.Fprintf(bundle.Resources.Logwriter, "%s\n", k)
 		slice := stringutil.String2Slice(v)
 		for _, s := range slice {
-			fmt.Fprintf(bundle.Resources.Logwriter, "  %s\n", s)
+			fmt.Fprintf(bundle.Resources.Logwriter, "  ➜ %s\n", s)
 		}
 	}
 	return nil, nil
