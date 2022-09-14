@@ -296,6 +296,8 @@ func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
 	}
 	defer f.Close()
 
+	// set source for editing even if parsed failed
+	meta.Source = name
 	q, ast, err := actuator.New(f)
 	if err != nil {
 		return err
@@ -305,7 +307,6 @@ func parseOneFlowl(name string, meta *exported.FlowMetaInsight) error {
 		total++
 		return nil
 	})
-	meta.Source = name
 	meta.Total = total
 	meta.Desc = ast.Desc()
 	return nil
