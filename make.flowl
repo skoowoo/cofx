@@ -1,12 +1,13 @@
-load "go:command"
-load "go:go_build"
 load "go:go_generate"
+load "go:go_build"
+load "go:go_test"
 load "go:outcome"
 
 var build = $(env.BUILD)
 var test = $(env.TEST)
 
 var bins
+var test_report
 
 switch { 
     case $(build) == "true" { 
@@ -16,7 +17,7 @@ switch {
     }
 
     case $(test) == "true" {
-        co gotest
+        co go_test -> test_report
     }
 }
 
@@ -36,14 +37,9 @@ fn build_cross = go_build {
     }
 }
 
-fn gotest = command {
-    args = {
-        "cmd" : "go test ./..."
-    }
-}
-
 fn print_outcome = outcome {
 	args = {
 		"go build": "$(bins.outcome)"
+        "go test":  "$(test_report.outcome)"
 	}
 }
