@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/cofunclabs/cofunc/service"
@@ -15,16 +16,25 @@ func listStd() error {
 
 	svc := service.New()
 	all := svc.ListStdFunctions(ctx)
+	sort.Slice(all, func(i int, j int) bool {
+		a1 := all[i].Category + "/" + all[i].Name
+		a2 := all[j].Category + "/" + all[j].Name
+		return a1 < a2
+	})
 
 	// here is title
 	fmt.Fprintln(os.Stdout, "\n"+
 		colorGrey.Render(iconSpace.String()+
-			flowNameStyle.Render("FUNCTION NAME")+
+			funcNameStyle.Render("FUNCTION NAME")+
 			"DESC"))
 
 	for _, f := range all {
+		name := f.Name
+		if f.Category != "" {
+			name = f.Category + "/" + name
+		}
 		s := iconCircleOk.String() +
-			funcNameStyle.Render(f.Name) +
+			funcNameStyle.Render(name) +
 			lipgloss.NewStyle().MaxWidth(100).Render(f.Desc)
 		fmt.Fprintln(os.Stdout, s)
 	}

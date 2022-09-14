@@ -35,6 +35,7 @@ var (
 )
 
 var _manifest = manifest.Manifest{
+	Category:    "go",
 	Name:        "go_build",
 	Description: "For building go project that based on 'go mod'",
 	Driver:      "go",

@@ -68,8 +68,9 @@ func (s *SVC) ListStdFunctions(ctx context.Context) []exported.ListStdFunctions 
 	all := std.ListAll()
 	for _, m := range all {
 		list = append(list, exported.ListStdFunctions{
-			Name: m.Name,
-			Desc: m.Description,
+			Category: m.Category,
+			Name:     m.Name,
+			Desc:     m.Description,
 		})
 	}
 	return list
