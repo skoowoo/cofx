@@ -34,7 +34,7 @@ func listStd() error {
 			name = f.Category + "/" + name
 		}
 		s := iconCircleOk.String() +
-			funcNameStyle.Render(name) +
+			funcNameStyle.Foreground(lipgloss.Color("222")).Render(name) +
 			lipgloss.NewStyle().MaxWidth(100).Render(f.Desc)
 		fmt.Fprintln(os.Stdout, s)
 	}
