@@ -17,7 +17,7 @@ import (
 )
 
 func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {
-	items := []list.Item{}
+	items := make([]list.Item, 0, len(flows))
 	for _, f := range flows {
 		items = append(items, flowItem(f))
 	}

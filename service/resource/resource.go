@@ -20,13 +20,13 @@ type Resources struct {
 	HttpTrigger HttpTrigger
 }
 
-// CronTrigger add and remove the cron job by trigger function, the CronTrigger is a resrouce for trigger.
+// CronTrigger add and remove the cron job by trigger function, the CronTrigger is a resource for trigger.
 type CronTrigger interface {
 	Add(format string, ch chan<- time.Time) (interface{}, error)
 	Remove(interface{}) error
 }
 
-// HttpTrigger add and remove the http handler by trigger function, the HttpTrigger is a resrouce for trigger.
+// HttpTrigger add and remove the http handler by trigger function, the HttpTrigger is a resource for trigger.
 type HttpTrigger interface {
 	AddRoute(path string, handler func(w http.ResponseWriter, r *http.Request)) error
 	RemoveRoute(path string) error

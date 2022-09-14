@@ -15,7 +15,7 @@ import (
 type Driver interface {
 	// Name returns the name of the driver, e.g. "go", "cmd", etc.
 	Name() string
-	// FunctinName returns the name of the function associated with the driver
+	// FunctionName returns the name of the function associated with the driver
 	FunctionName() string
 	// Manifest returns the manifest of the function associated with the driver
 	Manifest() manifest.Manifest

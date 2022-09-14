@@ -215,7 +215,7 @@ func (b *Block) GetVarValue(name string) string {
 	return v
 }
 
-// Getvar lookup variable by name in map
+// GetVar lookup variable by name in map
 func (b *Block) getVar(name string) (*_var, *Block) {
 	for p := b; p != nil; p = p.parent {
 		v, ok := p.vtbl.get(name)

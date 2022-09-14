@@ -66,7 +66,7 @@ func WithBeforeFunc(_func func(nameid.ID) error) FlowOption {
 	}
 }
 
-// WithAferFunc initializes the after call-back.
+// WithAfterFunc initializes the after call-back.
 func WithAfterFunc(_func func(nameid.ID) error) FlowOption {
 	return func(fb *FlowBody) {
 		fb.afterFunc = _func
@@ -182,7 +182,7 @@ func (f *Flow) ToReady() error {
 }
 
 // ToRunning set the flow to running status and the begin time of the last running
-func (f *Flow) ToRuning() {
+func (f *Flow) ToRunning() {
 	if f.IsRunning() {
 		return
 	}
@@ -239,9 +239,9 @@ type FlowBody struct {
 	// The status of the flow, the value is one of the following:
 	// StatusAdded, StatusReady, StatusRunning, StatusStopped
 	// Added: The flow is added to the flow store, parsed flowl only, not initialized.
-	// Ready: The flow is initialized inlcude node and driver, but not running.
+	// Ready: The flow is initialized include node and driver, but not running.
 	// Running: The flow is running.
-	// Stopped: The flow is stopped, if need to start again, it must be changed to Ready first.
+	// Stopped: The flow is stopped, if you need to start again, it must be changed to Ready first.
 	status StatusType
 
 	// beforeFunc will be invoked beforeFunc the flow is started.
@@ -330,7 +330,7 @@ func (fs *functionStatistics) IsStatus(status StatusType) bool {
 	return fs.status == status
 }
 
-func (fs *functionStatistics) ToRuning() {
+func (fs *functionStatistics) ToRunning() {
 	fs.WithLock(func(body *functionStatisticsBody) {
 		body.begin = time.Now()
 		body.status = StatusRunning
@@ -357,7 +357,7 @@ func (fs *functionStatistics) ToStopped(err error) {
 type progress struct {
 	// Stored seq number of all nodes in a flow
 	nodes []int
-	// Stored seq number of all fnished nodes in a flow
+	// Stored seq number of all finished nodes in a flow
 	done []int
 	// Stored seq number of all running nodes in a flow; The key is the seq number, which is easy to find.
 	running map[int]struct{}

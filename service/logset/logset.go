@@ -194,7 +194,7 @@ func newLogFile2Write(path string) (*logFile, error) {
 	}, nil
 }
 
-// newLogFile2Read createa 'Logfile' object, can use it to read the ouput content from the file, the arugment is
+// newLogFile2Read create 'Logfile' object, can use it to read the output content from the file, the argument is
 // file path.
 func newLogFile2Read(path string) (*logFile, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)

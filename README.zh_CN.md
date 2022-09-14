@@ -113,7 +113,7 @@ var d = $(c) * 2
 
 ```go
 var a = "foo"
-a <- "bar
+a <- "bar"
 // <- 重写变量后，a 变量的值就变成了 bar
 ```
 
@@ -217,6 +217,7 @@ co {
 #### switch 条件选择
 
 `switch + case` 可以根据条件选择执行 `co`，一个 case 语句包含一个条件表达式和一个 co 语句，如下有两个 case 的 switch 语句：
+
 ```go
 switch { 
 	case $(build) == "true" { 

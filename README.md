@@ -140,7 +140,7 @@ The `<-` operator is used for variable rewriting (usually called assignment in o
 
 ```go
 var a = "foo"
-a <- "bar
+a <- "bar"
 // <- Rewriting the variable, the value of the variable 'a' becomes bar
 ```
 
@@ -244,6 +244,7 @@ co {
 #### switch
 
 `switch + case` can choose to execute `co` according to the condition. A case statement contains a conditional expression and a co statement. The following switch statement has two cases:
+
 ```go
 switch { 
     case $(build) == "true" { 
