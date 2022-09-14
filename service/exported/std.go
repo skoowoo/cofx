@@ -8,8 +8,9 @@ import (
 )
 
 type ListStdFunctions struct {
-	Name string `json:"name"`
-	Desc string `json:"desc"`
+	Category string `json:"category"`
+	Name     string `json:"name"`
+	Desc     string `json:"desc"`
 }
 
 func (l ListStdFunctions) JsonWrite(w io.Writer) error {

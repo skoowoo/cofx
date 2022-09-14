@@ -11,6 +11,7 @@ import (
 )
 
 var _manifest = manifest.Manifest{
+	Category:       "go",
 	Name:           "go_generate",
 	Description:    "A function that packaging 'go generate' command",
 	Driver:         "go",

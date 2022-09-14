@@ -23,6 +23,7 @@ var upstreamArg = manifest.UsageDesc{
 }
 
 var _manifest = manifest.Manifest{
+	Category:    "git",
 	Name:        "git_sync_upstream",
 	Description: "Sync git branch from upstream",
 	Driver:      "go",
