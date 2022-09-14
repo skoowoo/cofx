@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cofunclabs/cofunc/config"
+	"github.com/cofunclabs/cofunc/pkg/nameid"
+	"github.com/cofunclabs/cofunc/service"
 	"github.com/cofunclabs/cofunc/service/exported"
 )
 
@@ -42,16 +45,16 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		return exported.FlowMetaInsight{}, err
 	}
 
-	if m, ok := ret.(listFlowModel); ok && m.selected.Name != "" {
-		return m.selected, nil
+	if m, ok := ret.(listFlowModel); ok && m.flowToRun.Name != "" {
+		return exported.FlowMetaInsight(m.flowToRun), nil
 	}
 	return exported.FlowMetaInsight{}, nil
 }
 
 type listFlowModel struct {
-	list     list.Model
-	keys     keyMap
-	selected exported.FlowMetaInsight
+	list      list.Model
+	keys      keyMap
+	flowToRun flowItem
 }
 
 func (m listFlowModel) Init() tea.Cmd {
@@ -65,13 +68,22 @@ func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		if key.Matches(msg, m.keys.toggleRun) {
-			m.selected = exported.FlowMetaInsight(m.list.SelectedItem().(flowItem))
+			m.flowToRun = m.getSelected()
 			return m, tea.Quit
 		}
 		if key.Matches(msg, m.keys.toggleEdit) {
-			return m, openEditor(m.list.SelectedItem().(flowItem).Source)
+			return m, openEditor(m.getSelected().Source)
 		}
 	case editorFinishedMsg:
+		// parse this flow again
+		svc := service.New()
+		insight, err := svc.GetAvailableMeta(context.Background(), nameid.New(m.getSelected().Name))
+		if err != nil {
+			m.updateSelected(func(selected *flowItem) { selected.Desc = err.Error() })
+		} else {
+			m.replaceSelected(flowItem(insight))
+		}
+		return m, nil
 
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
@@ -99,6 +111,20 @@ func (f flowItem) Description() string {
 
 func (f flowItem) FilterValue() string {
 	return f.Name
+}
+
+func (m listFlowModel) getSelected() flowItem {
+	return m.list.SelectedItem().(flowItem)
+}
+
+func (m listFlowModel) updateSelected(f func(selected *flowItem)) {
+	selected := m.getSelected()
+	f(&selected)
+	m.list.SetItem(m.list.Index(), selected)
+}
+
+func (m listFlowModel) replaceSelected(item flowItem) {
+	m.list.SetItem(m.list.Index(), item)
 }
 
 type editorFinishedMsg struct {
