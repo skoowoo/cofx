@@ -45,25 +45,19 @@ func (o *Output) Close() {
 	o.buffer = nil
 }
 
-func ColumnFunc(values *[][]string, sep string, filterFunc func(fields []string) bool, cols ...int) func([]byte) {
+func ColumnFunc(sep string, filterFunc func(fields []string), cols ...int) func([]byte) {
 	return func(line []byte) {
-		var res []string
+		var values []string
 		s := string(line)
 		fields := strings.Fields(s)
 		l := len(fields)
 		for _, col := range cols {
 			if col < l {
-				res = append(res, fields[col])
+				values = append(values, fields[col])
 			} else {
-				res = append(res, "")
+				values = append(values, "")
 			}
 		}
-		if filterFunc != nil {
-			if filterFunc(res) {
-				*values = append(*values, res)
-			}
-		} else {
-			*values = append(*values, res)
-		}
+		filterFunc(values)
 	}
 }

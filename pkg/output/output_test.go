@@ -83,8 +83,10 @@ upstream        https://github.com/cofunclabs/cofunc.git (push)
 	)
 	out := &Output{
 		W: nil,
-		HandleFunc: ColumnFunc(&rows, sep, func(fields []string) bool {
-			return fields[0] == "upstream" && strings.Contains(fields[2], "fetch")
+		HandleFunc: ColumnFunc(sep, func(fields []string) {
+			if fields[0] == "upstream" && strings.Contains(fields[2], "fetch") {
+				rows = append(rows, fields)
+			}
 		}, 0, 1, 2),
 	}
 	out.Write([]byte(testingdata))

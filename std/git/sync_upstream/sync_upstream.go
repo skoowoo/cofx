@@ -43,10 +43,12 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	branches := args.GetStringSlice(branchArg.Name)
-	currentBranch, err := getCurrentBranch(ctx)
+	currentBranch, cmd, err := getCurrentBranch(ctx)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s ➜ %s\n", cmd, currentBranch)
+
 	var found bool
 	for _, branch := range branches {
 		if branch == currentBranch {
@@ -58,16 +60,20 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		return map[string]string{"outcome": "no sync: not sync this branch"}, nil
 	}
 
-	upstream, err := getUpstreamAddr(ctx)
+	upstream, cmd, err := getUpstreamAddr(ctx)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s ➜ %s\n", cmd, upstream)
+
 	if upstream == "" {
 		return map[string]string{"outcome": "no sync: not found upstream"}, nil
 	}
 	// git fetch --all
-	if err := fetchRemotes(ctx); err != nil {
+	if cmd, err := fetchRemotes(ctx); err != nil {
 		return nil, err
+	} else {
+		fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd)
 	}
 	// git merge-base
 	// git merge-tree
@@ -84,8 +90,10 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		if state2 == consistent {
 			return map[string]string{"outcome": "no sync: three branches are consistent"}, nil
 		} else {
-			if err := pushOrigin(ctx, currentBranch); err != nil {
+			if cmd, err := pushOrigin(ctx, currentBranch); err != nil {
 				return nil, err
+			} else {
+				fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd)
 			}
 		}
 		return nil, nil
@@ -100,25 +108,31 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	// git push origin branch
-	if err := pushOrigin(ctx, currentBranch); err != nil {
+	if cmd, err := pushOrigin(ctx, currentBranch); err != nil {
 		return nil, err
+	} else {
+		fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd)
 	}
 
 	return map[string]string{"outcome": "synced"}, nil
 }
 
-func pushOrigin(ctx context.Context, branch string) error {
-	var lasterr error
+func pushOrigin(ctx context.Context, branch string) (string, error) {
+	var (
+		lasterr error
+		cmdstr  string
+	)
 	for i := 0; i < 3; i++ {
 		cmd := exec.CommandContext(ctx, "git", "push", "origin", branch)
 		out, err := cmd.CombinedOutput()
+		cmdstr = cmd.String()
 		if err != nil {
 			lasterr = fmt.Errorf("%w: %s", err, string(out))
 			continue
 		}
-		return nil
+		return cmdstr, nil
 	}
-	return lasterr
+	return cmdstr, lasterr
 }
 
 func rebaseUpstream(ctx context.Context, branch string) error {
@@ -173,38 +187,44 @@ func checkMergeBase(ctx context.Context, toBranch, fromBranch string) (mergeBase
 	return noConflict, nil
 }
 
-func fetchRemotes(ctx context.Context) error {
-	var lasterr error
+func fetchRemotes(ctx context.Context) (string, error) {
+	var (
+		lasterr error
+		cmdstr  string
+	)
 	for i := 0; i < 3; i++ {
 		cmd := exec.CommandContext(ctx, "git", "fetch", "--all")
 		out, err := cmd.CombinedOutput()
+		cmdstr = cmd.String()
 		if err != nil {
 			lasterr = fmt.Errorf("%w: %s", err, string(out))
 			continue
 		}
-		return nil
+		return cmdstr, nil
 	}
-	return lasterr
+	return cmdstr, lasterr
 }
 
-func getCurrentBranch(ctx context.Context) (string, error) {
+func getCurrentBranch(ctx context.Context) (string, string, error) {
 	cmd := exec.CommandContext(ctx, "git", "branch", "--show-current")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", err, string(out))
+		return "", cmd.String(), fmt.Errorf("%w: %s", err, string(out))
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(string(out)), cmd.String(), nil
 }
 
-func getUpstreamAddr(ctx context.Context) (string, error) {
+func getUpstreamAddr(ctx context.Context) (string, string, error) {
 	var (
 		rows [][]string
 		sep  = " "
 	)
 	out := &output.Output{
 		W: nil,
-		HandleFunc: output.ColumnFunc(&rows, sep, func(fields []string) bool {
-			return fields[0] == "upstream" && strings.Contains(fields[2], "fetch")
+		HandleFunc: output.ColumnFunc(sep, func(fields []string) {
+			if fields[0] == "upstream" && strings.Contains(fields[2], "fetch") {
+				rows = append(rows, fields)
+			}
 		}, 0, 1, 2),
 	}
 
@@ -212,11 +232,11 @@ func getUpstreamAddr(ctx context.Context) (string, error) {
 	cmd.Stderr = out
 	cmd.Stdout = out
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return "", cmd.String(), err
 	}
 	if len(rows) != 0 {
-		return rows[0][1], nil
+		return rows[0][1], cmd.String(), nil
 	} else {
-		return "", nil
+		return "", cmd.String(), nil
 	}
 }

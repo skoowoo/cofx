@@ -12,6 +12,7 @@ import (
 	syncupstream "github.com/cofunclabs/cofunc/std/git/sync_upstream"
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
+	"github.com/cofunclabs/cofunc/std/go/gotest"
 	"github.com/cofunclabs/cofunc/std/outcome"
 	"github.com/cofunclabs/cofunc/std/print"
 	"github.com/cofunclabs/cofunc/std/sleep"
@@ -68,6 +69,7 @@ func init() {
 		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
+		gotest.New,
 		outcome.New,
 		syncupstream.New,
 		// event trigger function
