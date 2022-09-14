@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -17,6 +18,7 @@ func listFlows() error {
 
 	svc := service.New()
 	availables := svc.ListAvailables(ctx)
+	sort.Slice(availables, func(i, j int) bool { return availables[i].Name < availables[j].Name })
 
 	// calculate the max length of flow's source field
 	var max int = 20
@@ -41,13 +43,13 @@ func listFlows() error {
 		var s string
 		if f.Total == -1 {
 			s = iconCircleFailed.String() +
-				flowNameStyle.Render(f.Name) +
+				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(source) +
 				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
 			s = iconCircleOk.String() +
-				flowNameStyle.Render(f.Name) +
+				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(source) +
 				lipgloss.NewStyle().MaxWidth(30).Render(f.Desc)
