@@ -114,10 +114,12 @@ func (l *lexer) split(line string, ln int, eof bool) error {
 			})
 			// Here is special handling of comments, because a line comment can contain unicode character
 			if ts := l.get(ln); ts != nil {
-				if len(ts) == 1 && ts[0].String() == "//" {
+				if len(ts) == 1 && strings.HasPrefix(ts[0].String(), "//") {
+					comment := strings.TrimPrefix(ts[0].String(), "//")
+					ts[0].str = "//"
 					// save the remaining characters on the current line as comment
 					l.insert(ln, &Token{
-						str: strings.TrimSpace(line[pos:]),
+						str: strings.TrimSpace(comment + line[pos:]),
 						typ: _string_t,
 					})
 					l._goto(_lx_unknow)

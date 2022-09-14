@@ -56,6 +56,7 @@ func TestParseBlocksFull(t *testing.T) {
 		co f2
 	}
 
+	//---
 	fn f1 = function1 {
 		args = {
 			"k1": "v1"
