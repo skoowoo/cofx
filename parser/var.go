@@ -212,7 +212,7 @@ func newEnvVar() *_var {
 }
 
 func isFieldVar(name string) (string, string, bool) {
-	fields := strings.Split(name, ".")
+	fields := strings.SplitN(name, ".", 2)
 	if len(fields) != 2 {
 		return "", "", false
 	}

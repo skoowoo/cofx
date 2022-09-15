@@ -13,6 +13,7 @@ import (
 	gobuild "github.com/cofunclabs/cofunc/std/go/go_build"
 	gogenerate "github.com/cofunclabs/cofunc/std/go/go_generate"
 	"github.com/cofunclabs/cofunc/std/go/gotest"
+	httpget "github.com/cofunclabs/cofunc/std/http/http_get"
 	"github.com/cofunclabs/cofunc/std/outcome"
 	"github.com/cofunclabs/cofunc/std/print"
 	"github.com/cofunclabs/cofunc/std/sleep"
@@ -72,6 +73,7 @@ func init() {
 		gotest.New,
 		outcome.New,
 		syncupstream.New,
+		httpget.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,
