@@ -1,0 +1,16 @@
+load "go:http_get"
+load "go:print"
+
+var response
+co get_github_upstream -> response
+co print {
+    "_": "$(response.parent.clone_url)"
+}
+
+//---
+fn get_github_upstream = http_get {
+    args = {
+        "url": "https://api.github.com/repos/skoo87/cofunc"
+        "path": "parent.clone_url"
+    }
+}

@@ -160,7 +160,7 @@ func (t *Token) validate() error {
 		}
 		name := seg.str
 		if strings.Contains(seg.str, ".") {
-			fields := strings.Split(seg.str, ".")
+			fields := strings.SplitN(seg.str, ".", 2)
 			if len(fields) != 2 {
 				return varErrorf(t.ln, ErrVariableFormat, "'%s' in token '%s'", name, t)
 			}
