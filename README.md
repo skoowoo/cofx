@@ -2,11 +2,10 @@
 
 [[中文](./README.zh_CN.md)]
 
-CoFUNC is an automation engine based on function fabric, which can be used to build automated function flows through the combination of functions. FlowL is a `function fabric` language embedded in CoFUNC, which provides some features such as function events, function operation and management from the language.
+CoFUNC is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The cofunc framework engine consists of two parts, the programming language and the standard function library.
 
 ![](./docs/assets/demo.gif)
 
-- [You Can](#you-can)
 - [Installation Guide](#installation-guide)
 - [CLI](#cli)
 - [FlowL - A small language](#flowl---a-small-language)
@@ -29,19 +28,6 @@ CoFUNC is an automation engine based on function fabric, which can be used to bu
 - [Thanks](#thanks)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
-
-## You Can
-* Build CI/CD, DevOps toolchains
-* Build workflows
-* Build data ETL
-* Build a distributed task system
-* Build automated OPS tools
-* Connected and integrated API of external systems to automate some workflows
-* Standardized management of a large number of scripting tools
-* Build simple and useful FaaS tools
-* Build personal local automated bots
-* ...
 
 ## Installation Guide
 Currently, an installation package is not provided yet, but you can try it through building the source code by yourself.
