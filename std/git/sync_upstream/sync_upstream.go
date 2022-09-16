@@ -32,7 +32,7 @@ var _manifest = manifest.Manifest{
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{branchArg},
+		Args:         []manifest.UsageDesc{branchArg, upstreamArg},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
@@ -67,7 +67,14 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s ➜ %s\n", cmd, upstream)
 
 	if upstream == "" {
-		return map[string]string{"outcome": "no sync: not found upstream"}, nil
+		if upstream = args.GetString(upstreamArg.Name); upstream == "" {
+			return map[string]string{"outcome": "no sync: not found upstream"}, nil
+		}
+		if cmd, err := addUpstream(ctx, upstream); err != nil {
+			return nil, err
+		} else {
+			fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd)
+		}
 	}
 	// git fetch --all
 	if cmd, err := fetchRemotes(ctx); err != nil {
@@ -115,6 +122,15 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	return map[string]string{"outcome": "synced"}, nil
+}
+
+func addUpstream(ctx context.Context, upstream string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "remote", "add", "upstream", upstream)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", err, string(out))
+	}
+	return cmd.String(), nil
 }
 
 func pushOrigin(ctx context.Context, branch string) (string, error) {
