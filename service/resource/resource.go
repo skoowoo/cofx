@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"time"
@@ -30,4 +31,10 @@ type CronTrigger interface {
 type HttpTrigger interface {
 	AddRoute(path string, handler func(w http.ResponseWriter, r *http.Request)) error
 	RemoveRoute(path string) error
+}
+
+type TableOperation interface {
+	Insert(ctx context.Context, columns []string, values ...any) error
+	Delete(ctx context.Context, where string) error
+	Query(ctx context.Context, columns []string, where string) ([][]string, error)
 }

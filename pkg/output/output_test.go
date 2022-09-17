@@ -79,7 +79,7 @@ upstream        https://github.com/cofunclabs/cofunc.git (push)
 
 	var (
 		rows [][]string
-		sep  = " "
+		sep  string
 	)
 	out := &Output{
 		W: nil,

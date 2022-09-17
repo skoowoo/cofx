@@ -2,7 +2,7 @@
 
 [[中文](./README.zh_CN.md)]
 
-CoFUNC is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The cofunc framework engine consists of two parts, the programming language and the standard function library.
+CoFunc is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The CoFunc framework engine consists of two parts, the programming language and the standard function library.
 
 ![](./docs/assets/demo.gif)
 

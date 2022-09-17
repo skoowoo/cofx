@@ -47,9 +47,16 @@ func (o *Output) Close() {
 
 func ColumnFunc(sep string, filterFunc func(fields []string), cols ...int) func([]byte) {
 	return func(line []byte) {
-		var values []string
+		var (
+			values []string
+			fields []string
+		)
 		s := string(line)
-		fields := strings.Fields(s)
+		if sep == "" {
+			fields = strings.Fields(s)
+		} else {
+			fields = strings.Split(s, sep)
+		}
 		l := len(fields)
 		for _, col := range cols {
 			if col < l {
