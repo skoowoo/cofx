@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/functiondriver"
-	"github.com/cofunclabs/cofunc/parser"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/functiondriver"
+	"github.com/cofxlabs/cofx/parser"
+	"github.com/cofxlabs/cofx/service/resource"
 	"github.com/sirupsen/logrus"
 )
 

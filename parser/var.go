@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cofunclabs/cofunc/pkg/enabled"
-	"github.com/cofunclabs/cofunc/pkg/eval"
-	"github.com/cofunclabs/cofunc/pkg/is"
+	"github.com/cofxlabs/cofx/pkg/enabled"
+	"github.com/cofxlabs/cofx/pkg/eval"
+	"github.com/cofxlabs/cofx/pkg/is"
 )
 
 const (

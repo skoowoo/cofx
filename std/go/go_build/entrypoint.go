@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
-	"github.com/cofunclabs/cofunc/manifest"
+	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/manifest"
 )
 
 var (

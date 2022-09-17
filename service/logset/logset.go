@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofunclabs/cofunc/pkg/output"
+	"github.com/cofxlabs/cofx/pkg/output"
 )
 
 type LogsetOption func(*Logset)

@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/service"
+	co "github.com/cofxlabs/cofx"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/service"
 )
 
 func runflowl(nameorid nameid.NameOrID) error {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
-	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/manifest"
+	"github.com/cofxlabs/cofx/service/resource"
 )
 
 var exprArg = manifest.UsageDesc{

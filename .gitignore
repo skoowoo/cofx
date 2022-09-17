@@ -15,7 +15,7 @@
 bin/
 vendor/
 .tmp/
-.cofunc/
+.cofx/
 .vscode/
 .VSCode*/
 *_string.go

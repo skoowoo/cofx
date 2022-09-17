@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/service"
+	"github.com/cofxlabs/cofx/config"
+	"github.com/cofxlabs/cofx/service"
 )
 
 func listFlows() error {

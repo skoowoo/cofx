@@ -9,16 +9,16 @@ import (
 	"path/filepath"
 	"strconv"
 
-	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/runtime"
-	"github.com/cofunclabs/cofunc/runtime/actuator"
-	"github.com/cofunclabs/cofunc/service/crontrigger"
-	"github.com/cofunclabs/cofunc/service/exported"
-	"github.com/cofunclabs/cofunc/service/logset"
-	"github.com/cofunclabs/cofunc/service/resource"
-	"github.com/cofunclabs/cofunc/std"
+	co "github.com/cofxlabs/cofx"
+	"github.com/cofxlabs/cofx/config"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/runtime"
+	"github.com/cofxlabs/cofx/runtime/actuator"
+	"github.com/cofxlabs/cofx/service/crontrigger"
+	"github.com/cofxlabs/cofx/service/exported"
+	"github.com/cofxlabs/cofx/service/logset"
+	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/cofxlabs/cofx/std"
 )
 
 // SVC is the service layer, it provides API to access and manage the flows

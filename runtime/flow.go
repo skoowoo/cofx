@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofunclabs/cofunc/parser"
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/runtime/actuator"
-	"github.com/cofunclabs/cofunc/service/exported"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/parser"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/runtime/actuator"
+	"github.com/cofxlabs/cofx/service/exported"
+	"github.com/cofxlabs/cofx/service/resource"
 )
 
 type StatusType string

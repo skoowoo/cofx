@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/pkg/enabled"
+	"github.com/cofxlabs/cofx/pkg/enabled"
 )
 
 type aststate int
