@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
-	godriver "github.com/cofunclabs/cofunc/functiondriver/go"
-	shelldriver "github.com/cofunclabs/cofunc/functiondriver/shell"
-	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/service/resource"
+	godriver "github.com/cofxlabs/cofx/functiondriver/go"
+	shelldriver "github.com/cofxlabs/cofx/functiondriver/shell"
+	"github.com/cofxlabs/cofx/manifest"
+	"github.com/cofxlabs/cofx/service/resource"
 )
 
 type Driver interface {

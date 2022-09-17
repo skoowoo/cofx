@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +20,7 @@ func TestCommandFunction(t *testing.T) {
 		},
 	}
 	_, err := ep(context.Background(), bundle, map[string]string{
-		"cmd": "echo hello cofunc && sleep 2 && echo hello cofunc2",
+		"cmd": "echo hello cofx && sleep 2 && echo hello cofx2",
 	})
 	assert.NoError(t, err)
 }

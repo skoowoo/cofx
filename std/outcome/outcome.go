@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
-	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/stringutil"
+	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/manifest"
+	"github.com/cofxlabs/cofx/pkg/stringutil"
 )
 
 var _manifest = manifest.Manifest{

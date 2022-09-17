@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
-	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/parser"
-	"github.com/cofunclabs/cofunc/runtime/actuator"
+	co "github.com/cofxlabs/cofx"
+	"github.com/cofxlabs/cofx/parser"
+	"github.com/cofxlabs/cofx/runtime/actuator"
 )
 
 func parseflowl(name string, all bool) error {

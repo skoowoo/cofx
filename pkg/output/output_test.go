@@ -71,10 +71,10 @@ func TestOutput2(t *testing.T) {
 
 func TestColumnFunc(t *testing.T) {
 	testingdata := `
-origin  https://github.com/skoo87/cofunc.git (fetch)
-origin  https://github.com/skoo87/cofunc.git (push)
-upstream        https://github.com/cofunclabs/cofunc.git (fetch)
-upstream        https://github.com/cofunclabs/cofunc.git (push)	
+origin  https://github.com/skoo87/cofx.git (fetch)
+origin  https://github.com/skoo87/cofx.git (push)
+upstream        https://github.com/cofxlabs/cofx.git (fetch)
+upstream        https://github.com/cofxlabs/cofx.git (push)	
 `
 
 	var (

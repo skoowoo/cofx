@@ -1,3 +1,3 @@
 #!/bin/sh
 
-echo ${COFUNC_MESSAGE}
+echo ${COFX_MESSAGE}

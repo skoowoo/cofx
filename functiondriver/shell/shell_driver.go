@@ -9,16 +9,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/output"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/config"
+	"github.com/cofxlabs/cofx/manifest"
+	"github.com/cofxlabs/cofx/pkg/output"
+	"github.com/cofxlabs/cofx/service/resource"
 )
 
 const Name = "shell"
 
 // ShellDriver is used to execute shell script functions. All shell script functions must be stored in
-// $COFUNC_HOME/shell directory, the ShellDriver is able to find and load them.
+// $COFX_HOME/shell directory, the ShellDriver is able to find and load them.
 type ShellDriver struct {
 	fpath   string
 	fname   string
@@ -39,7 +39,7 @@ func New(fname, fpath, version string) *ShellDriver {
 	}
 }
 
-// Load loads the shell script function from $COFUNC_HOME/shell directory.
+// Load loads the shell script function from $cofx_HOME/shell directory.
 func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) error {
 	functionDir := filepath.Join(config.ShellDir(), d.fpath)
 	mfPath := filepath.Join(functionDir, "manifest.json")
@@ -136,7 +136,7 @@ func (d *ShellDriver) mergeArgs(args map[string]string) map[string]string {
 func (d *ShellDriver) toEnv(args map[string]string) []string {
 	var envs []string
 	for k, v := range args {
-		k = "COFUNC_" + strings.ToUpper(k)
+		k = "COFX_" + strings.ToUpper(k)
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 	return envs

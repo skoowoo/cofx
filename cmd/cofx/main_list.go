@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/service"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/service"
 )
 
 func mainList() error {
@@ -14,7 +14,7 @@ func mainList() error {
 	svc := service.New()
 	availables := svc.ListAvailables(ctx)
 
-	//  execute 'cofunc' command without any args or sub-command
+	//  execute 'cofx' command without any args or sub-command
 	for {
 		selected, err := startListingView(availables)
 		if err != nil {

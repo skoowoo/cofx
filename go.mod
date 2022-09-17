@@ -1,4 +1,4 @@
-module github.com/cofunclabs/cofunc
+module github.com/cofxlabs/cofx
 
 go 1.18
 

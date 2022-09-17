@@ -2,7 +2,7 @@
 
 [[中文](./README.zh_CN.md)]
 
-CoFunc is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The CoFunc framework engine consists of two parts, the programming language and the standard function library.
+CoFx is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The CoFx framework engine consists of two parts, the programming language and the standard function library.
 
 ![](./docs/assets/demo.gif)
 
@@ -39,26 +39,26 @@ make first
 
 ## CLI
 ```
-// cofunc -h
+// cofx -h
 
 An automation engine based on function fabric, can used to parse, create, run
 and manage flow
 
-Execute 'cofunc' command directly and no any args or sub-command, will list
+Execute 'cofx' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFX_HOME=<path of a directory>           // Default $HOME/.cofx
 
 Examples:
-  cofunc
-  cofunc list
-  cofunc run   helloworld.flowl
-  cofunc prun  helloworld.flowl
+  cofx
+  cofx list
+  cofx run   helloworld.flowl
+  cofx prun  helloworld.flowl
 
 Usage:
-  cofunc [flags]
-  cofunc [command]
+  cofx [flags]
+  cofx [command]
 
 Available Commands:
   help        Help about any command
@@ -68,7 +68,7 @@ Available Commands:
   run         Run a flowl file
 
 Flags:
-  -h, --help   help for cofunc
+  -h, --help   help for cofx
 ```
 
 ## FlowL - A small language
@@ -320,7 +320,7 @@ Driver
 
 tool
 * function development helper
-* cofunc-server
+* cofx-server
 * repository
 
 ## Architecture Design
@@ -331,7 +331,7 @@ tool
 
 <div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
 
-There are 4 core concepts in CoFUNC architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
+There are 4 core concepts in cofx architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
 
 * `Flow` is a process that's defined through a `.flowl` file
 * `Node` is the entity that makes up a Flow, the node entity executes and manages a Function

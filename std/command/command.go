@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cofunclabs/cofunc/functiondriver/go/spec"
-	"github.com/cofunclabs/cofunc/manifest"
-	"github.com/cofunclabs/cofunc/pkg/output"
+	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/manifest"
+	"github.com/cofxlabs/cofx/pkg/output"
 )
 
 var cmdArg = manifest.UsageDesc{

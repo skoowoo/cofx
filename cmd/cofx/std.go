@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofunclabs/cofunc/service"
+	"github.com/cofxlabs/cofx/service"
 )
 
 func listStd() error {

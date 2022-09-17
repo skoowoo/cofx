@@ -32,13 +32,13 @@ func Init() error {
 }
 
 func HomeDir() string {
-	v := os.Getenv("COFUNC_HOME")
+	v := os.Getenv("COFX_HOME")
 	if len(v) == 0 {
 		home, err := homedir.Dir()
 		if err != nil {
 			panic(err)
 		}
-		v = filepath.Join(home, ".cofunc")
+		v = filepath.Join(home, ".cofx")
 	}
 	return v
 }

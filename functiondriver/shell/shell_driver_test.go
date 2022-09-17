@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +17,8 @@ func TestShellDriver(t *testing.T) {
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	os.Setenv("COFUNC_HOME", filepath.Join(wd, "testdata"))
-	defer os.Unsetenv("COFUNC_HOME")
+	os.Setenv("COFX_HOME", filepath.Join(wd, "testdata"))
+	defer os.Unsetenv("COFX_HOME")
 
 	var buf bytes.Buffer
 	ctx := context.Background()

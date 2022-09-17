@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	co "github.com/cofunclabs/cofunc"
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/service"
-	"github.com/cofunclabs/cofunc/service/exported"
+	co "github.com/cofxlabs/cofx"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/service"
+	"github.com/cofxlabs/cofx/service/exported"
 )
 
 func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
