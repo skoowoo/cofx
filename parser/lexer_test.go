@@ -51,7 +51,7 @@ func TestLexer(t *testing.T) {
 	testingdata := `load "go:print"
 
 co print {
-	"STARTING": "build \"cofunc\""
+	"STARTING": "build \"cofx\""
 }
 fn gobuild = command {
 	"hello
@@ -86,7 +86,7 @@ world"`
 			assert.Equal(t, "{", line[2].String())
 			assert.Equal(t, _symbol_t, line[2].typ)
 		}
-		// "STARTING": "build \"cofunc\""
+		// "STARTING": "build \"cofx\""
 		if n == 4 {
 			assert.Len(t, line, 3)
 			assert.Equal(t, "STARTING", line[0].String())
@@ -95,7 +95,7 @@ world"`
 			assert.Equal(t, ":", line[1].String())
 			assert.Equal(t, _symbol_t, line[1].typ)
 
-			assert.Equal(t, `build "cofunc"`, line[2].String())
+			assert.Equal(t, `build "cofx"`, line[2].String())
 			assert.Equal(t, _string_t, line[2].typ)
 		}
 		// }

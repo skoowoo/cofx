@@ -10,7 +10,7 @@ co print {
 //---
 fn get_github_upstream = http_get {
     args = {
-        "url": "https://api.github.com/repos/skoo87/cofunc"
+        "url": "https://api.github.com/repos/skoo87/cofx"
         "path": "parent.clone_url"
     }
 }

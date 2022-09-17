@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/cofunclabs/cofunc/config"
-	"github.com/cofunclabs/cofunc/pkg/nameid"
-	"github.com/cofunclabs/cofunc/service"
-	"github.com/cofunclabs/cofunc/service/exported"
+	"github.com/cofxlabs/cofx/config"
+	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/service"
+	"github.com/cofxlabs/cofx/service/exported"
 )
 
 func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {

@@ -4,7 +4,7 @@ load "go:outcome"
 
 var resp 
 co http_get -> resp {
-    "url": "https://api.github.com/repos/skoo87/cofunc"
+    "url": "https://api.github.com/repos/skoo87/cofx"
     "path": "parent.clone_url"
 }
 

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/pkg/stringutil"
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/pkg/stringutil"
+	"github.com/cofxlabs/cofx/service/resource"
 )
 
 const (

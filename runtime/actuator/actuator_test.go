@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/parser"
+	"github.com/cofxlabs/cofx/parser"
 	"github.com/stretchr/testify/assert"
 )
 

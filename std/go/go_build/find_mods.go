@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cofunclabs/cofunc/pkg/textline"
+	"github.com/cofxlabs/cofx/pkg/textline"
 )
 
 type modinfo struct {

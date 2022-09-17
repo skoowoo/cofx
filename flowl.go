@@ -1,10 +1,10 @@
-package cofunc
+package cofx
 
 import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofunclabs/cofunc/config"
+	"github.com/cofxlabs/cofx/config"
 )
 
 const filesuffix = ".flowl"

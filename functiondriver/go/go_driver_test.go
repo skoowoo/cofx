@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cofunclabs/cofunc/service/resource"
+	"github.com/cofxlabs/cofx/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 

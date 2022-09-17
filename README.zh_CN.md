@@ -1,6 +1,6 @@
 ![](./docs/assets/logo.png)
 
-CoFUNC 是一个自动化引擎，用低代码编程的方式构建个人自动化工作流，让一切无聊的事情都代码化、自动化的被解决。cofunc 框架引擎由编程语言和标准功能函数库两部分组成。
+cofx 是一个自动化引擎，用低代码编程的方式构建个人自动化工作流，让一切无聊的事情都代码化、自动化的被解决。cofx 框架引擎由编程语言和标准功能函数库两部分组成。
 
 ![](./docs/assets/demo.gif)
 
@@ -14,26 +14,26 @@ make first
 
 ## CLI
 ```go
-// cofunc -h
+// cofx -h
 
 An automation engine based on function fabric, can used to parse, create, run
 and manage flow
 
-Execute 'cofunc' command directly and no any args or sub-command, will list
+Execute 'cofx' command directly and no any args or sub-command, will list
 all flows in interactive mode
 
 Environment variables:
-  COFUNC_HOME=<path of a directory>           // Default $HOME/.cofunc
+  COFX_HOME=<path of a directory>           // Default $HOME/.cofx
 
 Examples:
-  cofunc
-  cofunc list
-  cofunc run   helloworld.flowl
-  cofunc prun  helloworld.flowl
+  cofx
+  cofx list
+  cofx run   helloworld.flowl
+  cofx prun  helloworld.flowl
 
 Usage:
-  cofunc [flags]
-  cofunc [command]
+  cofx [flags]
+  cofx [command]
 
 Available Commands:
   help        Help about any command
@@ -43,7 +43,7 @@ Available Commands:
   run         Run a flowl file
 
 Flags:
-  -h, --help   help for cofunc
+  -h, --help   help for cofx
 ```
 
 ## FlowL
@@ -294,7 +294,7 @@ Driver
 
 工具
 * 函数开发架手架
-* cofunc-server
+* cofx-server
 * repository
 
 ## 架构设计
@@ -305,7 +305,7 @@ Driver
 
 <div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
 
-CoFUNC 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` 和 `Function`
+cofx 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` 和 `Function`
 
 * Flow 就是用一个 `.flowl` 文件编写、定义的一条流
 * Node 就是组成一条 Flow 的实体，实际执行、管理 Function 的对象
