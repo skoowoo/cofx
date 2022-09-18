@@ -45,7 +45,7 @@ func (o *Output) Close() {
 	o.buffer = nil
 }
 
-func ColumnFunc(sep string, filterFunc func(fields []string), cols ...int) func([]byte) {
+func ColumnFunc(sep string, filterFunc func(fields []string), fieldIndexs ...int) func([]byte) {
 	return func(line []byte) {
 		var (
 			values []string
@@ -58,13 +58,15 @@ func ColumnFunc(sep string, filterFunc func(fields []string), cols ...int) func(
 			fields = strings.Split(s, sep)
 		}
 		l := len(fields)
-		for _, col := range cols {
+		for _, col := range fieldIndexs {
 			if col < l {
 				values = append(values, fields[col])
 			} else {
 				values = append(values, "")
 			}
 		}
-		filterFunc(values)
+		if len(values) > 0 {
+			filterFunc(values)
+		}
 	}
 }

@@ -14,11 +14,12 @@ import (
 	"github.com/cofxlabs/cofx/pkg/nameid"
 	"github.com/cofxlabs/cofx/runtime"
 	"github.com/cofxlabs/cofx/runtime/actuator"
-	"github.com/cofxlabs/cofx/service/crontrigger"
 	"github.com/cofxlabs/cofx/service/exported"
-	"github.com/cofxlabs/cofx/service/logset"
 	"github.com/cofxlabs/cofx/service/resource"
-	"github.com/cofxlabs/cofx/service/sqlitedb"
+	"github.com/cofxlabs/cofx/service/resource/crontrigger"
+	"github.com/cofxlabs/cofx/service/resource/labels"
+	"github.com/cofxlabs/cofx/service/resource/logset"
+	"github.com/cofxlabs/cofx/service/resource/sqlitedb"
 	"github.com/cofxlabs/cofx/std"
 )
 
@@ -175,6 +176,7 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (expor
 		return resource.Resources{
 			CronTrigger:  s.cron,
 			OutputParser: s.outbl,
+			Labels:       make(labels.Labels),
 		}
 	}
 	var opts = []runtime.FlowOption{

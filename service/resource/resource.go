@@ -20,6 +20,13 @@ type Resources struct {
 	CronTrigger  CronTrigger
 	HttpTrigger  HttpTrigger
 	OutputParser TableOperation
+	Labels       LabelManger
+}
+
+// LabelManager manage some labels for driver and function, the LabelManager is a resource.
+type LabelManger interface {
+	Get(key string) string
+	Set(key, value string)
 }
 
 // CronTrigger add and remove the cron job by trigger function, the CronTrigger is a resource for trigger.

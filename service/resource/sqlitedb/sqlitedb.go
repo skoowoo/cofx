@@ -95,13 +95,18 @@ func (t *Table) Delete(ctx context.Context, where string) error {
 
 // Query query the table with given where clause, and returns the result.
 func (t *Table) Query(ctx context.Context, columns []string, where string) ([][]string, error) {
+	if len(columns) == 0 {
+		return nil, nil
+	}
 	var stmt strings.Builder
 	stmt.WriteString("SELECT ")
 	stmt.WriteString(strings.Join(columns, ","))
 	stmt.WriteString(" FROM ")
 	stmt.WriteString(t.name)
-	stmt.WriteString(" WHERE ")
-	stmt.WriteString(where)
+	if where != "" {
+		stmt.WriteString(" WHERE ")
+		stmt.WriteString(where)
+	}
 	stmt.WriteString(";")
 
 	rows, err := t.db.QueryContext(ctx, stmt.String())
@@ -126,9 +131,10 @@ func (t *Table) Query(ctx context.Context, columns []string, where string) ([][]
 // StatementCreateOutputParsingTable returns a statement to create a table and the table name.
 func StatementCreateOutputParsingTable() (string, string) {
 	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(
-		flow_id TEXT PRIMARY KEY NOT NULL,
-		fseq    INT  NOT NULL,
-		fname   TEXT NOT NULL,
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		flow_id 	TEXT NOT NULL,
+		node_seq    INT  NOT NULL,
+		node_name   TEXT NOT NULL,
 		c0 		TEXT,
 		c1 		TEXT,
 		c2 		TEXT,

@@ -91,6 +91,11 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 			}
 			resources := fb.copyResources()
 			resources.Logwriter = logwriter
+			if resources.Labels != nil {
+				resources.Labels.Set("node_seq", strconv.Itoa(seq))
+				resources.Labels.Set("node_name", node.Name())
+				resources.Labels.Set("flow_id", fb.id.ID())
+			}
 			return node.Init(ctx, actuator.WithResources(resources))
 		})
 		if err != nil {
@@ -100,12 +105,18 @@ func (rt *Runtime) InitFlow(ctx context.Context, id nameid.ID, opts ...FlowOptio
 		// Initialize all triggers
 		triggers := fb.runq.GetTriggers()
 		for _, tg := range triggers {
-			logwriter, err := fb.createLogwriter(strconv.Itoa(tg.(actuator.Task).Seq()), tg.FormatString())
+			seq := tg.(actuator.Task).Seq()
+			logwriter, err := fb.createLogwriter(strconv.Itoa(seq), tg.FormatString())
 			if err != nil {
 				return err
 			}
 			resources := fb.copyResources()
 			resources.Logwriter = logwriter
+			if resources.Labels != nil {
+				resources.Labels.Set("node_seq", strconv.Itoa(seq))
+				resources.Labels.Set("node_name", tg.Name())
+				resources.Labels.Set("flow_id", fb.id.ID())
+			}
 			if err := tg.Init(ctx, actuator.WithResources(resources)); err != nil {
 				return err
 			}
