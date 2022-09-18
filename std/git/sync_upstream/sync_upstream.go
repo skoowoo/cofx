@@ -233,7 +233,7 @@ func getCurrentBranch(ctx context.Context) (string, string, error) {
 func getUpstreamAddr(ctx context.Context) (string, string, error) {
 	var (
 		rows [][]string
-		sep  = " "
+		sep  string
 	)
 	out := &output.Output{
 		W: nil,

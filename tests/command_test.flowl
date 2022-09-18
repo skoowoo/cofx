@@ -1,0 +1,11 @@
+load "go:command"
+
+co echo_command
+
+//---
+fn echo_command = command {
+    args = {
+        "cmd": "echo hello word 123 abc foo"
+        "extract": "0,4"
+    }
+}

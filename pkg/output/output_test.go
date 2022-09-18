@@ -79,7 +79,7 @@ upstream        https://github.com/cofxlabs/cofx.git (push)
 
 	var (
 		rows [][]string
-		sep  = " "
+		sep  string
 	)
 	out := &Output{
 		W: nil,

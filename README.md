@@ -2,7 +2,7 @@
 
 [[中文](./README.zh_CN.md)]
 
-cofx is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The cofx framework engine consists of two parts, the programming language and the standard function library.
+CoFx is an automation engine that uses low-code programming to build personal automation workflows, so that turn boring suff into low code. The CoFx framework engine consists of two parts, the programming language and the standard function library.
 
 ![](./docs/assets/demo.gif)
 

@@ -51,7 +51,7 @@ func execGoTestCommand(ctx context.Context) ([][]string, [][]string, [][]string,
 		fails [][]string
 		oks   [][]string
 		nos   [][]string
-		sep   = " "
+		sep   string
 		buff  bytes.Buffer
 	)
 	out := &output.Output{

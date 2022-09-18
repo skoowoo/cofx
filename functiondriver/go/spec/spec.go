@@ -29,6 +29,19 @@ func (e EntrypointArgs) GetURL(name string) (string, error) {
 	return s, nil
 }
 
+func (e EntrypointArgs) GetIntSlice(name string) ([]int, error) {
+	ss := e.GetStringSlice(name)
+	values := make([]int, len(ss))
+	for i, s := range ss {
+		n, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		values[i] = int(n)
+	}
+	return values, nil
+}
+
 func (e EntrypointArgs) GetStringSlice(name string) []string {
 	return stringutil.String2Slice(e.GetString(name))
 }
