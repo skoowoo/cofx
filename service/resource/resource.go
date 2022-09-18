@@ -16,9 +16,10 @@ type LogStdoutPrinter interface {
 // Resources contains some services that can be used by the driver and function.
 // .e.g. logset service, cron service, httpserver service etc.
 type Resources struct {
-	Logwriter   io.Writer
-	CronTrigger CronTrigger
-	HttpTrigger HttpTrigger
+	Logwriter    io.Writer
+	CronTrigger  CronTrigger
+	HttpTrigger  HttpTrigger
+	OutputParser TableOperation
 }
 
 // CronTrigger add and remove the cron job by trigger function, the CronTrigger is a resource for trigger.
@@ -33,6 +34,7 @@ type HttpTrigger interface {
 	RemoveRoute(path string) error
 }
 
+// TableOperation is the interface for db table's insert, delete and query.
 type TableOperation interface {
 	Insert(ctx context.Context, columns []string, values ...any) error
 	Delete(ctx context.Context, where string) error

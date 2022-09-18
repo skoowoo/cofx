@@ -18,6 +18,7 @@ import (
 	"github.com/cofxlabs/cofx/service/exported"
 	"github.com/cofxlabs/cofx/service/logset"
 	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/cofxlabs/cofx/service/sqlitedb"
 	"github.com/cofxlabs/cofx/std"
 )
 
@@ -31,6 +32,9 @@ type SVC struct {
 	stdout  *logset.Logset
 	// cron service for flow and function
 	cron *crontrigger.CronTrigger
+	// mdb and outbl service for parsing the output of commands
+	mdb   *sqlitedb.DB
+	outbl *sqlitedb.Table
 }
 
 // New create a service layer instance
@@ -51,7 +55,17 @@ func New() *SVC {
 	// Create cron trigger service
 	cron := crontrigger.New()
 	cron.Start()
-	// Create http trigger service
+	// TODO: Create http trigger service
+
+	// Create mdb service
+	mdb, err := sqlitedb.NewMemDB()
+	if err != nil {
+		panic(err)
+	}
+	tbl, err := mdb.CreateTable(context.Background(), sqlitedb.StatementCreateOutputParsingTable)
+	if err != nil {
+		panic(err)
+	}
 
 	return &SVC{
 		rt:         runtime.New(),
@@ -59,6 +73,8 @@ func New() *SVC {
 		logfile:    logfile,
 		stdout:     stdout,
 		cron:       cron,
+		mdb:        mdb,
+		outbl:      &tbl,
 	}
 }
 
@@ -157,7 +173,8 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, toStdout bool) (expor
 	}
 	copy := func() resource.Resources {
 		return resource.Resources{
-			CronTrigger: s.cron,
+			CronTrigger:  s.cron,
+			OutputParser: s.outbl,
 		}
 	}
 	var opts = []runtime.FlowOption{
