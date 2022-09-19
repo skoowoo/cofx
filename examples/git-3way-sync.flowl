@@ -2,9 +2,11 @@ load "go:http_get"
 load "go:git_push"
 load "go:git_check_merge"
 load "go:git_fetch"
-load "go:git_get_remote"
+load "go:git_remote"
 load "go:git_rebase"
 load "go:git_current_branch"
+load "go:exit"
+load "go:print"
 
 var resp 
 co http_get -> resp {
@@ -15,12 +17,16 @@ co http_get -> resp {
 co git_fetch
 
 var upstream
-co git_get_remote -> upstream {
+co git_remote -> upstream {
     "target": "upstream"
 }
 
-if $(upstream.outcome) != $(resp.parent.clone_url) {
-    // exit
+switch {
+    case $(upstream.outcome) != $(resp.parent.clone_url) {
+        co exit {
+            "error": "upstream and clone_url are not the same git repo"
+        }
+    }
 }
 
 var current_branch
@@ -47,7 +53,9 @@ switch {
         co git_rebase_upstream
     }
     case $(local_upstream_conflict.outcome) == "conflict" {
-        // exit
+        co exit {
+            "error": "local and upstream have conflicts"
+        }
     }
 }
 
@@ -73,6 +81,8 @@ switch {
         co git_push_origin
     }
     case $(local_origin_conflict.outcome) == "conflict" {
-        // exit
+        co exit {
+            "error": "local and origin have conflicts"
+        }
     }
 }

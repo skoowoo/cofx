@@ -45,6 +45,6 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 	rets["current_branch"] = v
 	rets["outcome"] = v
-
+	fmt.Fprintf(bundle.Resources.Logwriter, "➜ %s\n", v)
 	return rets, nil
 }

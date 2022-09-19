@@ -1,4 +1,4 @@
-package gitgetremote
+package gitremote
 
 import (
 	"context"
@@ -16,7 +16,7 @@ var targetArg = manifest.UsageDesc{
 
 var _manifest = manifest.Manifest{
 	Category:       "git",
-	Name:           "git_get_remote",
+	Name:           "git_remote",
 	Description:    "Use 'git remote -v' to get remote url",
 	Driver:         "go",
 	Args:           map[string]string{},
@@ -47,13 +47,16 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	_, ep, _ := command.New()
 	rets, err := ep(ctx, bundle, _args)
 	if err != nil {
-		return nil, fmt.Errorf("%w: in git_get_remote function", err)
+		return nil, fmt.Errorf("%w: in git_remote function", err)
 	}
 	v, ok := rets["outcome_0"]
 	if !ok || v == "" {
 		return nil, fmt.Errorf("not found remote url for target %s", target)
 	}
-	rets["remote"] = v
+	rets[target] = v
 	rets["outcome"] = v
+	for k, v := range rets {
+		fmt.Fprintf(bundle.Resources.Logwriter, "➜ %s: %s\n", k, v)
+	}
 	return rets, nil
 }
