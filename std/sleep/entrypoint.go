@@ -18,7 +18,7 @@ var _manifest = manifest.Manifest{
 	Description: "Used to pause the program for a period of time",
 	Driver:      "go",
 	Args: map[string]string{
-		"duration": "1s",
+		durationArg.Name: "1s",
 	},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{

@@ -9,13 +9,13 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 	eventcron "github.com/cofxlabs/cofx/std/events/event_cron"
 	eventtick "github.com/cofxlabs/cofx/std/events/event_tick"
+	"github.com/cofxlabs/cofx/std/exit"
 	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
 	gitcurrentbranch "github.com/cofxlabs/cofx/std/git/git_current_branch"
 	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
-	gitgetremote "github.com/cofxlabs/cofx/std/git/git_get_remote"
 	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
 	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
-	syncupstream "github.com/cofxlabs/cofx/std/git/sync_upstream"
+	gitremote "github.com/cofxlabs/cofx/std/git/git_remote"
 	gobuild "github.com/cofxlabs/cofx/std/go/go_build"
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
 	"github.com/cofxlabs/cofx/std/go/gotest"
@@ -78,14 +78,14 @@ func init() {
 		gogenerate.New,
 		gotest.New,
 		outcome.New,
-		syncupstream.New,
 		httpget.New,
-		gitgetremote.New,
+		gitremote.New,
 		gitcurrentbranch.New,
 		gitfetch.New,
 		gitpush.New,
 		gitcheckmerge.New,
 		gitrebase.New,
+		exit.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,
