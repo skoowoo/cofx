@@ -20,7 +20,7 @@ var urlArg = manifest.UsageDesc{
 }
 
 var pathArg = manifest.UsageDesc{
-	Name: "path",
+	Name: "query_json_path",
 	Desc: "Specify the path to get values from json document, the path is provided with GJSON Syntax:\nhttps://github.com/tidwall/gjson/blob/master/SYNTAX.md",
 }
 

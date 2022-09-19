@@ -9,6 +9,12 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 	eventcron "github.com/cofxlabs/cofx/std/events/event_cron"
 	eventtick "github.com/cofxlabs/cofx/std/events/event_tick"
+	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
+	gitcurrentbranch "github.com/cofxlabs/cofx/std/git/git_current_branch"
+	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
+	gitgetremote "github.com/cofxlabs/cofx/std/git/git_get_remote"
+	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
+	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
 	syncupstream "github.com/cofxlabs/cofx/std/git/sync_upstream"
 	gobuild "github.com/cofxlabs/cofx/std/go/go_build"
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
@@ -74,6 +80,12 @@ func init() {
 		outcome.New,
 		syncupstream.New,
 		httpget.New,
+		gitgetremote.New,
+		gitcurrentbranch.New,
+		gitfetch.New,
+		gitpush.New,
+		gitcheckmerge.New,
+		gitrebase.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,

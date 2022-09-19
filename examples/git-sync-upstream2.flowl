@@ -1,0 +1,78 @@
+load "go:http_get"
+load "go:git_push"
+load "go:git_check_merge"
+load "go:git_fetch"
+load "go:git_get_remote"
+load "go:git_rebase"
+load "go:git_current_branch"
+
+var resp 
+co http_get -> resp {
+    "url":              "https://api.github.com/repos/skoo87/cofx"
+    "query_json_path":  "parent.clone_url"
+}
+
+co git_fetch
+
+var upstream
+co git_get_remote -> upstream {
+    "target": "upstream"
+}
+
+if $(upstream.outcome) != $(resp.parent.clone_url) {
+    // exit
+}
+
+var current_branch
+co git_current_branch -> current_branch
+
+fn git_check_local_upstream = git_check_merge {
+    var to = $(current_branch.outcome)
+    var from = "upstream/$(current_branch.outcome)"
+    args = {
+        "to_branch": "$(to)"
+        "from_branch": "$(from)"
+    }
+}
+fn git_rebase_upstream = git_rebase {
+    var branch = "upstream/$(current_branch.outcome)"
+    args = {
+        "branch": "$(branch)"
+    }
+}
+var local_upstream_conflict
+co git_check_local_upstream -> local_upstream_conflict
+switch {
+    case $(local_upstream_conflict.outcome) == "no-conflict" {
+        co git_rebase_upstream
+    }
+    case $(local_upstream_conflict.outcome) == "conflict" {
+        // exit
+    }
+}
+
+fn git_check_local_origin = git_check_merge {
+    var to = "origin/$(current_branch.outcome)"
+    var from = "$(current_branch.outcome)"
+    args = {
+        "to_branch": "$(to)"
+        "from_branch": "$(from)"
+    }
+}
+fn git_push_origin = git_push {
+    var branch = $(current_branch.outcome)
+    args = {
+        "local_branch": "$(branch)"
+        "remote_branch": "$(branch)"
+    }
+}
+var local_origin_conflict
+co git_check_local_origin -> local_origin_conflict
+switch {
+    case $(local_origin_conflict.outcome) == "no-conflict" {
+        co git_push_origin
+    }
+    case $(local_origin_conflict.outcome) == "conflict" {
+        // exit
+    }
+}
