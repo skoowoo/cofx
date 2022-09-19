@@ -89,7 +89,6 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			k := paths[i]
 			v := res.String()
 			returns[k] = v
-			fmt.Fprintf(bundle.Resources.Logwriter, "➜ %s: %s\n", k, v)
 		}
 	}
 	return returns, nil

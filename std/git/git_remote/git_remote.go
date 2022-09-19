@@ -55,8 +55,5 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 	rets[target] = v
 	rets["outcome"] = v
-	for k, v := range rets {
-		fmt.Fprintf(bundle.Resources.Logwriter, "➜ %s: %s\n", k, v)
-	}
 	return rets, nil
 }
