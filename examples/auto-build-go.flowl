@@ -1,19 +1,9 @@
 load "go:go_generate"
 load "go:go_build"
-load "go:outcome"
-
-var bins
 
 co go_generate
-co build_local ->bins
-co print_outcome
+co build_local
 
 //---
 fn build_local = go_build {
-}
-
-fn print_outcome = outcome {
-	args = {
-		"go build": "$(bins.outcome)"
-	}
 }
