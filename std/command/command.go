@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -107,8 +108,9 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		}
 	}()
 
+	var buff bytes.Buffer
 	out := &output.Output{
-		W: nil,
+		W: &buff,
 		HandleFunc: output.ColumnFunc(splitSep, func(columns []string) {
 			// insert db
 			names := []string{"flow_id", "node_seq", "node_name"}
@@ -127,6 +129,9 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	cmd := exec.CommandContext(ctx, "sh", "-c", cmdstr)
 	cmd.Env = append(cmd.Env, env...)
 	cmd.Dir = workingDir
+
+	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
+
 	opipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -151,9 +156,9 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}()
 	wg.Wait()
 	if err := cmd.Wait(); err != nil {
+		fmt.Fprintf(bundle.Resources.Logwriter, "%s", buff.String())
 		return nil, err
 	}
-	fmt.Fprintf(bundle.Resources.Logwriter, "---> %s\n", cmd.String())
 
 	// query outcome
 	rows, err := bundle.Resources.OutputParser.Query(ctx, queryColumns, queryWhere)
@@ -166,7 +171,8 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			splitSep = " "
 		}
 		k := fmt.Sprintf("outcome_%d", i)
-		returns[k] = strings.Join(r, splitSep)
+		v := strings.Join(r, splitSep)
+		returns[k] = v
 	}
 	return returns, nil
 }
