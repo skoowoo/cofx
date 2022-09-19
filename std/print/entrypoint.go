@@ -33,7 +33,5 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	for _, s := range slice {
 		fmt.Fprintln(bundle.Resources.Logwriter, s)
 	}
-	return map[string]string{
-		"status": "ok",
-	}, nil
+	return nil, nil
 }

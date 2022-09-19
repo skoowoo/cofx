@@ -3,6 +3,7 @@ package godriver
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/cofxlabs/cofx/functiondriver/go/spec"
 	"github.com/cofxlabs/cofx/manifest"
@@ -73,6 +74,9 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {
 		return nil, err
+	}
+	for k, v := range out {
+		fmt.Fprintf(d.resources.Logwriter, "➜ %s: '%s'\n", k, v)
 	}
 	return out, nil
 }

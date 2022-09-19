@@ -38,7 +38,6 @@ func TestRun(t *testing.T) {
 		Logwriter: os.Stdout,
 	})
 	assert.NoError(t, err)
-	out, err := dr.Run(context.Background(), nil)
+	_, err = dr.Run(context.Background(), nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "ok", out["status"])
 }
