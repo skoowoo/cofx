@@ -83,9 +83,9 @@ func (r *RunQueue) WalkAndExec(ctx context.Context, exec func([]Node) error) err
 		return err
 	}
 
-	var (
-		i = 0
-	)
+	// The for loop is the main loop of the run queue, it will execute all steps in order.
+	// Only TaskNode will be executed via an external call-back.
+	var i = 0
 	for i < len(r.steps) {
 		e := r.steps[i]
 
@@ -114,6 +114,17 @@ func (r *RunQueue) WalkAndExec(ctx context.Context, exec func([]Node) error) err
 			}
 			if err := exec(batch); err != nil {
 				return err
+			}
+		}
+
+		if n, ok := e.(*BuiltinNode); ok {
+			if err := n.Exec(ctx); err != nil {
+				if err == ErrExitWithSuccess {
+					return nil
+				}
+				if err != ErrConditionIsFalse {
+					return err
+				}
 			}
 		}
 
@@ -234,6 +245,22 @@ func (r *RunQueue) generateSteps(blocks []*parser.Block) error {
 			r.processingForNode.btfIdx = node.idx
 			r.steps = append(r.steps, node)
 			r.processingForNode = nil
+			continue
+		}
+
+		if name, ok := b.IsBuiltinDirective(); ok {
+			f := lookupBuiltinDirective(name)
+			if f == nil {
+				return wrapErrorf(ErrBuiltinDirectiveNotFound, "'%s'", name)
+			}
+			node := &BuiltinNode{
+				name:  name,
+				arg1:  b.Target1().Value(),
+				arg2:  b.Target2().Value(),
+				b:     b,
+				_func: f,
+			}
+			r.steps = append(r.steps, node)
 			continue
 		}
 
@@ -537,4 +564,41 @@ func WithResources(resources resource.Resources) func(context.Context, Node) err
 		}
 		return funcnode.driver.Load(ctx, resources)
 	}
+}
+
+// BuiltinNode be used to execute some builtin functions, .e.g exit, sleep, println...
+type BuiltinNode struct {
+	name  string
+	arg1  string
+	arg2  string
+	b     *parser.Block
+	_func func(context.Context, ...string) error
+}
+
+func (n *BuiltinNode) FormatString() string {
+	return n.name
+}
+
+func (n *BuiltinNode) Name() string {
+	return n.name
+}
+
+func (n *BuiltinNode) Init(ctx context.Context, handles ...func(context.Context, Node) error) error {
+	return nil
+}
+
+func (n *BuiltinNode) Exec(ctx context.Context) error {
+	if n.b.InSwitch() || n.b.InIf() {
+		if !n.b.ExecCondition() {
+			return ErrConditionIsFalse
+		}
+	}
+	var args []string
+	if n.arg1 != "" {
+		args = append(args, n.arg1)
+		if n.arg2 != "" {
+			args = append(args, n.arg2)
+		}
+	}
+	return n._func(ctx, args...)
 }

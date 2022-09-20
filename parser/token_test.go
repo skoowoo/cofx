@@ -21,7 +21,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 1)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, text, vl)
 	}
 	{
@@ -36,7 +36,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 2)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, `cohello word\n`, vl)
 	}
 	{
@@ -51,7 +51,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 2)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, `123456789\nco`, vl)
 	}
 	{
@@ -66,7 +66,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 3)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456coword\n", vl)
 	}
 	{
@@ -82,7 +82,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 4)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456co1co2word\n", vl)
 	}
 	{
@@ -98,7 +98,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, tk._segments, 3)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456co1$(co2)word\n", vl)
 	}
 	{
@@ -112,7 +112,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		err := tk.extractVar()
 		assert.NoError(t, err)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456$(co1word\n", vl)
 	}
 	{
@@ -126,7 +126,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		err := tk.extractVar()
 		assert.NoError(t, err)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456$(co1word", vl)
 	}
 	{
@@ -140,7 +140,7 @@ func TestExtractAndCalcVar(t *testing.T) {
 		err := tk.extractVar()
 		assert.NoError(t, err)
 
-		vl := tk.value()
+		vl := tk.Value()
 		assert.Equal(t, "123456c.oword", vl)
 	}
 }
