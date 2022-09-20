@@ -697,8 +697,8 @@ func (ast *AST) parseCo(line []*Token, ln int, parent *Block) (*Block, error) {
 		}
 	}
 
-	// when co is in switch, add the condition var statement
-	if b.IsCo() && (b.Parent().IsCase() || b.Parent().IsDefault()) {
+	// when co is in switch/if, add the condition var statement
+	if b.IsCo() && (b.InSwitch() || b.InIf()) {
 		stm := NewStatement("var").Append(b.Parent().Target1()).Append(b.Parent().Target2())
 		if err := b.initVar(stm); err != nil {
 			return nil, err
@@ -978,36 +978,6 @@ func (ast *AST) parseSwitch(line []*Token, ln int, parent *Block) (*Block, error
 
 func (ast *AST) parseSwitchBody(line []*Token, ln int, current *Block) (*Block, error) {
 	if _, err := ast.preparse("closed", line, ln, current); err == nil {
-		// generate condition expression of the 'default'
-		swb := current
-		var deft *Block
-		for _, c := range swb.child {
-			if c.IsDefault() {
-				deft = c
-				break
-			}
-		}
-
-		if deft != nil {
-			var cases []string
-			for _, c := range swb.child {
-				if c.IsCase() {
-					cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
-				}
-			}
-			s := strings.Join(cases, "&&")
-			deft.target2 = Token{
-				ln:  deft.target1.ln,
-				_b:  deft.target1._b,
-				str: s,
-				typ: _expr_t,
-			}
-			if err := deft.target2.extractVar(); err != nil {
-				return nil, err
-			}
-		}
-
-		// goto
 		parent := current.parent
 		if parent.IsFor() {
 			ast._goto(_ast_for_body)
@@ -1100,7 +1070,24 @@ func (ast *AST) parseDefault(line []*Token, ln int, parent *Block) (*Block, erro
 		str: _condition_expr_var,
 		typ: _varname_t,
 	}
-	// nb.target2 = ? (handle target2 at 'switch body' closed)
+
+	// generate condition expression of the 'default'
+	var cases []string
+	swb := parent
+	for _, c := range swb.child {
+		if c.IsCase() {
+			cases = append(cases, fmt.Sprintf("(!(%s))", c.target2.String()))
+		}
+	}
+	b.target2 = Token{
+		ln:  ln,
+		_b:  b,
+		str: strings.Join(cases, "&&"),
+		typ: _expr_t,
+	}
+	if err := b.target2.extractVar(); err != nil {
+		return nil, err
+	}
 
 	parent.child = append(parent.child, b)
 	return b, nil

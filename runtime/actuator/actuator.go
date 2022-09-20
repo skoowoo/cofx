@@ -469,7 +469,7 @@ func (n *TaskNode) Exec(ctx context.Context) error {
 }
 
 func (n *TaskNode) execCondition(ctx context.Context) error {
-	if n.co.InSwitch() {
+	if n.co.InSwitch() || n.co.InIf() {
 		if !n.co.ExecCondition() {
 			return ErrConditionIsFalse
 		}

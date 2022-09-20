@@ -160,6 +160,10 @@ func (b *Block) InSwitch() bool {
 	return b.parent.IsCase() || b.parent.IsDefault()
 }
 
+func (b *Block) InIf() bool {
+	return b.parent.IsIf()
+}
+
 func (b *Block) String() string {
 	var builder strings.Builder
 

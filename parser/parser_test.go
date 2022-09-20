@@ -622,3 +622,149 @@ func TestEvent(t *testing.T) {
 		assert.Equal(t, _kw_co, blocks[3].kind.String())
 	}
 }
+
+func TestIf(t *testing.T) {
+	{
+		const testingdata string = `
+		var v = 1
+		if $(v) == 1 {
+			co function
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_if, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+
+		cob := blocks[2]
+		assert.True(t, cob.ExecCondition())
+	}
+	{
+		const testingdata string = `
+		var v = "1"
+		if $(v) == 1 {
+			co function
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_if, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+
+		cob := blocks[2]
+		assert.True(t, cob.ExecCondition())
+	}
+	{
+		const testingdata string = `
+		var v = "1"
+		if "$(v)" == "1" {
+			co function
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_if, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+
+		cob := blocks[2]
+		assert.True(t, cob.ExecCondition())
+	}
+	{
+		const testingdata string = `
+		var a = 1
+		var b = 2
+		if $(b) == $(a) + 1 {
+			co function
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_if, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+
+		cob := blocks[2]
+		assert.True(t, cob.ExecCondition())
+	}
+	{
+		const testingdata string = `
+		var a = "hello"
+		if $(a) == "" {
+			co function
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 3)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_if, blocks[1].kind.String())
+		assert.Equal(t, _kw_co, blocks[2].kind.String())
+
+		cob := blocks[2]
+		assert.False(t, cob.ExecCondition())
+	}
+}
+
+func TestSWitchCase(t *testing.T) {
+	{
+		const testingdata string = `
+		var v = 1
+		switch {
+			case $(v) == 1 {
+				co function
+			}
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 4)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_switch, blocks[1].kind.String())
+		assert.Equal(t, _kw_case, blocks[2].kind.String())
+		assert.Equal(t, _kw_co, blocks[3].kind.String())
+
+		cob := blocks[3]
+		assert.True(t, cob.ExecCondition())
+	}
+	{
+		const testingdata string = `
+		var a = "hello"
+		switch {
+			case $(a) == "" {
+				co function
+			}
+			default{
+				co function2
+			}
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 6)
+		assert.Equal(t, "global", blocks[0].kind.String())
+		assert.Equal(t, _kw_switch, blocks[1].kind.String())
+		assert.Equal(t, _kw_case, blocks[2].kind.String())
+		assert.Equal(t, _kw_co, blocks[3].kind.String())
+		assert.Equal(t, _kw_default, blocks[4].kind.String())
+		assert.Equal(t, _kw_co, blocks[5].kind.String())
+
+		cob1 := blocks[3]
+		assert.False(t, cob1.ExecCondition())
+		cob2 := blocks[5]
+		assert.True(t, cob2.ExecCondition())
+	}
+}
