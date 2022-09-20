@@ -10,9 +10,11 @@ import (
 	eventcron "github.com/cofxlabs/cofx/std/events/event_cron"
 	eventtick "github.com/cofxlabs/cofx/std/events/event_tick"
 	"github.com/cofxlabs/cofx/std/exit"
+	gitaddupstream "github.com/cofxlabs/cofx/std/git/git_add_upstream"
 	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
 	gitcurrentbranch "github.com/cofxlabs/cofx/std/git/git_current_branch"
 	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
+	gitpull "github.com/cofxlabs/cofx/std/git/git_pull"
 	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
 	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
 	gitremote "github.com/cofxlabs/cofx/std/git/git_remote"
@@ -85,6 +87,8 @@ func init() {
 		gitpush.New,
 		gitcheckmerge.New,
 		gitrebase.New,
+		gitpull.New,
+		gitaddupstream.New,
 		exit.New,
 		// event trigger function
 		eventtick.New,

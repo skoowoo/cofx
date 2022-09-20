@@ -1,4 +1,4 @@
-package gitremote
+package gitpull
 
 import (
 	"context"
@@ -9,20 +9,15 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 )
 
-var targetArg = manifest.UsageDesc{
-	Name: "target",
-	Desc: "Specify a target to get remote url, .e.g origin, upstream",
-}
-
 var _manifest = manifest.Manifest{
 	Category:       "git",
-	Name:           "git_remote",
-	Description:    "Use 'git remote -v' to get remote url",
+	Name:           "git_pull",
+	Description:    "Use 'git pull' to update local repository from remote.",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{targetArg},
+		Args:         []manifest.UsageDesc{},
 		ReturnValues: []manifest.UsageDesc{},
 	},
 }
@@ -32,25 +27,17 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 }
 
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
-	target := args.GetString(targetArg.Name)
-	if target == "" {
-		return nil, nil
-	}
-	// upstream	https://github.com/cofxlabs/cofx.git (fetch)
 	_args := spec.EntrypointArgs{
-		"cmd":            "git remote -v",
+		"cmd":            "git pull",
 		"split":          "",
-		"extract_fields": "0,1,2",
-		"query_columns":  "c1",
-		"query_where":    fmt.Sprintf("c0 == '%s'", target) + " AND c2 like '%fetch%'",
+		"extract_fields": "",
+		"query_columns":  "",
+		"query_where":    "",
 	}
 	_, ep, _ := command.New()
 	rets, err := ep(ctx, bundle, _args)
 	if err != nil {
-		return nil, fmt.Errorf("%w: in git_remote function", err)
+		return nil, fmt.Errorf("%w: in git_pull function", err)
 	}
-	v := rets["outcome_0"]
-	rets[target] = v
-	rets["outcome"] = v
 	return rets, nil
 }

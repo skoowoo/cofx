@@ -5,33 +5,55 @@ load "go:git_fetch"
 load "go:git_remote"
 load "go:git_rebase"
 load "go:git_current_branch"
+load "go:git_pull"
+load "go:git_add_upstream"
 load "go:exit"
 load "go:print"
 
+// Figure out the parent repo that the github repo forks from.
 var resp 
 co http_get -> resp {
     "url":              "https://api.github.com/repos/skoo87/cofx"
     "query_json_path":  "parent.clone_url"
 }
+if $(resp.parent.clone_url) == "" {
+    co exit {
+        "error": "not found parent repo url through github api"
+    }
+}
 
-co git_fetch
-
+// Find out the upstream url from local git repo, it depends on you have set the upstream.
 var upstream
 co git_remote -> upstream {
     "target": "upstream"
 }
+if $(upstream.outcome) == "" {
+    co git_add_upstream {
+        "upstream_url": "$(resp.parent.clone_url)"
+    }
+}
+
+// Find out the current branch name from local git repo.
+var current_branch
+co git_current_branch -> current_branch
 
 switch {
-    case $(upstream.outcome) != $(resp.parent.clone_url) {
+    case $(upstream.outcome) != "" && $(upstream.outcome) != $(resp.parent.clone_url) {
         co exit {
             "error": "upstream and clone_url are not the same git repo"
         }
     }
+    case $(current_branch.outcome) != "master" && $(current_branch.outcome) != "main" {
+        co exit {
+            "error": "current branch is not master or main"
+        }
+    }
 }
 
-var current_branch
-co git_current_branch -> current_branch
-
+co git_pull
+co git_fetch
+// Check if the current branch is up to date with upstream git repo, if not, will rebase 
+// the current branch.
 fn git_check_local_upstream = git_check_merge {
     var to = $(current_branch.outcome)
     var from = "upstream/$(current_branch.outcome)"
@@ -40,12 +62,14 @@ fn git_check_local_upstream = git_check_merge {
         "from_branch": "$(from)"
     }
 }
+
 fn git_rebase_upstream = git_rebase {
     var branch = "upstream/$(current_branch.outcome)"
     args = {
         "branch": "$(branch)"
     }
 }
+
 var local_upstream_conflict
 co git_check_local_upstream -> local_upstream_conflict
 switch {
@@ -59,6 +83,8 @@ switch {
     }
 }
 
+// Check if the origin branch is up to date with local current branch, if not, will push
+// the current branch to origin.
 fn git_check_local_origin = git_check_merge {
     var to = "origin/$(current_branch.outcome)"
     var from = "$(current_branch.outcome)"
@@ -67,6 +93,7 @@ fn git_check_local_origin = git_check_merge {
         "from_branch": "$(from)"
     }
 }
+
 fn git_push_origin = git_push {
     var branch = $(current_branch.outcome)
     args = {
@@ -74,6 +101,7 @@ fn git_push_origin = git_push {
         "remote_branch": "$(branch)"
     }
 }
+
 var local_origin_conflict
 co git_check_local_origin -> local_origin_conflict
 switch {
