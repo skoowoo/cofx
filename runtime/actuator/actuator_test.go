@@ -167,3 +167,57 @@ func TestParseFullWithRunqWithErr(t *testing.T) {
 		_ = rq
 	}
 }
+
+func TestBuiltiDirective(t *testing.T) {
+	{
+		const testingdata string = `
+		var v = 1
+		if $(v) == 1 {
+			sleep "1s"
+		}
+	`
+
+		_, _, rq, err := loadTestingdata2(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.NoError(t, err)
+		err = rq.WalkAndExec(context.Background(), nil)
+		assert.NoError(t, err)
+	}
+	{
+		const testingdata string = `
+		var v = 1
+		switch {
+			case $(v) == 1 {
+				println "error"
+			}
+			default {
+				println "default"
+			}
+		}
+
+		if $(v) == 1 {
+			sleep "1s"
+		}
+	`
+
+		_, _, rq, err := loadTestingdata2(testingdata)
+		assert.NoError(t, err)
+		err = rq.WalkAndExec(context.Background(), nil)
+		assert.NoError(t, err)
+	}
+	{
+		const testingdata string = `
+		exit "hello"
+	`
+
+		_, _, rq, err := loadTestingdata2(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		assert.NoError(t, err)
+		err = rq.WalkAndExec(context.Background(), nil)
+		assert.Error(t, err)
+	}
+}

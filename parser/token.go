@@ -22,6 +22,9 @@ const (
 	_kw_case    = "case"
 	_kw_default = "default"
 	_kw_event   = "event"
+	_kw_exit    = "exit"
+	_kw_sleep   = "sleep"
+	_kw_println = "println"
 )
 
 var keywordTable = map[string]struct{}{
@@ -37,6 +40,9 @@ var keywordTable = map[string]struct{}{
 	_kw_switch:  {},
 	_kw_var:     {},
 	_kw_event:   {},
+	_kw_exit:    {},
+	// _kw_sleep:   {},
+	_kw_println: {},
 }
 
 func iskeyword(ss ...string) (string, bool) {
@@ -177,8 +183,8 @@ func (t *Token) validate() error {
 	return nil
 }
 
-// value will calcuate the variable's value, if the token contain some variables
-func (t *Token) value() string {
+// Value will calcuate the variable's Value, if the token contain some variables
+func (t *Token) Value() string {
 	if !t.hasVar() {
 		return t.str
 	}

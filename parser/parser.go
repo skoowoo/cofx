@@ -155,6 +155,13 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_keyword_t, _symbol_t},
 		func() body { return &plainbody{} },
 	},
+	"builtins": {
+		1, 3,
+		[]TokenType{_ident_t, _string_t, _string_t},
+		[]string{"", "", ""},
+		[]TokenType{_keyword_t, _string_t, _string_t},
+		nil,
+	},
 }
 
 var statementInferRules map[string][]inferData = map[string][]inferData{
@@ -255,7 +262,8 @@ func (ast *AST) GetBlocks() (loads []*Block, fns []*Block, runs []*Block) {
 		if b.IsFn() {
 			fns = append(fns, b)
 		}
-		if b.IsFor() || b.IsBtf() || b.IsCo() {
+		_, isbuiltin := b.IsBuiltinDirective()
+		if b.IsFor() || b.IsBtf() || b.IsCo() || isbuiltin {
 			runs = append(runs, b)
 		}
 		return nil
@@ -348,6 +356,10 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 				parsingblock = block
 				ast._goto(_ast_event_body)
+			case _kw_exit, _kw_sleep, _kw_println:
+				if err := ast.parseBuiltDirective(line, ln, parsingblock); err != nil {
+					return err
+				}
 			default:
 				if _parse, err := ast._InferTree.lookup(line); err == nil {
 					if err := _parse(parsingblock, line, ln); err != nil {
@@ -881,6 +893,10 @@ func (ast *AST) parseForBody(line []*Token, ln int, current *Block) (*Block, err
 		}
 		ast._goto(_ast_switch_body)
 		return block, nil
+	case _kw_exit, _kw_sleep, _kw_println:
+		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
+			return nil, err
+		}
 	default:
 		if _parse, err := ast._InferTree.lookup(line); err == nil {
 			if err := _parse(current, line, ln); err != nil {
@@ -952,6 +968,10 @@ func (ast *AST) parseIfBody(line []*Token, ln int, current *Block) (*Block, erro
 		if block.body != nil {
 			ast._goto(_ast_co_body)
 			return block, nil
+		}
+	case _kw_exit, _kw_sleep, _kw_println:
+		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
+			return nil, err
 		}
 	default:
 		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
@@ -1111,6 +1131,10 @@ func (ast *AST) parseCaseDeafultBody(line []*Token, ln int, current *Block) (*Bl
 			ast._goto(_ast_co_body)
 			return block, nil
 		}
+	case _kw_exit, _kw_sleep, _kw_println:
+		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, statementErrorf(ln, ErrStatementUnknow, "%s", kind)
 	}
@@ -1156,6 +1180,37 @@ func (ast *AST) parseEventBody(line []*Token, ln int, current *Block) (*Block, e
 	}
 	// don't goto, keep parsing the body of 'event'
 	return current, nil
+}
+
+func (ast *AST) parseBuiltDirective(line []*Token, ln int, parent *Block) error {
+	b := &Block{
+		parent: parent,
+		vtbl:   vartable{vars: make(map[string]*_var)},
+	}
+	body, err := ast.preparse("builtins", line, ln, b)
+	if err != nil {
+		return err
+	}
+	b.body = body
+	b.kind = *line[0]
+	if len(line) == 2 {
+		b.target1 = *line[1]
+	}
+	if len(line) == 3 {
+		b.target1 = *line[1]
+		b.target2 = *line[2]
+	}
+
+	// when in switch/if, add the condition var statement
+	if b.InSwitch() || b.InIf() {
+		stm := NewStatement("var").Append(b.Parent().Target1()).Append(b.Parent().Target2())
+		if err := b.initVar(stm); err != nil {
+			return err
+		}
+	}
+
+	parent.child = append(parent.child, b)
+	return nil
 }
 
 type _FA struct {

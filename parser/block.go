@@ -146,6 +146,19 @@ func (b *Block) IsEvent() bool {
 	return b.Iskind(_kw_event)
 }
 
+func (b *Block) IsBuiltinDirective() (string, bool) {
+	if b.Iskind(_kw_exit) {
+		return _kw_exit, true
+	}
+	if b.Iskind(_kw_sleep) {
+		return _kw_sleep, true
+	}
+	if b.Iskind(_kw_println) {
+		return _kw_println, true
+	}
+	return "", false
+}
+
 func (b *Block) InFor() bool {
 	var p *Block
 	for p = b.parent; p != nil; p = p.parent {
@@ -338,7 +351,7 @@ type MapBody struct {
 func (m *MapBody) ToMap() map[string]string {
 	ret := make(map[string]string)
 	for _, ln := range m.lines {
-		k, v := ln.tokens[0].value(), ln.tokens[1].value()
+		k, v := ln.tokens[0].Value(), ln.tokens[1].Value()
 		ret[k] = v
 	}
 	return ret
@@ -375,7 +388,7 @@ type ListBody struct {
 func (l *ListBody) ToSlice() []string {
 	var ret []string
 	for _, ln := range l.lines {
-		v := ln.tokens[0].value()
+		v := ln.tokens[0].Value()
 		ret = append(ret, v)
 	}
 	return ret

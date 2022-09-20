@@ -768,3 +768,39 @@ func TestSWitchCase(t *testing.T) {
 		assert.True(t, cob2.ExecCondition())
 	}
 }
+
+func TestBuiltinDirective(t *testing.T) {
+	{
+		const testingdata string = `
+		var v = 1
+		switch {
+			case $(v) == 1 {
+				exit "error"
+			}
+			default {
+				println "default"
+			}
+		}
+
+		if $(v) == 1 {
+			sleep "1s"
+		}
+	`
+		blocks, err := loadTestingdata(testingdata)
+		assert.NoError(t, err)
+
+		assert.Len(t, blocks, 8)
+
+		assert.Equal(t, _kw_exit, blocks[3].kind.String())
+		assert.Equal(t, "error", blocks[3].target1.String())
+		assert.True(t, blocks[3].ExecCondition())
+
+		assert.Equal(t, _kw_println, blocks[5].kind.String())
+		assert.Equal(t, "default", blocks[5].target1.String())
+		assert.False(t, blocks[5].ExecCondition())
+
+		assert.Equal(t, _kw_sleep, blocks[7].kind.String())
+		assert.Equal(t, "1s", blocks[7].target1.String())
+		assert.True(t, blocks[7].ExecCondition())
+	}
+}
