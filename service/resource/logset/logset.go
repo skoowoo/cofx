@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
@@ -285,13 +286,28 @@ func (l *logStdout) Reset() error {
 }
 
 func (l *logStdout) PrintTitle() {
-	s := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
+	s := "\n" +
+		lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
 		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("222")).Render("Running function: "+l.desc+" seq:"+l.id)
 	fmt.Fprintln(l.w, s)
 }
 
-func (l *logStdout) PrintSummary() {
-
+func (l *logStdout) PrintSummary(rets map[string]string) {
+	var keys []string
+	var maxLen int
+	for k, _ := range rets {
+		if len(k) > maxLen {
+			maxLen = len(k)
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := rets[k]
+		s := lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("➜").String() +
+			lipgloss.NewStyle().Width(maxLen).Render(k) + ": " + v
+		fmt.Fprintln(l.w, s)
+	}
 }
 
 func (l *logStdout) Write(p []byte) (int, error) {
