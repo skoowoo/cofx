@@ -16,12 +16,9 @@ import (
 
 func TestCancelFlow(t *testing.T) {
 	const testingdata string = `
-load "go:sleep"
 load "go:print"
 for {
-	co sleep {
-		"duration": "5s"
-	}
+	sleep "5s"
 	co print{
 		"_": "sleep 5s"
 	}
@@ -36,7 +33,7 @@ for {
 		defer wg.Done()
 
 		e := expect{
-			nodes:      2,
+			nodes:      1,
 			output:     "",
 			hasExecErr: true,
 		}
@@ -72,7 +69,6 @@ co print {
 func TestAddReadyStartFlow(t *testing.T) {
 	const testingdata string = `
 	load "go:print"
-	load "go:sleep"
 
 	fn p = print {
 		args = {
@@ -82,7 +78,6 @@ func TestAddReadyStartFlow(t *testing.T) {
 	}
 
 	co p
-	co	sleep
 	`
 
 	rt := New()

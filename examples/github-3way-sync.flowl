@@ -1,3 +1,4 @@
+// 3way-sync: Automatically synchronize local, origin, upstream three repositories.
 load "go:http_get"
 load "go:git_push"
 load "go:git_check_merge"

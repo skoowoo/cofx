@@ -791,15 +791,15 @@ func TestBuiltinDirective(t *testing.T) {
 
 		assert.Len(t, blocks, 8)
 
-		assert.Equal(t, _kw_exit, blocks[3].kind.String())
+		assert.Equal(t, _di_exit, blocks[3].kind.String())
 		assert.Equal(t, "error", blocks[3].target1.String())
 		assert.True(t, blocks[3].ExecCondition())
 
-		assert.Equal(t, _kw_println, blocks[5].kind.String())
+		assert.Equal(t, _di_println, blocks[5].kind.String())
 		assert.Equal(t, "default", blocks[5].target1.String())
 		assert.False(t, blocks[5].ExecCondition())
 
-		assert.Equal(t, _kw_sleep, blocks[7].kind.String())
+		assert.Equal(t, _di_sleep, blocks[7].kind.String())
 		assert.Equal(t, "1s", blocks[7].target1.String())
 		assert.True(t, blocks[7].ExecCondition())
 	}
