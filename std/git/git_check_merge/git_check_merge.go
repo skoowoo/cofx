@@ -81,17 +81,17 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		if err != nil {
 			return nil, fmt.Errorf("%w: in git_check_merge function", err)
 		}
-		outcome := "outcome"
+		key := "status"
 		m := map[string]string{
-			outcome: "no-conflict",
+			key: "no-conflict",
 		}
 		if len(rets) == 0 {
-			m[outcome] = "no-content-to-merge"
+			m[key] = "no-content-to-merge"
 			return m, nil
 		}
 		for _, v := range rets {
 			if strings.Contains(v, "changed in both") {
-				m[outcome] = "conflict"
+				m[key] = "conflict"
 				break
 			}
 		}

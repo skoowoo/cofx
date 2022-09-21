@@ -2,42 +2,39 @@ load "go:http_get"
 load "go:git_push"
 load "go:git_check_merge"
 load "go:git_fetch"
-load "go:git_remote"
 load "go:git_rebase"
-load "go:git_current_branch"
 load "go:git_pull"
 load "go:git_add_upstream"
+load "go:git_local_info"
+
+// Get some base information from local git repo
+var info 
+co git_local_info -> info
+if $(info.github_org) == "" || $(info.github_repo) == "" {
+    exit "not found github_org or github_repo from local git repo"
+}
 
 // Figure out the parent repo that the github repo forks from.
 var resp 
 co http_get -> resp {
-    "url":              "https://api.github.com/repos/skoo87/cofx"
+    "url":              "https://api.github.com/repos/$(info.github_org)/$(info.github_repo)"
     "query_json_path":  "parent.clone_url"
 }
 if $(resp.parent.clone_url) == "" {
-    exit "not found parent repo url through github api"
+    exit "not found parent.clone_url through github api"
 }
-
-// Find out the upstream url from local git repo, it depends on you have set the upstream.
-var upstream
-co git_remote -> upstream {
-    "target": "upstream"
-}
-if $(upstream.outcome) == "" {
-    co git_add_upstream {
-        "upstream_url": "$(resp.parent.clone_url)"
-    }
-}
-
-// Find out the current branch name from local git repo.
-var current_branch
-co git_current_branch -> current_branch
 
 switch {
-    case $(upstream.outcome) != "" && $(upstream.outcome) != $(resp.parent.clone_url) {
+    case $(info.upstream) == "" {
+        // Add upstream
+        co git_add_upstream {
+            "upstream_url": "$(resp.parent.clone_url)"
+        }
+    }
+    case $(info.upstream) != "" && $(info.upstream) != $(resp.parent.clone_url) {
         exit "upstream and clone_url are not the same git repo"
     }
-    case $(current_branch.outcome) != "master" && $(current_branch.outcome) != "main" {
+    case $(info.current_branch) != "master" && $(info.current_branch) != "main" {
         exit "current branch is not master or main"
     }
 }
@@ -47,8 +44,8 @@ co git_fetch
 // Check if the current branch is up to date with upstream git repo, if not, will rebase 
 // the current branch.
 fn git_check_local_upstream = git_check_merge {
-    var to = $(current_branch.outcome)
-    var from = "upstream/$(current_branch.outcome)"
+    var to = $(info.current_branch)
+    var from = "upstream/$(info.current_branch)"
     args = {
         "to_branch": "$(to)"
         "from_branch": "$(from)"
@@ -56,7 +53,7 @@ fn git_check_local_upstream = git_check_merge {
 }
 
 fn git_rebase_upstream = git_rebase {
-    var branch = "upstream/$(current_branch.outcome)"
+    var branch = "upstream/$(info.current_branch)"
     args = {
         "branch": "$(branch)"
     }
@@ -65,10 +62,10 @@ fn git_rebase_upstream = git_rebase {
 var local_upstream_conflict
 co git_check_local_upstream -> local_upstream_conflict
 switch {
-    case $(local_upstream_conflict.outcome) == "no-conflict" {
+    case $(local_upstream_conflict.status) == "no-conflict" {
         co git_rebase_upstream
     }
-    case $(local_upstream_conflict.outcome) == "conflict" {
+    case $(local_upstream_conflict.status) == "conflict" {
         exit "local and upstream have conflicts"
     }
 }
@@ -76,8 +73,8 @@ switch {
 // Check if the origin branch is up to date with local current branch, if not, will push
 // the current branch to origin.
 fn git_check_local_origin = git_check_merge {
-    var to = "origin/$(current_branch.outcome)"
-    var from = "$(current_branch.outcome)"
+    var to = "origin/$(info.current_branch)"
+    var from = "$(info.current_branch)"
     args = {
         "to_branch": "$(to)"
         "from_branch": "$(from)"
@@ -85,7 +82,7 @@ fn git_check_local_origin = git_check_merge {
 }
 
 fn git_push_origin = git_push {
-    var branch = $(current_branch.outcome)
+    var branch = $(info.current_branch)
     args = {
         "local_branch": "$(branch)"
         "remote_branch": "$(branch)"
@@ -95,10 +92,10 @@ fn git_push_origin = git_push {
 var local_origin_conflict
 co git_check_local_origin -> local_origin_conflict
 switch {
-    case $(local_origin_conflict.outcome) == "no-conflict" {
+    case $(local_origin_conflict.status) == "no-conflict" {
         co git_push_origin
     }
-    case $(local_origin_conflict.outcome) == "conflict" {
+    case $(local_origin_conflict.status) == "conflict" {
         exit "local and origin have conflicts"
     }
 }

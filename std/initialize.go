@@ -12,12 +12,11 @@ import (
 	"github.com/cofxlabs/cofx/std/exit"
 	gitaddupstream "github.com/cofxlabs/cofx/std/git/git_add_upstream"
 	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
-	gitcurrentbranch "github.com/cofxlabs/cofx/std/git/git_current_branch"
 	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
+	gitlocalinfo "github.com/cofxlabs/cofx/std/git/git_local_info"
 	gitpull "github.com/cofxlabs/cofx/std/git/git_pull"
 	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
 	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
-	gitremote "github.com/cofxlabs/cofx/std/git/git_remote"
 	gobuild "github.com/cofxlabs/cofx/std/go/go_build"
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
 	"github.com/cofxlabs/cofx/std/go/gotest"
@@ -81,14 +80,13 @@ func init() {
 		gotest.New,
 		outcome.New,
 		httpget.New,
-		gitremote.New,
-		gitcurrentbranch.New,
 		gitfetch.New,
 		gitpush.New,
 		gitcheckmerge.New,
 		gitrebase.New,
 		gitpull.New,
 		gitaddupstream.New,
+		gitlocalinfo.New,
 		exit.New,
 		// event trigger function
 		eventtick.New,

@@ -9,7 +9,7 @@ import (
 
 type LogStdoutPrinter interface {
 	PrintTitle()
-	PrintSummary()
+	PrintSummary(map[string]string)
 	Reset() error
 }
 

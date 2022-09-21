@@ -3,7 +3,6 @@ package godriver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/cofxlabs/cofx/functiondriver/go/spec"
 	"github.com/cofxlabs/cofx/manifest"
@@ -66,7 +65,6 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	printer, ok := d.resources.Logwriter.(resource.LogStdoutPrinter)
 	if ok {
 		defer func() {
-			printer.PrintSummary()
 			printer.Reset()
 		}()
 		printer.PrintTitle()
@@ -75,8 +73,8 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range out {
-		fmt.Fprintf(d.resources.Logwriter, "➜ %s: '%s'\n", k, v)
+	if ok {
+		printer.PrintSummary(out)
 	}
 	return out, nil
 }
