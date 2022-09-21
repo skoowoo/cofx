@@ -2,7 +2,4 @@
 load "go:print"
 
 var s = "hello world!!!"
-
-co print {
-    "_" : "$(s)"
-}
+println "$(s)"

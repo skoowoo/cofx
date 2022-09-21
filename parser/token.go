@@ -22,9 +22,6 @@ const (
 	_kw_case    = "case"
 	_kw_default = "default"
 	_kw_event   = "event"
-	_kw_exit    = "exit"
-	_kw_sleep   = "sleep"
-	_kw_println = "println"
 )
 
 var keywordTable = map[string]struct{}{
@@ -40,14 +37,35 @@ var keywordTable = map[string]struct{}{
 	_kw_switch:  {},
 	_kw_var:     {},
 	_kw_event:   {},
-	_kw_exit:    {},
-	// _kw_sleep:   {},
-	_kw_println: {},
 }
 
 func iskeyword(ss ...string) (string, bool) {
 	for _, s := range ss {
 		_, ok := keywordTable[s]
+		if ok {
+			return s, true
+		}
+	}
+	return "", false
+}
+
+const (
+	_di_exit         = "exit"
+	_di_sleep        = "sleep"
+	_di_println      = "println"
+	_di_if_none_exit = "if_none_exit"
+)
+
+var directiveTable = map[string]struct{}{
+	_di_exit:         {},
+	_di_sleep:        {},
+	_di_println:      {},
+	_di_if_none_exit: {},
+}
+
+func isdirective(ss ...string) (string, bool) {
+	for _, s := range ss {
+		_, ok := directiveTable[s]
 		if ok {
 			return s, true
 		}

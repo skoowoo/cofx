@@ -147,16 +147,7 @@ func (b *Block) IsEvent() bool {
 }
 
 func (b *Block) IsBuiltinDirective() (string, bool) {
-	if b.Iskind(_kw_exit) {
-		return _kw_exit, true
-	}
-	if b.Iskind(_kw_sleep) {
-		return _kw_sleep, true
-	}
-	if b.Iskind(_kw_println) {
-		return _kw_println, true
-	}
-	return "", false
+	return isdirective(b.kind.String())
 }
 
 func (b *Block) InFor() bool {

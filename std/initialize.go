@@ -9,7 +9,6 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 	eventcron "github.com/cofxlabs/cofx/std/events/event_cron"
 	eventtick "github.com/cofxlabs/cofx/std/events/event_tick"
-	"github.com/cofxlabs/cofx/std/exit"
 	gitaddupstream "github.com/cofxlabs/cofx/std/git/git_add_upstream"
 	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
 	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
@@ -21,9 +20,7 @@ import (
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
 	"github.com/cofxlabs/cofx/std/go/gotest"
 	httpget "github.com/cofxlabs/cofx/std/http/http_get"
-	"github.com/cofxlabs/cofx/std/outcome"
 	"github.com/cofxlabs/cofx/std/print"
-	"github.com/cofxlabs/cofx/std/sleep"
 	stdtime "github.com/cofxlabs/cofx/std/time"
 )
 
@@ -71,14 +68,12 @@ func init() {
 	factories = make(map[string]spec.CreateCustomFunc)
 
 	var stds = []func() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc){
-		sleep.New,
 		print.New,
 		command.New,
 		stdtime.New,
 		gobuild.New,
 		gogenerate.New,
 		gotest.New,
-		outcome.New,
 		httpget.New,
 		gitfetch.New,
 		gitpush.New,
@@ -87,7 +82,6 @@ func init() {
 		gitpull.New,
 		gitaddupstream.New,
 		gitlocalinfo.New,
-		exit.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,

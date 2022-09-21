@@ -17,9 +17,24 @@ func lookupBuiltinDirective(name string) func(context.Context, ...string) error 
 }
 
 var builtindirectives = map[string]func(context.Context, ...string) error{
-	"sleep":   sleep,
-	"println": _println,
-	"exit":    exit,
+	"sleep":        sleep,
+	"println":      _println,
+	"exit":         exit,
+	"if_none_exit": ifNoneExit,
+}
+
+func ifNoneExit(ctx context.Context, args ...string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("if_none_exit: invalid argument count")
+	}
+	for i, arg := range args {
+		if arg != "" {
+			return nil
+		} else {
+			return fmt.Errorf("none exit: arg is empty at index %d", i)
+		}
+	}
+	return nil
 }
 
 func sleep(ctx context.Context, args ...string) error {
