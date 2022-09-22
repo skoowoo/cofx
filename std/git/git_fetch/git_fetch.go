@@ -11,7 +11,7 @@ import (
 
 var targetArg = manifest.UsageDesc{
 	Name: "target",
-	Desc: "Specify a target to get remote url, .e.g origin, upstream; if not specified, fetch all remotes",
+	Desc: "Specify a target to get remote url, e.g. origin, upstream; if not specified, fetch all remotes",
 }
 
 var _manifest = manifest.Manifest{

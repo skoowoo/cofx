@@ -1,0 +1,80 @@
+// auto-pr: Automatically push orgin branch and create the pull request for upstream repo.
+load "go:git_check_merge"
+load "go:git_push"
+load "go:git_fetch"
+load "go:git_local_info"
+load "go:gh_create_pr"
+load "go:http_get"
+load "go:command"
+
+var github_token = "$(env.GITHUB_TOKEN)"
+var main_branch = "main"
+if_none_exit "$(github_token)" "not set GITHUB_TOKEN env var"
+
+var info
+co git_local_info -> info
+if_none_exit "$(info.current_branch)" "not found current branch"
+
+var resp 
+co http_get -> resp {
+    "url":              "https://api.github.com/repos/$(info.github_org)/$(info.github_repo)"
+    "query_json_path":  "parent.owner.login, parent.name"
+}
+if_none_exit "$(resp.parent.owner.login)" "not got upstream org" 
+if_none_exit "$(resp.parent.name)" "not got upstream repo"
+
+if $(info.current_branch) == $(main_branch) {
+    exit "current branch is $(main_branch), can not create pr automatically"
+}
+
+var conflict
+var pr_out 
+co check_with_upstream -> conflict
+
+switch {
+    case $(conflict.status) == "no-content-to-merge" {
+        println "no content to merge"
+        exit
+    } 
+    case $(conflict.status) == "conflict" {
+        exit "have conflicts"
+    } 
+    case $(conflict.status) == "no-conflict" {
+        co push_origin
+        co create_pr -> pr_out
+        co command {
+            "cmd": "open $(pr_out.pr_html)"
+        }
+    } 
+}
+
+//---
+fn check_with_upstream = git_check_merge {
+    var from = $(info.current_branch)
+    args = {
+        "to_branch": "upstream/$(main_branch)"
+        "from_branch": "$(from)"
+    }
+}
+
+fn push_origin = git_push {
+    var branch = $(info.current_branch)
+    args = {
+        "local_branch": "$(branch)"
+        "remote_branch": "$(branch)"
+    }
+}
+
+fn create_pr = gh_create_pr {
+    var to_org = $(resp.parent.owner.login)
+    var to_repo = $(resp.parent.name)
+    var from_branch = $(info.current_branch)
+    var from_org = $(info.github_org)
+    args = {
+        "create_pr_url":    "https://api.github.com/repos/$(to_org)/$(to_repo)/pulls"
+        "to_branch":        "$(main_branch)"
+        "from_branch":      "$(from_branch)"
+        "from_org":         "$(from_org)"
+        "github_token":     "$(github_token)"
+    }
+}

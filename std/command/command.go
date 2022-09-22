@@ -39,7 +39,7 @@ var splitArg = manifest.UsageDesc{
 
 var extractArg = manifest.UsageDesc{
 	Name: "extract_fields",
-	Desc: "Specify one column or more to extract, .e.g 0,1,2",
+	Desc: "Specify one column or more to extract, e.g. 0,1,2",
 }
 
 var queryColumnArg = manifest.UsageDesc{

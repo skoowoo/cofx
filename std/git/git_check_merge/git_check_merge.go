@@ -10,15 +10,25 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 )
 
-var toBranchArg = manifest.UsageDesc{
-	Name: "to_branch",
-	Desc: "Specify the to branch name",
-}
+var (
+	toBranchArg = manifest.UsageDesc{
+		Name: "to_branch",
+		Desc: "Specify the to branch name",
+	}
 
-var fromBranchArg = manifest.UsageDesc{
-	Name: "from_branch",
-	Desc: "Specify the from branch name",
-}
+	fromBranchArg = manifest.UsageDesc{
+		Name: "from_branch",
+		Desc: "Specify the from branch name",
+	}
+)
+
+var (
+	statusRet = manifest.UsageDesc{
+		Name:           "status",
+		OptionalValues: []string{"conflict", "no-conflict", "no-content-to-merge"},
+		Desc:           "The status of merge",
+	}
+)
 
 var _manifest = manifest.Manifest{
 	Category:       "git",
@@ -29,7 +39,7 @@ var _manifest = manifest.Manifest{
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
 		Args:         []manifest.UsageDesc{toBranchArg, fromBranchArg},
-		ReturnValues: []manifest.UsageDesc{},
+		ReturnValues: []manifest.UsageDesc{statusRet},
 	},
 }
 
