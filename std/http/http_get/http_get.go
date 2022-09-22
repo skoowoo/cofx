@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,11 +78,13 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	var buff bytes.Buffer
 	io.Copy(&buff, resp.Body)
 	// handle error
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code not 200: %d: %s", resp.StatusCode, buff.String())
+	if resp.StatusCode-200 >= 100 {
+		return nil, fmt.Errorf("status code not 2xx: %d: %s", resp.StatusCode, buff.String())
 	}
 	// success
 	returns := make(map[string]string)
+	returns["status_code"] = strconv.Itoa(resp.StatusCode)
+
 	ct := resp.Header.Get("Content-Type")
 	if strings.Contains(ct, "application/json") {
 		results := gjson.GetManyBytes(buff.Bytes(), paths...)

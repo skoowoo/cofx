@@ -20,6 +20,7 @@ import (
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
 	"github.com/cofxlabs/cofx/std/go/gotest"
 	httpget "github.com/cofxlabs/cofx/std/http/http_get"
+	httppost "github.com/cofxlabs/cofx/std/http/http_post"
 	"github.com/cofxlabs/cofx/std/print"
 	stdtime "github.com/cofxlabs/cofx/std/time"
 )
@@ -75,6 +76,7 @@ func init() {
 		gogenerate.New,
 		gotest.New,
 		httpget.New,
+		httppost.New,
 		gitfetch.New,
 		gitpush.New,
 		gitcheckmerge.New,

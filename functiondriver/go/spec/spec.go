@@ -3,6 +3,8 @@ package spec
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -22,6 +24,18 @@ type ArgValType int
 
 // EntrypointArgs is the 'Args' argument of the entrypoint
 type EntrypointArgs map[string]string
+
+func (e EntrypointArgs) GetReader(name string) (io.ReadCloser, error) {
+	p := e.GetString(name)
+	if p == "" {
+		return nil, nil
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
 
 func (e EntrypointArgs) GetURL(name string) (string, error) {
 	s := e.GetString(name)

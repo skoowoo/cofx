@@ -10,6 +10,29 @@ import (
 	"github.com/cofxlabs/cofx/std/command"
 )
 
+var (
+	originRet = manifest.UsageDesc{
+		Name: "origin",
+		Desc: "The origin url of the git local repo",
+	}
+	upstreamRet = manifest.UsageDesc{
+		Name: "upstream",
+		Desc: "The upstream url of the git local repo",
+	}
+	branchRet = manifest.UsageDesc{
+		Name: "current_branch",
+		Desc: "The current branch name of the git local repo",
+	}
+	orgRet = manifest.UsageDesc{
+		Name: "github_org",
+		Desc: "The github org name that the git local repo forked from",
+	}
+	repoRet = manifest.UsageDesc{
+		Name: "github_repo",
+		Desc: "The github repo name that the git local repo forked from",
+	}
+)
+
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_local_info",
@@ -19,7 +42,7 @@ var _manifest = manifest.Manifest{
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
 		Args:         []manifest.UsageDesc{},
-		ReturnValues: []manifest.UsageDesc{},
+		ReturnValues: []manifest.UsageDesc{originRet, upstreamRet, branchRet, orgRet, repoRet},
 	},
 }
 
@@ -53,7 +76,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	// Get github org and repo name
-	// .e.g https://github.com/skoo87/cofx.git
+	// e.g. https://github.com/skoo87/cofx.git
 	origin, ok := m["origin"]
 	if ok {
 		if strings.Contains(origin, "https://github.com") {

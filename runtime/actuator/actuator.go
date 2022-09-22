@@ -566,7 +566,7 @@ func WithResources(resources resource.Resources) func(context.Context, Node) err
 	}
 }
 
-// BuiltinNode be used to execute some builtin functions, .e.g exit, sleep, println...
+// BuiltinNode be used to execute some builtin functions, e.g. exit, sleep, println...
 type BuiltinNode struct {
 	name  string
 	arg1  string

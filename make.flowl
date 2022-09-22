@@ -21,8 +21,6 @@ switch {
     }
 }
 
-co print_outcome
-
 // ---
 fn build_local = go_build {
     args = {
@@ -35,11 +33,4 @@ fn build_cross = go_build {
 		"find_mainpkg_dirs": "cmd"
         "bin_format":        "bin/darwin/,bin/linux/,bin/windows/"
     }
-}
-
-fn print_outcome = outcome {
-	args = {
-		"go build": "$(bins.outcome)"
-        "go test":  "$(test_report.outcome)"
-	}
 }

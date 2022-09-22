@@ -1,0 +1,57 @@
+// auto-pr: Automatically push orgin branch and create the pull request for upstream repo.
+load "go:git_check_merge"
+load "go:git_push"
+load "go:git_fetch"
+load "go:git_local_info"
+
+var github_token = ""
+var main_branch = "main"
+
+var info
+co git_local_info -> info
+if $(info.current_branch) == "" {
+    exit "not found current branch"
+}
+
+if $(info.current_branch) == $(main_branch) {
+    exit "current branch is $(main_branch), can not create pr automatically"
+}
+
+fn check_with_upstream = git_check_merge {
+    var from = $(info.current_branch)
+    args = {
+        "to_branch": "upstream/$(main_branch)"
+        "from_branch": "$(from)"
+    }
+}
+var conflict
+co check_with_upstream -> conflict
+
+switch {
+    case $(conflict.status) == "no-content-to-merge" {
+        println "no content to merge"
+        exit
+    } 
+    case $(conflict.status) == "conflict" {
+        exit "have conflicts"
+    } 
+    case $(conflict.status) == "no-conflict" {
+        co push_origin
+    }
+}
+
+fn push_origin = git_push {
+    var branch = $(info.current_branch)
+    args = {
+        "local_branch": "$(branch)"
+        "remote_branch": "$(branch)"
+    }
+}
+
+fn create_pr = http_post {
+    args = {
+        "url": "https://api.github.com/repos/$(info.github_org)/$(inof.github_repo)/pulls"
+        "set_headers": "Accept: application/vnd.github+json, Authorization: Bearer $(github_token)"
+        "json_file_path": ""
+    }
+}
