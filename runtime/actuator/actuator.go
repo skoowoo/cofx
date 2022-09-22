@@ -594,6 +594,13 @@ func (n *BuiltinNode) Exec(ctx context.Context) error {
 		}
 	}
 	var args []string
+	// Special handle for 'if_none_exit' directive
+	if n.name == "if_none_exit" {
+		args = append(args, n.arg1)
+		args = append(args, n.arg2)
+		return n._func(ctx, args...)
+	}
+
 	if n.arg1 != "" {
 		args = append(args, n.arg1)
 		if n.arg2 != "" {

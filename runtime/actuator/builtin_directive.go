@@ -24,15 +24,11 @@ var builtindirectives = map[string]func(context.Context, ...string) error{
 }
 
 func ifNoneExit(ctx context.Context, args ...string) error {
-	if len(args) < 1 {
+	if len(args) != 2 {
 		return fmt.Errorf("if_none_exit: invalid argument count")
 	}
-	for i, arg := range args {
-		if arg != "" {
-			return nil
-		} else {
-			return fmt.Errorf("none exit: arg is empty at index %d", i)
-		}
+	if args[0] == "" {
+		return fmt.Errorf("if_none_exit: %s", args[1])
 	}
 	return nil
 }

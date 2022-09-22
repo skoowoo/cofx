@@ -91,7 +91,8 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	// Get current branch
 	{
 		_args := spec.EntrypointArgs{
-			"cmd":            "git branch --show-current",
+			// "cmd":            "git branch --show-current",
+			"cmd":            "git rev-parse --abbrev-ref HEAD",
 			"split":          "",
 			"extract_fields": "0",
 			"query_columns":  "c0",

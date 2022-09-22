@@ -16,6 +16,7 @@ import (
 	gitpull "github.com/cofxlabs/cofx/std/git/git_pull"
 	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
 	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
+	ghcreatepr "github.com/cofxlabs/cofx/std/github/gh_create_pr"
 	gobuild "github.com/cofxlabs/cofx/std/go/go_build"
 	gogenerate "github.com/cofxlabs/cofx/std/go/go_generate"
 	"github.com/cofxlabs/cofx/std/go/gotest"
@@ -72,11 +73,14 @@ func init() {
 		print.New,
 		command.New,
 		stdtime.New,
+		// go
 		gobuild.New,
 		gogenerate.New,
 		gotest.New,
+		// http
 		httpget.New,
 		httppost.New,
+		// git
 		gitfetch.New,
 		gitpush.New,
 		gitcheckmerge.New,
@@ -84,6 +88,8 @@ func init() {
 		gitpull.New,
 		gitaddupstream.New,
 		gitlocalinfo.New,
+		// github
+		ghcreatepr.New,
 		// event trigger function
 		eventtick.New,
 		eventcron.New,

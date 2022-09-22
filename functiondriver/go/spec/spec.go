@@ -25,7 +25,7 @@ type ArgValType int
 // EntrypointArgs is the 'Args' argument of the entrypoint
 type EntrypointArgs map[string]string
 
-func (e EntrypointArgs) GetReader(name string) (io.ReadCloser, error) {
+func (e EntrypointArgs) GetReader(name string) (io.Reader, error) {
 	p := e.GetString(name)
 	if p == "" {
 		return nil, nil
