@@ -9,7 +9,7 @@ test:
 	cofx run make.flowl -e TEST=true 
 
 clean:
-	rm -rf bin/
+	rm -rf bin/ .tmp/
 
 first:
 	go generate ./...
