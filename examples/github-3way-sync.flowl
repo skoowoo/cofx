@@ -11,9 +11,8 @@ load "go:git_local_info"
 // Get some base information from local git repo
 var info 
 co git_local_info -> info
-if $(info.github_org) == "" || $(info.github_repo) == "" {
-    exit "not found github_org or github_repo from local git repo"
-}
+if_none_exit $(info.github_org) "not found github_org in local git repo"
+if_none_exit $(info.github_repo) "not found github_repo in local git repo"
 
 // Figure out the parent repo that the github repo forks from.
 var resp 
@@ -21,9 +20,7 @@ co http_get -> resp {
     "url":              "https://api.github.com/repos/$(info.github_org)/$(info.github_repo)"
     "query_json_path":  "parent.clone_url"
 }
-if $(resp.parent.clone_url) == "" {
-    exit "not found parent.clone_url through github api"
-}
+if_none_exit $(resp.parent.clone_url) "not found parent.clone_url through github api"
 
 switch {
     case $(info.upstream) == "" {

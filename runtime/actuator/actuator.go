@@ -255,8 +255,6 @@ func (r *RunQueue) generateSteps(blocks []*parser.Block) error {
 			}
 			node := &BuiltinNode{
 				name:  name,
-				arg1:  b.Target1().Value(),
-				arg2:  b.Target2().Value(),
 				b:     b,
 				_func: f,
 			}
@@ -569,8 +567,6 @@ func WithResources(resources resource.Resources) func(context.Context, Node) err
 // BuiltinNode be used to execute some builtin functions, e.g. exit, sleep, println...
 type BuiltinNode struct {
 	name  string
-	arg1  string
-	arg2  string
 	b     *parser.Block
 	_func func(context.Context, ...string) error
 }
@@ -593,18 +589,21 @@ func (n *BuiltinNode) Exec(ctx context.Context) error {
 			return ErrConditionIsFalse
 		}
 	}
+	arg1 := n.b.Target1().Value()
+	arg2 := n.b.Target2().Value()
 	var args []string
 	// Special handle for 'if_none_exit' directive
+	// TODO: refactor this
 	if n.name == "if_none_exit" {
-		args = append(args, n.arg1)
-		args = append(args, n.arg2)
+		args = append(args, arg1)
+		args = append(args, arg2)
 		return n._func(ctx, args...)
 	}
 
-	if n.arg1 != "" {
-		args = append(args, n.arg1)
-		if n.arg2 != "" {
-			args = append(args, n.arg2)
+	if arg1 != "" {
+		args = append(args, arg1)
+		if arg2 != "" {
+			args = append(args, arg2)
 		}
 	}
 	return n._func(ctx, args...)

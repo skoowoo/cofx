@@ -171,6 +171,20 @@ func TestParseFullWithRunqWithErr(t *testing.T) {
 func TestBuiltiDirective(t *testing.T) {
 	{
 		const testingdata string = `
+		var v = ""
+		if_none_exit $(v) "v is empty"
+	`
+
+		_, _, rq, err := loadTestingdata2(testingdata)
+		if err != nil {
+			assert.FailNow(t, err.Error())
+		}
+		err = rq.WalkAndExec(context.Background(), nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "v is empty")
+	}
+	{
+		const testingdata string = `
 		var v = 1
 		if $(v) == 1 {
 			sleep "1s"
@@ -181,7 +195,6 @@ func TestBuiltiDirective(t *testing.T) {
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
-		assert.NoError(t, err)
 		err = rq.WalkAndExec(context.Background(), nil)
 		assert.NoError(t, err)
 	}
