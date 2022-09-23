@@ -155,11 +155,32 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_keyword_t, _symbol_t},
 		func() body { return &plainbody{} },
 	},
-	"builtins": {
-		1, 3,
+	_di_if_none_exit: {
+		3, 3,
+		[]TokenType{_ident_t, _refvar_t, _string_t},
+		[]string{"", "", ""},
+		[]TokenType{_ident_t, _refvar_t, _string_t},
+		nil,
+	},
+	_di_exit: {
+		1, 2,
+		[]TokenType{_ident_t, _string_t},
+		[]string{"", ""},
+		[]TokenType{_ident_t, _string_t},
+		nil,
+	},
+	_di_println: {
+		2, 3,
 		[]TokenType{_ident_t, _string_t, _string_t},
 		[]string{"", "", ""},
 		[]TokenType{_ident_t, _string_t, _string_t},
+		nil,
+	},
+	_di_sleep: {
+		2, 2,
+		[]TokenType{_ident_t, _string_t},
+		[]string{"", ""},
+		[]TokenType{_ident_t, _string_t},
 		nil,
 	},
 }
@@ -1187,7 +1208,7 @@ func (ast *AST) parseBuiltDirective(line []*Token, ln int, parent *Block) error 
 		parent: parent,
 		vtbl:   vartable{vars: make(map[string]*_var)},
 	}
-	body, err := ast.preparse("builtins", line, ln, b)
+	body, err := ast.preparse(line[0].String(), line, ln, b)
 	if err != nil {
 		return err
 	}

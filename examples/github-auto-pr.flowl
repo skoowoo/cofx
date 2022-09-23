@@ -9,19 +9,19 @@ load "go:command"
 
 var github_token = "$(env.GITHUB_TOKEN)"
 var main_branch = "main"
-if_none_exit "$(github_token)" "not set GITHUB_TOKEN env var"
+if_none_exit $(github_token) "not set GITHUB_TOKEN env var"
 
 var info
 co git_local_info -> info
-if_none_exit "$(info.current_branch)" "not found current branch"
+if_none_exit $(info.current_branch) "not found current branch"
 
 var resp 
 co http_get -> resp {
     "url":              "https://api.github.com/repos/$(info.github_org)/$(info.github_repo)"
     "query_json_path":  "parent.owner.login, parent.name"
 }
-if_none_exit "$(resp.parent.owner.login)" "not got upstream org" 
-if_none_exit "$(resp.parent.name)" "not got upstream repo"
+if_none_exit $(resp.parent.owner.login) "not got upstream org" 
+if_none_exit $(resp.parent.name) "not got upstream repo"
 
 if $(info.current_branch) == $(main_branch) {
     exit "current branch is $(main_branch), can not create pr automatically"
