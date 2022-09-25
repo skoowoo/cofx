@@ -778,7 +778,7 @@ func TestBuiltinDirective(t *testing.T) {
 				exit "error"
 			}
 			default {
-				println "default"
+				exit "default"
 			}
 		}
 
@@ -795,7 +795,7 @@ func TestBuiltinDirective(t *testing.T) {
 		assert.Equal(t, "error", blocks[3].target1.String())
 		assert.True(t, blocks[3].ExecCondition())
 
-		assert.Equal(t, _di_println, blocks[5].kind.String())
+		assert.Equal(t, _di_exit, blocks[5].kind.String())
 		assert.Equal(t, "default", blocks[5].target1.String())
 		assert.False(t, blocks[5].ExecCondition())
 

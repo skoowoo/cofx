@@ -203,10 +203,10 @@ func TestBuiltiDirective(t *testing.T) {
 		var v = 1
 		switch {
 			case $(v) == 1 {
-				println "error"
+				sleep "1s"
 			}
 			default {
-				println "default"
+				exit "default"
 			}
 		}
 
