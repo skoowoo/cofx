@@ -25,7 +25,7 @@ Examples:
   cofx run  fc5e038d38a57032085441e7fe7010b0
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return mainList()
+		return indexEntry()
 	},
 }
 
@@ -37,23 +37,6 @@ func Execute() {
 }
 
 func initCmd() {
-	{
-		var showAll bool
-
-		parseCmd := &cobra.Command{
-			Use:          "parse [path to flowl file]",
-			Short:        "Parse a flowl",
-			Example:      "cofx parse [-a] ./example.flowl",
-			SilenceUsage: true,
-			Args:         cobra.ExactArgs(1),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				return parseflowl(args[0], showAll)
-			},
-		}
-		parseCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show run queue and blocks, only show run queue by default")
-		rootCmd.AddCommand(parseCmd)
-	}
-
 	{
 		var envs []string
 		runCmd := &cobra.Command{

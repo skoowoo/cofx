@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
@@ -58,6 +60,7 @@ func runEntry(nameorid nameid.NameOrID) error {
 	out := &output.Output{
 		W: nil,
 		HandleFunc: func(line []byte) {
+			line = bytes.TrimSuffix(line, []byte{'\n'})
 			lineC <- string(line)
 		},
 	}
@@ -88,29 +91,35 @@ func runEntry(nameorid nameid.NameOrID) error {
 			svc.CancelRunningFlow(ctx, fid)
 			wg.Done()
 		}()
+		rand.Seed(time.Now().UnixNano())
 
 		m := newRunModel()
 		m.getMsgFunc = func() tea.Cmd {
-			return tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
+			return tea.Tick(time.Millisecond*time.Duration(rand.Intn(50)), func(t time.Time) tea.Msg {
 				insight, err := svc.InsightFlow(ctx, fid)
 				if err != nil {
 					return err
 				}
 				// insight.JsonWrite(os.Stdout)
-				msg := runMsg{
+				return runGetMsg{
 					status: insight,
 				}
-				select {
-				case line, ok := <-lineC:
-					if !ok {
-						msg.exit = true
-					}
-					msg.outline = strings.TrimSuffix(line, "\n")
-				case <-time.After(time.Millisecond * 100):
-				}
-				return msg
 			})
 		}
+		m.subMsgFunc = func() tea.Cmd {
+			return func() tea.Msg {
+				l, ok := <-lineC
+				if !ok {
+					return runSubMsg{
+						exit: true,
+					}
+				}
+				return runSubMsg{
+					l: l,
+				}
+			}
+		}
+
 		if err := tea.NewProgram(m).Start(); err != nil {
 			errs = append(errs, err)
 			return
@@ -124,10 +133,13 @@ func runEntry(nameorid nameid.NameOrID) error {
 	return nil
 }
 
-type runMsg struct {
-	status  exported.FlowRunningInsight
-	outline string
-	exit    bool
+type runSubMsg struct {
+	l    string
+	exit bool
+}
+
+type runGetMsg struct {
+	status exported.FlowRunningInsight
 }
 
 type runModel struct {
@@ -136,6 +148,7 @@ type runModel struct {
 	spinner    spinner.Model
 	progress   progress.Model
 	getMsgFunc func() tea.Cmd
+	subMsgFunc func() tea.Cmd
 	totalNum   int
 	doneNum    int
 	nodes      []exported.NodeRunningInsight
@@ -156,7 +169,7 @@ func newRunModel() runModel {
 }
 
 func (m runModel) Init() tea.Cmd {
-	return tea.Batch(m.getMsgFunc(), m.spinner.Tick)
+	return tea.Batch(m.getMsgFunc(), m.subMsgFunc(), m.spinner.Tick)
 }
 
 func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -168,21 +181,19 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		}
-	case runMsg:
+	case runSubMsg:
+		if msg.exit {
+			return m, tea.Quit
+		}
+		return m, tea.Batch(m.subMsgFunc(), tea.Printf("%s", msg.l))
+	case runGetMsg:
 		m.doneNum = msg.status.Done
 		m.totalNum = msg.status.Total
 		m.nodes = msg.status.Nodes
 		// Update progress bar
 		progressCmd := m.progress.SetPercent(float64(m.doneNum) / float64(m.totalNum))
-		if msg.exit {
-			return m, tea.Quit
-		}
 
-		cmds := []tea.Cmd{progressCmd, m.getMsgFunc()}
-		if len(msg.outline) > 0 {
-			cmds = append(cmds, tea.Printf("%s", msg.outline))
-		}
-		return m, tea.Batch(cmds...)
+		return m, tea.Batch(progressCmd, m.getMsgFunc())
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -216,8 +227,8 @@ func (m runModel) View() string {
 	}
 	running := fmt.Sprintf("Running %s", executing.Render(strings.Join(names, ", ")))
 
-	if m.width/2 < 80 {
-		m.progress.Width = m.width / 2
+	if m.width/3 < 80 {
+		m.progress.Width = m.width / 3
 	}
 	prog := m.progress.View()
 
