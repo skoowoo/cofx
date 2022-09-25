@@ -33,8 +33,7 @@ co check_with_upstream -> conflict
 
 switch {
     case $(conflict.status) == "no-content-to-merge" {
-        println "no content to merge"
-        exit
+        exit "no content to merge"
     } 
     case $(conflict.status) == "conflict" {
         exit "have conflicts"
