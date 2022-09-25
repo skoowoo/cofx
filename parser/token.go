@@ -52,15 +52,15 @@ func iskeyword(ss ...string) (string, bool) {
 const (
 	_di_exit         = "exit"
 	_di_sleep        = "sleep"
-	_di_println      = "println"
 	_di_if_none_exit = "if_none_exit"
+	// _di_println      = "println"
 )
 
 var directiveTable = map[string]struct{}{
 	_di_exit:         {},
 	_di_sleep:        {},
-	_di_println:      {},
 	_di_if_none_exit: {},
+	//_di_println:      {},
 }
 
 func isdirective(ss ...string) (string, bool) {

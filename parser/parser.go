@@ -169,13 +169,13 @@ var statementPatterns = map[string]struct {
 		[]TokenType{_ident_t, _string_t},
 		nil,
 	},
-	_di_println: {
-		2, 3,
-		[]TokenType{_ident_t, _string_t, _string_t},
-		[]string{"", "", ""},
-		[]TokenType{_ident_t, _string_t, _string_t},
-		nil,
-	},
+	// _di_println: {
+	// 	2, 3,
+	// 	[]TokenType{_ident_t, _string_t, _string_t},
+	// 	[]string{"", "", ""},
+	// 	[]TokenType{_ident_t, _string_t, _string_t},
+	// 	nil,
+	// },
 	_di_sleep: {
 		2, 2,
 		[]TokenType{_ident_t, _string_t},
@@ -377,7 +377,7 @@ func (ast *AST) scan(lx *lexer) error {
 				}
 				parsingblock = block
 				ast._goto(_ast_event_body)
-			case _di_exit, _di_sleep, _di_println, _di_if_none_exit:
+			case _di_exit, _di_sleep, _di_if_none_exit:
 				if err := ast.parseBuiltDirective(line, ln, parsingblock); err != nil {
 					return err
 				}
@@ -914,7 +914,7 @@ func (ast *AST) parseForBody(line []*Token, ln int, current *Block) (*Block, err
 		}
 		ast._goto(_ast_switch_body)
 		return block, nil
-	case _di_exit, _di_sleep, _di_println, _di_if_none_exit:
+	case _di_exit, _di_sleep, _di_if_none_exit:
 		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
 			return nil, err
 		}
@@ -990,7 +990,7 @@ func (ast *AST) parseIfBody(line []*Token, ln int, current *Block) (*Block, erro
 			ast._goto(_ast_co_body)
 			return block, nil
 		}
-	case _di_exit, _di_sleep, _di_println, _di_if_none_exit:
+	case _di_exit, _di_sleep, _di_if_none_exit:
 		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
 			return nil, err
 		}
@@ -1152,7 +1152,7 @@ func (ast *AST) parseCaseDeafultBody(line []*Token, ln int, current *Block) (*Bl
 			ast._goto(_ast_co_body)
 			return block, nil
 		}
-	case _di_exit, _di_sleep, _di_println, _di_if_none_exit:
+	case _di_exit, _di_sleep, _di_if_none_exit:
 		if err := ast.parseBuiltDirective(line, ln, current); err != nil {
 			return nil, err
 		}
