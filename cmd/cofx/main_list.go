@@ -23,7 +23,7 @@ func mainList() error {
 
 		// to run the selected flow
 		if selected.Source != "" {
-			err := prunflowl(nameid.NameOrID(selected.Source), true)
+			err := prunEntry(nameid.NameOrID(selected.Source), true)
 			if err != nil {
 				return err
 			}

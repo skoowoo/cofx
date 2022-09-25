@@ -12,7 +12,7 @@ import (
 	"github.com/cofxlabs/cofx/service/exported"
 )
 
-func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
+func prunEntry(nameorid nameid.NameOrID, fullscreen bool) error {
 	svc := service.New()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -45,7 +45,7 @@ func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 	if err := svc.AddFlow(ctx, fid, f); err != nil {
 		return err
 	}
-	if _, err := svc.ReadyFlow(ctx, fid, false); err != nil {
+	if _, err := svc.ReadyFlow(ctx, fid, nil); err != nil {
 		return err
 	}
 
@@ -63,7 +63,7 @@ func prunflowl(nameorid nameid.NameOrID, fullscreen bool) error {
 			svc.CancelRunningFlow(ctx, fid)
 		}()
 
-		if err := startRunningView(fullscreen, func() (*exported.FlowRunningInsight, error) {
+		if err := startPrunView(fullscreen, func() (*exported.FlowRunningInsight, error) {
 			fi, err := svc.InsightFlow(ctx, fid)
 			return &fi, err
 		}); err != nil {

@@ -3,7 +3,9 @@ package godriver
 import (
 	"context"
 	"errors"
+	"sort"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/cofxlabs/cofx/functiondriver/go/spec"
 	"github.com/cofxlabs/cofx/manifest"
 	"github.com/cofxlabs/cofx/service/resource"
@@ -62,19 +64,33 @@ func (d *GoDriver) Run(ctx context.Context, args map[string]string) (map[string]
 		Custom:    d.custom,
 		Resources: d.resources,
 	}
-	printer, ok := d.resources.Logwriter.(resource.LogStdoutPrinter)
+	pretty, ok := d.resources.Logwriter.(resource.OutPrettyPrinter)
 	if ok {
 		defer func() {
-			printer.Reset()
+			pretty.Reset()
 		}()
-		printer.PrintTitle()
+		pretty.WriteTitle(d.resources.Labels.Get("node_name"), d.Name()+":"+d.FunctionName())
 	}
 	out, err := d.entrypoint(ctx, bundle, spec.EntrypointArgs(merged))
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		printer.PrintSummary(out)
+		var keys []string
+		var maxLen int
+		for k := range out {
+			if len(k) > maxLen {
+				maxLen = len(k)
+			}
+			keys = append(keys, k)
+		}
+		var lines []string
+		sort.Strings(keys)
+		for _, k := range keys {
+			l := lipgloss.NewStyle().Width(maxLen).Render(k) + ": " + out[k]
+			lines = append(lines, l)
+		}
+		pretty.WriteSummary(lines)
 	}
 	return out, nil
 }

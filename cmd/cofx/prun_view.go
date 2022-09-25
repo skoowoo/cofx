@@ -16,7 +16,7 @@ import (
 
 var runCmdExited bool
 
-func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight, error)) error {
+func startPrunView(fullscreen bool, get func() (*exported.FlowRunningInsight, error)) error {
 	fi, err := get()
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight,
 	s := spinner.New()
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 
-	model := runningModel{
+	model := prunModel{
 		spinner: s,
 		progress: progress.New(
 			progress.WithDefaultGradient(),
@@ -51,7 +51,7 @@ func startRunningView(fullscreen bool, get func() (*exported.FlowRunningInsight,
 	}
 }
 
-type runningModel struct {
+type prunModel struct {
 	width      int
 	height     int
 	spinner    spinner.Model
@@ -62,11 +62,11 @@ type runningModel struct {
 	fullscreen bool
 }
 
-func (m runningModel) Init() tea.Cmd {
+func (m prunModel) Init() tea.Cmd {
 	return tea.Batch(m.getCmd, m.spinner.Tick)
 }
 
-func (m runningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m prunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -121,7 +121,7 @@ func maxNameWidth(nodes []exported.NodeRunningInsight) int {
 	return max
 }
 
-func (m runningModel) View() string {
+func (m prunModel) View() string {
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("  FLOW NAME: %s\n", m.fi.Name))
 	builder.WriteString(fmt.Sprintf("  FLOW ID:   %s\n\n", m.fi.ID))
