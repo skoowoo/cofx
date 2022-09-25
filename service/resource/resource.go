@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-type LogStdoutPrinter interface {
-	PrintTitle()
-	PrintSummary(map[string]string)
+type OutPrettyPrinter interface {
+	WriteTitle(primary, secondary string)
+	WriteSummary(lines []string)
 	Reset() error
 }
 

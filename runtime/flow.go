@@ -49,7 +49,7 @@ func newflow(id nameid.ID, runq *actuator.RunQueue, ast *parser.AST) *Flow {
 			afterFunc: func(id nameid.ID) error {
 				return nil
 			},
-			createLogwriter: func(fileid, desc string) (io.Writer, error) {
+			createLogwriter: func(fileid string) (io.Writer, error) {
 				return os.Stdout, nil
 			},
 			copyResources: func() resource.Resources {
@@ -74,7 +74,7 @@ func WithAfterFunc(_func func(nameid.ID) error) FlowOption {
 }
 
 // WithCreateLogwriter initializes the logger for flow & function write the log.
-func WithCreateLogwriter(_func func(string, string) (io.Writer, error)) FlowOption {
+func WithCreateLogwriter(_func func(string) (io.Writer, error)) FlowOption {
 	return func(fb *FlowBody) {
 		fb.createLogwriter = _func
 	}
@@ -249,7 +249,7 @@ type FlowBody struct {
 	// afterFunc will be invoked afterFunc the flow is stopped.
 	afterFunc func(id nameid.ID) error
 	// createLogwriter creates a log writer for the function node.
-	createLogwriter func(fileid, desc string) (io.Writer, error)
+	createLogwriter func(fileid string) (io.Writer, error)
 	// copyResources copy the resources to every function node.
 	copyResources func() resource.Resources
 	// cancel is used to cancel the flow through the context.

@@ -7,11 +7,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/cofxlabs/cofx/pkg/output"
+	"github.com/cofxlabs/cofx/pkg/uidesign"
 )
 
 type LogsetOption func(*Logset)
@@ -127,7 +126,7 @@ func (b *LogBucket) Reset() error {
 	return nil
 }
 
-func (b *LogBucket) CreateWriter(id, desc string) (io.Writer, error) {
+func (b *LogBucket) CreateWriter(id string, ws ...io.Writer) (io.Writer, error) {
 	if b.IsFile() {
 		path := filepath.Join(b.set.addr, "buckets", b.id, id, "logfile")
 		lf, err := newLogFile2Write(path)
@@ -141,7 +140,11 @@ func (b *LogBucket) CreateWriter(id, desc string) (io.Writer, error) {
 		return lf, nil
 	}
 	if b.IsStdout() {
-		lout := newLogStdout(id, desc)
+		var w io.Writer = os.Stdout
+		if len(ws) > 0 {
+			w = ws[0]
+		}
+		lout := newLogStdout(id, w)
 		if _, ok := b.writers[id]; ok {
 			return nil, errors.New("writer already exists: " + id)
 		}
@@ -258,24 +261,21 @@ type logStdout struct {
 	out *output.Output
 	// Usually, the id is the seq of this function
 	id string
-	// Usually, the desc is the name of this function
-	desc string
 }
 
-func newLogStdout(id, desc string) *logStdout {
-	ls := &logStdout{
-		w:    os.Stdout,
-		id:   id,
-		desc: desc,
+func newLogStdout(id string, w io.Writer) *logStdout {
+	l := &logStdout{
+		w:  w,
+		id: id,
 	}
-	ls.out = &output.Output{
+	l.out = &output.Output{
 		W: nil,
 		HandleFunc: func(line []byte) {
-			ls.w.Write([]byte("  "))
-			ls.w.Write(line)
+			l.w.Write([]byte("  "))
+			l.w.Write(line)
 		},
 	}
-	return ls
+	return l
 }
 
 // Reset reset the 'logStdout' object, will clear the 'printedTitle' flag
@@ -285,34 +285,20 @@ func (l *logStdout) Reset() error {
 	return nil
 }
 
-func (l *logStdout) PrintTitle() {
-	s := "\n" +
-		lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("●").String() +
-		lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("222")).Render("Running function: "+l.desc+" seq:"+l.id)
-	fmt.Fprintln(l.w, s)
+func (l *logStdout) WriteTitle(primary, secondary string) {
+	s := uidesign.IconCycle.String() + uidesign.ColorGrey.Render(primary+" ➜ "+secondary) + "\n"
+	fmt.Fprint(l.w, s)
 }
 
-func (l *logStdout) PrintSummary(rets map[string]string) {
-	var keys []string
-	var maxLen int
-	for k, _ := range rets {
-		if len(k) > maxLen {
-			maxLen = len(k)
-		}
-		keys = append(keys, k)
+func (l *logStdout) WriteSummary(lines []string) {
+	for _, s := range lines {
+		fmt.Fprint(l.w, uidesign.IconRight.String()+s+"\n")
 	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		v := rets[k]
-		s := lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Width(2).SetString("➜").String() +
-			lipgloss.NewStyle().Width(maxLen).Render(k) + ": " + v
-		fmt.Fprintln(l.w, s)
-	}
+	fmt.Fprint(l.w, " \n") // add a blank line
 }
 
 func (l *logStdout) Write(p []byte) (int, error) {
 	l.Lock()
 	defer l.Unlock()
-
 	return l.out.Write(p)
 }

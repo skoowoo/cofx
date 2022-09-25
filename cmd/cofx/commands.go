@@ -12,11 +12,7 @@ import (
 // root command
 var rootCmd = &cobra.Command{
 	Use: "cofx",
-	Long: `
-An automation engine based on function fabric, can be used to build automated workflows.
-
-Execute 'cofx' command directly without any args and sub-commands, will output
-all available flows in interactive mode.
+	Long: `A powerful automation workflow engine based on low code programming language
 
 Environment variables:
   COFX_HOME=<path of a directory>           // Default $HOME/.cofx
@@ -25,7 +21,8 @@ Examples:
   cofx
   cofx list
   cofx run  helloworld.flowl
-  cofx prun helloworld.flowl
+  cofx run  helloworld
+  cofx run  fc5e038d38a57032085441e7fe7010b0
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return mainList()
@@ -72,7 +69,7 @@ func initCmd() {
 						os.Setenv(kv[0], kv[1])
 					}
 				}
-				return runflowl(nameid.NameOrID(args[0]))
+				return runEntry(nameid.NameOrID(args[0]))
 			},
 		}
 		rootCmd.AddCommand(runCmd)
@@ -95,7 +92,7 @@ func initCmd() {
 					}
 				}
 				fullscreen := false
-				return prunflowl(nameid.NameOrID(args[0]), fullscreen)
+				return prunEntry(nameid.NameOrID(args[0]), fullscreen)
 			},
 		}
 		rootCmd.AddCommand(prunCmd)
