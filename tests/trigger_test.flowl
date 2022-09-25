@@ -18,9 +18,8 @@ event {
 var t
 var s = "hello world!!!"
 
-co sleep {
-    "duration" : "10s"
-}
+sleep "10s"
+
 co time -> t
 co print {
     "_" : "$(t.now) $(ev.which) $(s)"

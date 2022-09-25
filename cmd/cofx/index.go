@@ -16,6 +16,32 @@ import (
 	"github.com/cofxlabs/cofx/service/exported"
 )
 
+func indexEntry() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	svc := service.New()
+	availables := svc.ListAvailables(ctx)
+
+	//  execute 'cofx' command without any args or sub-command
+	for {
+		selected, err := startListingView(availables)
+		if err != nil {
+			return err
+		}
+
+		// to run the selected flow
+		if selected.Source != "" {
+			err := prunEntry(nameid.NameOrID(selected.Source), true)
+			if err != nil {
+				return err
+			}
+		} else {
+			return nil
+		}
+	}
+}
+
 func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {
 	items := make([]list.Item, 0, len(flows))
 	for _, f := range flows {
@@ -34,7 +60,7 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		}
 	}
 
-	model := listFlowModel{
+	model := indexModel{
 		list: l,
 		keys: keys,
 	}
@@ -45,23 +71,23 @@ func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsigh
 		return exported.FlowMetaInsight{}, err
 	}
 
-	if m, ok := ret.(listFlowModel); ok && m.flowToRun.Name != "" {
+	if m, ok := ret.(indexModel); ok && m.flowToRun.Name != "" {
 		return exported.FlowMetaInsight(m.flowToRun), nil
 	}
 	return exported.FlowMetaInsight{}, nil
 }
 
-type listFlowModel struct {
+type indexModel struct {
 	list      list.Model
 	keys      keyMap
 	flowToRun flowItem
 }
 
-func (m listFlowModel) Init() tea.Cmd {
+func (m indexModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m indexModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, m.keys.toggleQuit) {
@@ -95,7 +121,7 @@ func (m listFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m listFlowModel) View() string {
+func (m indexModel) View() string {
 	return docStyle.Render(m.list.View())
 }
 
@@ -113,17 +139,17 @@ func (f flowItem) FilterValue() string {
 	return f.Name
 }
 
-func (m listFlowModel) getSelected() flowItem {
+func (m indexModel) getSelected() flowItem {
 	return m.list.SelectedItem().(flowItem)
 }
 
-func (m listFlowModel) updateSelected(f func(selected *flowItem)) {
+func (m indexModel) updateSelected(f func(selected *flowItem)) {
 	selected := m.getSelected()
 	f(&selected)
 	m.list.SetItem(m.list.Index(), selected)
 }
 
-func (m listFlowModel) replaceSelected(item flowItem) {
+func (m indexModel) replaceSelected(item flowItem) {
 	m.list.SetItem(m.list.Index(), item)
 }
 
