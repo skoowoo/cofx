@@ -45,10 +45,7 @@ func (m indexModel) Init() tea.Cmd {
 func (m indexModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
-		}
+		return m, tea.Quit
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
@@ -64,46 +61,55 @@ func (m indexModel) View() string {
 		Bold(true).
 		Italic(true).
 		Align(lipgloss.Center).
+		MarginTop(m.height / 10).
 		Foreground(lipgloss.Color("15"))
 	name := "cofx"
 	name = nameStyle.Render(name)
 
 	// slogan
 	sloganStyle := lipgloss.NewStyle().
+		MarginTop(2).
 		Width(m.width).
 		Align(lipgloss.Center)
 	slogan := "Turn boring stuff into low code ..."
-	slogan = sloganStyle.Render(uidesign.ShadeText(slogan, 2))
+	slogan = sloganStyle.Render(uidesign.ShadeText(slogan, 0))
 
 	// metrics
-	functions := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.functions), "Standard Functions")
-	flows := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.flows), "Available Flows")
-	homeDir := lipgloss.JoinVertical(lipgloss.Left, m.homeDir, "CoFx Home Directory")
+	functions := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.functions), uidesign.ColorGrey1.Render("Standard Functions"))
+	flows := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.flows), uidesign.ColorGrey1.Render("Available Flows"))
+	homeDir := lipgloss.JoinVertical(lipgloss.Left, m.homeDir, uidesign.ColorGrey1.Render("CoFx Home Directory"))
 
 	maxWidth := max(lipgloss.Width(functions), lipgloss.Width(flows), lipgloss.Width(homeDir))
 	blockStyle := lipgloss.NewStyle().
-		Align(lipgloss.Center).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Padding(1, 2).
-		Height(4).
-		Width(maxWidth + 5)
+		BorderBottom(true).BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("99")).
+		Align(lipgloss.Left).
+		MarginLeft(0).MarginRight(1).
+		Width(maxWidth)
+	blockLayoutStyle := lipgloss.NewStyle().Margin(int(float64(m.height)*0.18), 1, 1, 1)
+	af := blockStyle.Copy().Render(flows)
+	af = blockLayoutStyle.Render(af)
 
-	grid := uidesign.ColorGrid(14, 8)
-	c1 := grid[4][0]
-	c2 := grid[4][1]
-	c3 := grid[4][2]
-	sf := blockStyle.Copy().Background(lipgloss.Color(c1)).Render(functions)
-	af := blockStyle.Copy().Background(lipgloss.Color(c2)).Render(flows)
-	hd := blockStyle.Copy().Background(lipgloss.Color(c3)).Render(homeDir)
+	sf := blockStyle.Copy().Render(functions)
+	sf = blockLayoutStyle.Render(sf)
+
+	hd := blockStyle.Copy().Render(homeDir)
+	hd = blockLayoutStyle.Render(hd)
+
 	metrics := lipgloss.JoinHorizontal(lipgloss.Bottom, af, sf, hd)
 	metrics = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(metrics)
 
 	// version
+	remainH := m.height - lipgloss.Height(name) - lipgloss.Height(slogan) - lipgloss.Height(metrics)
+
+	versionStyle := lipgloss.NewStyle().
+		MarginTop(remainH + 1).
+		Width(m.width).
+		Align(lipgloss.Center)
 	version := "v0.0.1"
 	from := "https://github.com/cofxlabs/cofx"
-	version = version + " " + from
-	version = lipgloss.NewStyle().MarginLeft(m.width/2 - len(version)/2).MarginTop(m.height / 10 * 5).Render(version)
-	version = uidesign.ColorGrey.Render(version)
+	help := "Press any key to exit"
+	version = version + " " + from + " • " + help
+	version = versionStyle.Render(uidesign.ColorGrey3.Render(version))
 
-	return name + "\n\n" + slogan + "\n\n\n\n" + metrics + "\n" + version
+	return name + slogan + metrics + version
 }

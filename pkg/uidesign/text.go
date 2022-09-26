@@ -8,7 +8,9 @@ import (
 )
 
 var (
-	ColorGrey = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	ColorGrey1 = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	ColorGrey2 = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	ColorGrey3 = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 )
 
 func ColorGrid(xSteps, ySteps int) [][]string {
