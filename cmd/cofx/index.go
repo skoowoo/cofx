@@ -1,19 +1,17 @@
 package main
 
+// A simple program that opens the alternate screen buffer then counts down
+// from 5 and then exits.
+
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
+	"strconv"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/cofxlabs/cofx/config"
-	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/pkg/uidesign"
 	"github.com/cofxlabs/cofx/service"
-	"github.com/cofxlabs/cofx/service/exported"
 )
 
 func indexEntry() error {
@@ -21,172 +19,91 @@ func indexEntry() error {
 	defer cancel()
 
 	svc := service.New()
-	availables := svc.ListAvailables(ctx)
-
-	//  execute 'cofx' command without any args or sub-command
-	for {
-		selected, err := startListingView(availables)
-		if err != nil {
-			return err
-		}
-
-		// to run the selected flow
-		if selected.Source != "" {
-			err := prunEntry(nameid.NameOrID(selected.Source), true)
-			if err != nil {
-				return err
-			}
-		} else {
-			return nil
-		}
+	functions := svc.ListStdFunctions(ctx)
+	flows := svc.ListAvailables(ctx)
+	m := indexModel{
+		functions: len(functions),
+		flows:     len(flows),
+		homeDir:   config.HomeDir(),
 	}
-}
-
-func startListingView(flows []exported.FlowMetaInsight) (exported.FlowMetaInsight, error) {
-	items := make([]list.Item, 0, len(flows))
-	for _, f := range flows {
-		items = append(items, flowItem(f))
-	}
-
-	keys := newAdditionalKeyMap()
-	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "All Available Flows"
-	l.Styles.Title = list.DefaultStyles().Title
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			keys.toggleQuit,
-			keys.toggleRun,
-			keys.toggleEdit,
-		}
-	}
-
-	model := indexModel{
-		list: l,
-		keys: keys,
-	}
-
-	p := tea.NewProgram(model, tea.WithAltScreen())
-	ret, err := p.StartReturningModel()
-	if err != nil {
-		return exported.FlowMetaInsight{}, err
-	}
-
-	if m, ok := ret.(indexModel); ok && m.flowToRun.Name != "" {
-		return exported.FlowMetaInsight(m.flowToRun), nil
-	}
-	return exported.FlowMetaInsight{}, nil
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	return p.Start()
 }
 
 type indexModel struct {
-	list      list.Model
-	keys      keyMap
-	flowToRun flowItem
+	height    int
+	width     int
+	flows     int
+	functions int
+	homeDir   string
 }
 
 func (m indexModel) Init() tea.Cmd {
-	return nil
+	return tea.Batch(tea.EnterAltScreen)
 }
 
-func (m indexModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+func (m indexModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := message.(type) {
 	case tea.KeyMsg:
-		if key.Matches(msg, m.keys.toggleQuit) {
+		switch msg.String() {
+		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		}
-		if key.Matches(msg, m.keys.toggleRun) {
-			m.flowToRun = m.getSelected()
-			return m, tea.Quit
-		}
-		if key.Matches(msg, m.keys.toggleEdit) {
-			return m, openEditor(m.getSelected().Source)
-		}
-	case editorFinishedMsg:
-		// parse this flow again
-		svc := service.New()
-		insight, err := svc.GetAvailableMeta(context.Background(), nameid.New(m.getSelected().Name))
-		if err != nil {
-			m.updateSelected(func(selected *flowItem) { selected.Desc = err.Error() })
-		} else {
-			m.replaceSelected(flowItem(insight))
-		}
-		return m, nil
-
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
+		m.height = msg.Height
+		m.width = msg.Width
 	}
 
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m indexModel) View() string {
-	return docStyle.Render(m.list.View())
-}
+	// name
+	nameStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Bold(true).
+		Italic(true).
+		Align(lipgloss.Center).
+		Foreground(lipgloss.Color("15"))
+	name := "cofx"
+	name = nameStyle.Render(name)
 
-type flowItem exported.FlowMetaInsight
+	// slogan
+	sloganStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Align(lipgloss.Center)
+	slogan := "Turn boring stuff into low code ..."
+	slogan = sloganStyle.Render(uidesign.ShadeText(slogan, 2))
 
-func (f flowItem) Title() string {
-	return fmt.Sprintf("%s %s", f.Name, f.ID)
-}
+	// metrics
+	functions := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.functions), "Standard Functions")
+	flows := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.flows), "Available Flows")
+	homeDir := lipgloss.JoinVertical(lipgloss.Left, m.homeDir, "CoFx Home Directory")
 
-func (f flowItem) Description() string {
-	return fmt.Sprintf("%d %s %s", f.Total, strings.TrimPrefix(f.Source, config.FlowSourceDir()), f.Desc)
-}
+	maxWidth := max(lipgloss.Width(functions), lipgloss.Width(flows), lipgloss.Width(homeDir))
+	blockStyle := lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(1, 2).
+		Height(4).
+		Width(maxWidth + 5)
 
-func (f flowItem) FilterValue() string {
-	return f.Name
-}
+	grid := uidesign.ColorGrid(14, 8)
+	c1 := grid[4][0]
+	c2 := grid[4][1]
+	c3 := grid[4][2]
+	sf := blockStyle.Copy().Background(lipgloss.Color(c1)).Render(functions)
+	af := blockStyle.Copy().Background(lipgloss.Color(c2)).Render(flows)
+	hd := blockStyle.Copy().Background(lipgloss.Color(c3)).Render(homeDir)
+	metrics := lipgloss.JoinHorizontal(lipgloss.Bottom, af, sf, hd)
+	metrics = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(metrics)
 
-func (m indexModel) getSelected() flowItem {
-	return m.list.SelectedItem().(flowItem)
-}
+	// version
+	version := "v0.0.1"
+	from := "https://github.com/cofxlabs/cofx"
+	version = version + " " + from
+	version = lipgloss.NewStyle().MarginLeft(m.width/2 - len(version)/2).MarginTop(m.height / 10 * 5).Render(version)
+	version = uidesign.ColorGrey.Render(version)
 
-func (m indexModel) updateSelected(f func(selected *flowItem)) {
-	selected := m.getSelected()
-	f(&selected)
-	m.list.SetItem(m.list.Index(), selected)
-}
-
-func (m indexModel) replaceSelected(item flowItem) {
-	m.list.SetItem(m.list.Index(), item)
-}
-
-type editorFinishedMsg struct {
-	err error
-}
-
-func openEditor(file string) tea.Cmd {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "vim"
-	}
-	c := exec.Command(editor, file) //nolint:gosec
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return editorFinishedMsg{err}
-	})
-}
-
-type keyMap struct {
-	toggleQuit key.Binding
-	toggleRun  key.Binding
-	toggleEdit key.Binding
-}
-
-func newAdditionalKeyMap() keyMap {
-	return keyMap{
-		toggleQuit: key.NewBinding(
-			key.WithKeys("ctrl+c"),
-			key.WithHelp("ctrl+c", "quit"),
-		),
-		toggleRun: key.NewBinding(
-			key.WithKeys("ctrl+r"),
-			key.WithHelp("ctrl+r", "run flow"),
-		),
-		toggleEdit: key.NewBinding(
-			key.WithKeys("ctrl+e"),
-			key.WithHelp("ctrl+e", "edit flow"),
-		),
-	}
+	return name + "\n\n" + slogan + "\n\n\n\n" + metrics + "\n" + version
 }

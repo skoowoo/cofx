@@ -6,15 +6,15 @@
 #   |- flowls/
 
 cd $(dirname "$0")
-cofx_home="~/.cofx"
-flowls_dir="~/.cofx/flowls/"
+COFX_HOME="${HOME}/.cofx"
+FLOWLS_DIR="${COFX_HOME}/flowls/"
 
-if [ ! -d "${cofx_home}" ]; then 
-    mkdir -p ${cofx_home}
+if [ ! -d "${COFX_HOME}" ]; then 
+    mkdir -p ${COFX_HOME}
 fi
-if [ ! -d "${flowls_dir}" ]; then
-    mkdir -p ${flowls_dir}
+if [ ! -d "${FLOWLS_DIR}" ]; then
+    mkdir -p ${FLOWLS_DIR}
 fi
 
 cp -f   ./cofx      /usr/local/bin/
-cp -rf  ./flowls/*  ${flowls_dir}
+cp -rf  ./flowls/*  ${FLOWLS_DIR}

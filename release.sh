@@ -30,7 +30,7 @@ done
 
 echo " "
 echo "Packed release files into the tarball: "
-for p in `ls .tmp/*.tar.gz`
+for p in $(ls .tmp/*.tar.gz)
 do
     echo "  $p"
 done
