@@ -52,7 +52,7 @@ func listFlows() error {
 				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(source) +
-				lipgloss.NewStyle().MaxWidth(30).Render(f.Desc)
+				lipgloss.NewStyle().MaxWidth(80).Render(f.Desc)
 		}
 		fmt.Fprintln(os.Stdout, s)
 	}

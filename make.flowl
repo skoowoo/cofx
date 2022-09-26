@@ -6,14 +6,13 @@ load "go:outcome"
 var build = $(env.BUILD)
 var test = $(env.TEST)
 
-var bins
 var test_report
 
 switch { 
     case $(build) == "true" { 
         co go_generate
-        co build_local ->bins
-        // co build_cross
+        // co build_local ->bins
+        co build_cross
     }
 
     case $(test) == "true" {
@@ -31,6 +30,6 @@ fn build_local = go_build {
 fn build_cross = go_build {
     args = {
 		"find_mainpkg_dirs": "cmd"
-        "bin_format":        "bin/darwin/,bin/linux/,bin/windows/"
+        "bin_format":        "bin/darwin-amd64/,bin/linux-amd64/,bin/windows-amd64/"
     }
 }
