@@ -23,9 +23,14 @@ do
 
         base=$(basename "${dir}")
         cd .tmp
-        tar zcvf "cofx.${base}.tar.gz" "${base}"
+        tar zcvf "cofx-${base}.tar.gz" "${base}"
         cd -
     fi
 done
 
+echo " "
 echo "Packed release files into the tarball: "
+for p in `ls .tmp/*.tar.gz`
+do
+    echo "  $p"
+done
