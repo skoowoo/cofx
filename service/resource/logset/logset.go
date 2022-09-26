@@ -286,7 +286,7 @@ func (l *logStdout) Reset() error {
 }
 
 func (l *logStdout) WriteTitle(primary, secondary string) {
-	s := uidesign.IconCycle.String() + uidesign.ColorGrey.Render(primary+" ➜ "+secondary) + "\n"
+	s := uidesign.IconCycle.String() + uidesign.ColorGrey1.Render(primary+" ➜ "+secondary) + "\n"
 	fmt.Fprint(l.w, s)
 }
 

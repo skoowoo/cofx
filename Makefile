@@ -7,6 +7,8 @@ build:
 
 test:
 	cofx run make.flowl -e TEST=true 
+release:
+	./release.sh
 
 clean:
 	rm -rf bin/ .tmp/

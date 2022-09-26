@@ -239,9 +239,12 @@ func (m runModel) View() string {
 	return spin + running + gap + prog + doneCount
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+func max(nums ...int) int {
+	var max int
+	for _, n := range nums {
+		if n > max {
+			max = n
+		}
 	}
-	return b
+	return max
 }
