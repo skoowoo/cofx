@@ -41,11 +41,7 @@ make first
 ```
 // cofx -h
 
-An automation engine based on function fabric, can used to parse, create, run
-and manage flow
-
-Execute 'cofx' command directly and no any args or sub-command, will list
-all flows in interactive mode
+A powerful automation workflow engine based on low code programming language
 
 Environment variables:
   COFX_HOME=<path of a directory>           // Default $HOME/.cofx
@@ -53,19 +49,22 @@ Environment variables:
 Examples:
   cofx
   cofx list
-  cofx run   helloworld.flowl
-  cofx prun  helloworld.flowl
+  cofx run  helloworld.flowl
+  cofx run  helloworld
+  cofx run  fc5e038d38a57032085441e7fe7010b0
 
 Usage:
   cofx [flags]
   cofx [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
   help        Help about any command
   list        List all flows that you coded in the flow source directory
-  log         View the execution log of the flow or function
-  parse       Parse a flowl source file
-  run         Run a flowl file
+  log         View the execution log of the function
+  prun        Prettily run a flowl
+  run         Run a flowl
+  std         List all functions in the standard library or show the manifest of a function
 
 Flags:
   -h, --help   help for cofx
