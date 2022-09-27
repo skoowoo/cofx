@@ -89,7 +89,7 @@ co print {
 
 Run the code:
 
-![](./docs/assets/hello.gif)
+![](./docs/assets/hello.png)
 
 The flowl source file needs to use the `.flowl` extension to be executed.
 
