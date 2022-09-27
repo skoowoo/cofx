@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/cofxlabs/cofx/functiondriver"
 	"github.com/cofxlabs/cofx/parser"
 	"github.com/cofxlabs/cofx/service/resource"
-	"github.com/sirupsen/logrus"
 )
 
 // RunQueue
@@ -518,7 +518,7 @@ func (n *TaskNode) saveReturns(retkvs map[string]string, filter func(string) boo
 			continue
 		}
 		if err := n.co.AddField2Var(name, field, val); err != nil {
-			logrus.Errorln(err)
+			log.Fatalln(err)
 		}
 	}
 	return true
