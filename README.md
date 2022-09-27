@@ -343,12 +343,3 @@ There are 4 core concepts in cofx architecture design when it's running, namely 
 <div align=center><img width="70%" height="70%" src="docs/assets/flowl-parser.png"/></div>
 
 flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
-
-## Contribution
-TODO:
-* [How to develop a new driver?]()
-* [How to develop a new std function?]()
-* [How to develop a new event trigger?]()
-
-## Thanks
-TODO:
