@@ -30,12 +30,13 @@ CoFx is an automation engine that uses low-code programming to build personal au
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Installation Guide
-Currently, an installation package is not provided yet, but you can try it through building the source code by yourself.
+Download the appropriate latest version from Release and execute the following command to install:
 
-To build the source code, execute the following command:
-````
-make first
-````
+```
+tar zxvf cofx-<your-os-arch>.tar.gz
+cd <your-os-arch>
+sudo ./install.sh
+```
 
 ## CLI
 ```

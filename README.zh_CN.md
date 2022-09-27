@@ -5,11 +5,12 @@ CoFx 是一个自动化引擎，用低代码编程的方式构建个人自动化
 ![](./docs/assets/demo.gif)
 
 ## 安装及配置
-目前，暂时还没有提供一个安装包，不过你可以通过自己构建源代码的方式去试用。
+从 Release 中下载合适的最新版本，执行如下命令安装：
 
-源码构建执行一下命令：
 ```
-make first
+tar zxvf cofx-<your-os-arch>.tar.gz
+cd <your-os-arch>
+sudo ./install.sh
 ```
 
 ## CLI
