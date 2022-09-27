@@ -31,6 +31,7 @@ Examples:
 
 func Execute() {
 	initCmd()
+	initCompletionCmd()
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -53,6 +54,9 @@ func initCmd() {
 					}
 				}
 				return runEntry(nameid.NameOrID(args[0]))
+			},
+			ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+				return runCompletionEntry(), cobra.ShellCompDirectiveNoFileComp
 			},
 		}
 		rootCmd.AddCommand(runCmd)
@@ -132,4 +136,59 @@ func initCmd() {
 		}
 		rootCmd.AddCommand(stdCmd)
 	}
+}
+
+func initCompletionCmd() {
+	completionCmd := &cobra.Command{
+		Use:   "completion [bash|zsh|fish|powershell]",
+		Short: "Generate completion script",
+		Long: `To load completions:
+
+Bash:
+
+$ source <(cofx completion bash)
+
+# To load completions for each session, execute once:
+Linux:
+  $ cofx completion bash > /etc/bash_completion.d/cofx
+MacOS:
+  $ cofx completion bash > /usr/local/etc/bash_completion.d/cofx
+
+Zsh:
+
+# If shell completion is not already enabled in your environment you will need
+# to enable it.  You can execute the following once:
+
+$ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+# To load completions for each session, execute once:
+$ cofx completion zsh > "${fpath[1]}/_cofx"
+
+# You will need to start a new shell for this setup to take effect.
+
+Fish:
+
+$ cofx completion fish | source
+
+# To load completions for each session, execute once:
+$ cofx completion fish > ~/.config/fish/completions/cofx.fish
+`,
+		DisableFlagsInUseLine: true,
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+		Args:                  cobra.ExactValidArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			switch args[0] {
+			case "bash":
+				cmd.Root().GenBashCompletion(os.Stdout)
+			case "zsh":
+				cmd.Root().GenZshCompletion(os.Stdout)
+			case "fish":
+				cmd.Root().GenFishCompletion(os.Stdout, true)
+			case "powershell":
+				cmd.Root().GenPowerShellCompletion(os.Stdout)
+			}
+		},
+	}
+
+	rootCmd.AddCommand(completionCmd)
 }

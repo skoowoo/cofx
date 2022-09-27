@@ -22,6 +22,18 @@ import (
 	"github.com/cofxlabs/cofx/service/exported"
 )
 
+func runCompletionEntry() []string {
+	svc := service.New()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	all := svc.ListAvailables(ctx)
+	var names []string
+	for _, a := range all {
+		names = append(names, a.Name)
+	}
+	return names
+}
+
 func runEntry(nameorid nameid.NameOrID) error {
 	svc := service.New()
 	ctx, cancel := context.WithCancel(context.Background())
