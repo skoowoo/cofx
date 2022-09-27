@@ -317,6 +317,3 @@ cofx 架构设计中有 4 个核心概念，分别是 `Flow`, `Node`, `Driver` �
 <div align=center><img width="70%" height="70%" src="docs/assets/flowl-parser.png"/></div>
 
 flowl 采用词法和语法分离的实现方式，再语法分析完成得出一颗 AST 树后，再将 AST 转换成函数的运行队列，基于运行队列就可以按序执行函数
-
-## 开发贡献
-TODO:
