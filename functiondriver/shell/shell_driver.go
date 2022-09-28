@@ -41,7 +41,7 @@ func New(fname, fpath, version string) *ShellDriver {
 
 // Load loads the shell script function from $cofx_HOME/shell directory.
 func (d *ShellDriver) Load(ctx context.Context, resources resource.Resources) error {
-	functionDir := filepath.Join(config.ShellDir(), d.fpath)
+	functionDir := filepath.Join(config.PrivateShellDir(), d.fpath)
 	mfPath := filepath.Join(functionDir, "manifest.json")
 	file, err := os.Open(mfPath)
 	if err != nil {
@@ -76,7 +76,7 @@ func (d *ShellDriver) Run(ctx context.Context, args map[string]string) (map[stri
 		pretty.WriteTitle(d.resources.Labels.Get("node_name"), d.Name()+":"+d.FunctionName())
 	}
 	merged := d.mergeArgs(args)
-	functionDir := filepath.Join(config.ShellDir(), d.fpath)
+	functionDir := filepath.Join(config.PrivateShellDir(), d.fpath)
 	program := filepath.Join(functionDir, d.manifest.Entrypoint)
 
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", program)

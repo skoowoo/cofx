@@ -56,7 +56,7 @@ func initCmd() {
 				return runEntry(nameid.NameOrID(args[0]))
 			},
 			ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-				return runCompletionEntry(), cobra.ShellCompDirectiveNoFileComp
+				return runCompletionEntry(), cobra.ShellCompDirectiveDefault
 			},
 		}
 		rootCmd.AddCommand(runCmd)

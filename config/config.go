@@ -13,7 +13,7 @@ func Init() error {
 	dirs := []getdir{
 		HomeDir,
 		LogDir,
-		FlowSourceDir,
+		PrivateFlowlDir,
 	}
 	for _, dir := range dirs {
 		_, err := os.Stat(dir())
@@ -43,8 +43,13 @@ func HomeDir() string {
 	return v
 }
 
-func FlowSourceDir() string {
+func PrivateFlowlDir() string {
 	v := filepath.Join(HomeDir(), "flowls")
+	return prettyDirPath(v)
+}
+
+func BaseFlowlDir() string {
+	v := filepath.Join(GetProgramAbsDir(), "flowls")
 	return prettyDirPath(v)
 }
 
@@ -53,12 +58,26 @@ func LogDir() string {
 	return prettyDirPath(v)
 }
 
-// ShellDir store all functions that's based on shell driver.
-func ShellDir() string {
+// PrivateShellDir store all functions that's based on shell driver.
+func PrivateShellDir() string {
 	v := filepath.Join(HomeDir(), "shell")
+	return prettyDirPath(v)
+}
+
+func BaseShellDir() string {
+	v := filepath.Join(GetProgramAbsDir(), "shell")
 	return prettyDirPath(v)
 }
 
 func prettyDirPath(p string) string {
 	return filepath.Clean(p) + "/"
+}
+
+// GetProgramAbsDir returns the absolute path of the program, it's also the installed path of the program.
+func GetProgramAbsDir() string {
+	path, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+	return path
 }

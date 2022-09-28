@@ -43,7 +43,7 @@ func New() *SVC {
 	if err := config.Init(); err != nil {
 		panic(err)
 	}
-	all, err := restoreAvailables(config.FlowSourceDir())
+	all, err := restoreAvailablesWithMerge(config.BaseFlowlDir(), config.PrivateFlowlDir())
 	if err != nil {
 		panic(err)
 	}
@@ -272,9 +272,36 @@ func (s *SVC) ViewLog(ctx context.Context, id nameid.ID, seq int, w io.Writer) e
 	return nil
 }
 
+// restoreAvailableWithMerge restore two directories and merge them into one. baseDir is the default
+// directory, and the privateDir is the user directory, the privateDir will override the baseDir.
+func restoreAvailablesWithMerge(baseDir, privateDir string) (map[string]exported.FlowMetaInsight, error) {
+	base, err := restoreAvailables(baseDir)
+	if err != nil {
+		return nil, err
+	}
+	if base == nil {
+		base = make(map[string]exported.FlowMetaInsight)
+	}
+	private, err := restoreAvailables(privateDir)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range private {
+		delete(base, k)
+		base[k] = v
+	}
+	return base, nil
+}
+
 // restoreAvailables returns all available flows in flow source directory, the method will
 // parse the flowl source file and generate AST.
 func restoreAvailables(dir string) (map[string]exported.FlowMetaInsight, error) {
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
 	var (
 		sources []string
 		flows   map[string]exported.FlowMetaInsight = make(map[string]exported.FlowMetaInsight)
@@ -300,7 +327,7 @@ func restoreAvailables(dir string) (map[string]exported.FlowMetaInsight, error) 
 		}
 		if err := parseOneFlowl(path, &meta); err != nil {
 			meta.Desc = fmt.Errorf("%w: parse '%s'", err, path).Error()
-			// -1 means that have a error in the flowl source file
+			// -1 means that have an error in the flowl source file
 			meta.Total = -1
 		}
 		flows[meta.ID] = meta

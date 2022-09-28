@@ -6,15 +6,18 @@
 #   |- flowls/
 
 cd $(dirname "$0")
-COFX_HOME="${HOME}/.cofx"
-FLOWLS_DIR="${COFX_HOME}/flowls/"
 
-if [ ! -d "${COFX_HOME}" ]; then 
-    mkdir -p ${COFX_HOME}
+INSTALL_DIR="/usr/local/cofx"
+INSTALL_FLOWLS_DIR="/usr/local/cofx/flowls"
+
+if [ ! -d "${INSTALL_DIR}" ]; then 
+    mkdir -p ${INSTALL_DIR}
 fi
-if [ ! -d "${FLOWLS_DIR}" ]; then
-    mkdir -p ${FLOWLS_DIR}
+if [ ! -d "${INSTALL_FLOWLS_DIR}" ]; then
+    mkdir -p ${INSTALL_FLOWLS_DIR}
 fi
 
-cp -f   ./cofx      /usr/local/bin/
-cp -rf  ./flowls/*  ${FLOWLS_DIR}
+cp -f   ./cofx      ${INSTALL_DIR}
+cp -rf  ./flowls/*  ${INSTALL_FLOWLS_DIR}
+
+ln -sf ${INSTALL_DIR}/cofx /usr/local/bin/cofx
