@@ -22,8 +22,12 @@ func listFlows() error {
 
 	// calculate the max length of flow's source field
 	var max int = 20
-	for _, f := range availables {
+	for i, f := range availables {
 		source := strings.TrimPrefix(f.Source, config.PrivateFlowlDir())
+		if source == f.Source {
+			source = strings.TrimPrefix(f.Source, config.BaseFlowlDir())
+		}
+		availables[i].Source = source
 		if max < len(source) {
 			max = len(source)
 		}
@@ -39,20 +43,19 @@ func listFlows() error {
 			"DESC"))
 
 	for _, f := range availables {
-		source := strings.TrimPrefix(f.Source, config.PrivateFlowlDir())
 		var s string
 		if f.Total == -1 {
 			s = iconCircleFailed.String() +
 				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
-				sourceStyle.Render(source) +
+				sourceStyle.Render(f.Source) +
 				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
 			s = iconCircleOk.String() +
 				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
-				sourceStyle.Render(source) +
-				lipgloss.NewStyle().MaxWidth(80).Render(f.Desc)
+				sourceStyle.Render(f.Source) +
+				lipgloss.NewStyle().MaxWidth(60).Render(f.Desc)
 		}
 		fmt.Fprintln(os.Stdout, s)
 	}
