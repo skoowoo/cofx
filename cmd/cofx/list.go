@@ -23,7 +23,7 @@ func listFlows() error {
 	// calculate the max length of flow's source field
 	var max int = 20
 	for _, f := range availables {
-		source := strings.TrimPrefix(f.Source, config.FlowSourceDir())
+		source := strings.TrimPrefix(f.Source, config.PrivateFlowlDir())
 		if max < len(source) {
 			max = len(source)
 		}
@@ -39,7 +39,7 @@ func listFlows() error {
 			"DESC"))
 
 	for _, f := range availables {
-		source := strings.TrimPrefix(f.Source, config.FlowSourceDir())
+		source := strings.TrimPrefix(f.Source, config.PrivateFlowlDir())
 		var s string
 		if f.Total == -1 {
 			s = iconCircleFailed.String() +

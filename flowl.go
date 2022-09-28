@@ -25,7 +25,7 @@ func FlowlPath2Name(path string, trimpath ...string) string {
 	if len(trimpath) > 0 {
 		path = strings.TrimPrefix(path, trimpath[0])
 	} else {
-		path = strings.TrimPrefix(path, config.FlowSourceDir())
+		path = strings.TrimPrefix(path, config.PrivateFlowlDir())
 	}
 	return TruncFlowl(path)
 }

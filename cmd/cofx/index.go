@@ -105,7 +105,7 @@ func (m indexModel) View() string {
 		MarginTop(remainH + 1).
 		Width(m.width).
 		Align(lipgloss.Center)
-	version := "v0.0.1"
+	version := "v0.0.2"
 	from := "https://github.com/cofxlabs/cofx"
 	help := "Press any key to exit"
 	version = version + " " + from + " • " + help
