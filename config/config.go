@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
@@ -76,7 +75,7 @@ func prettyDirPath(p string) string {
 
 // GetProgramAbsDir returns the absolute path of the program, it's also the installed path of the program.
 func GetProgramAbsDir() string {
-	path, err := exec.LookPath(os.Args[0])
+	path, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
@@ -85,9 +84,14 @@ func GetProgramAbsDir() string {
 		panic(err)
 	}
 	if fi.Mode()&os.ModeSymlink != 0 {
+		dir := filepath.Dir(path)
+
 		path, err = os.Readlink(path)
 		if err != nil {
 			panic(err)
+		}
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(dir, path)
 		}
 	}
 	return filepath.Dir(path)

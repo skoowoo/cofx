@@ -12,7 +12,3 @@ release:
 
 clean:
 	rm -rf bin/ .tmp/
-
-first:
-	go generate ./...
-	go build -o bin/cofx github.com/cofxlabs/cofx/cmd/cofx

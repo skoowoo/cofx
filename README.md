@@ -30,6 +30,14 @@ CoFx is an automation engine that uses low-code programming to build personal au
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Installation Guide
+#### MacOS 
+
+```
+brew tap cofxlabs/tap
+brew install cofx
+```
+
+#### Universal
 Download the appropriate latest version from Release and execute the following command to install:
 
 ```
