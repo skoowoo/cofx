@@ -112,6 +112,33 @@ func (s *SVC) LookupID(ctx context.Context, nameorid nameid.NameOrID) (nameid.ID
 	})
 }
 
+// LookupFlowl returns the flowl source file path and flow id.
+// If the argument 'nameorid' not contains the suffix ".flowl", We will treat it as a flow name or id, so we will lookup the flowl source path through
+// name or id. If the argument 'nameorid' contains the suffix ".flowl", we will treat it as a full path of the flowl file, so can open it directly.
+func (s *SVC) LookupFlowl(ctx context.Context, nameorid nameid.NameOrID) (string, nameid.ID, error) {
+	var (
+		path string
+		fid  nameid.ID
+	)
+	p := nameorid.String()
+	if !co.IsFlowl(p) {
+		id, err := s.LookupID(ctx, nameorid)
+		if err != nil {
+			return "", nil, err
+		}
+		meta, err := s.GetAvailableMeta(ctx, id)
+		if err != nil {
+			return "", nil, err
+		}
+		fid = id
+		path = meta.Source
+	} else {
+		fid = nameid.New(co.FlowlPath2Name(p))
+		path = p
+	}
+	return path, fid, nil
+}
+
 // ListAvailables returns the list of all available flows in the flow source directory that be defined by
 // the environment variable 'CO_FLOW_SOURCE_DIR'.
 func (s *SVC) ListAvailables(ctx context.Context) []exported.FlowMetaInsight {

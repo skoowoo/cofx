@@ -5,6 +5,14 @@ CoFx 是一个自动化引擎，用低代码编程的方式构建个人自动化
 ![](./docs/assets/demo.gif)
 
 ## 安装及配置
+#### MacOS 
+
+```
+brew tap cofxlabs/tap
+brew install cofx
+```
+
+#### 通用安装
 从 Release 中下载合适的最新版本，执行如下命令安装：
 
 ```
