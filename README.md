@@ -6,83 +6,55 @@ CoFx is an automation engine that uses low-code programming to build personal au
 
 ![](./docs/assets/demo.gif)
 
-- [Installation Guide](#installation-guide)
-- [CLI](#cli)
-- [FlowL - A small language](#flowl---a-small-language)
-  * [Hello World](#hello-world)
-  * [Grammar Introduction](#grammar-introduction)
-    + [Comment](#comment)
-    + [load](#load)
-    + [var](#var)
-    + [fn](#fn)
-    + [co](#co)
-    + [switch](#switch)
-    + [event](#event)
-    + [for loop](#for-loop)
-- [Standard Library](#standard-library)
-- [TODOs](#todos)
-- [Architecture Design](#architecture-design)
-  * [Runtime Core Concepts](#runtime-core-concepts)
-  * [flowl](#flowl)
-- [Contribution](#contribution)
-- [Thanks](#thanks)
+## 功能
+* 内置专用的函数流编织语言 flowL
+* 常用的函数标准库
+* 更符合程序员习惯的 CLI 工具
+* 通过函数编织，支持低代码开发 workflow 
+* 默认内置开箱即用的 workflow
+* 支持函数功能的扩展开发
+* 支持 event 触发 workflow 
+* ...
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+## 默认内置 Workflow 
+* [github-3way-sync](docs/github_3way_sync.zh_CN.md)：自动同步 Github 项目的 local、origin 和 upstream 三路分支
+* [github-auto-pr](docs/github_auto_pr.zh_CN.md)：自动 push 本地分支到 origin，然后再自动创建 pull request 并通过浏览器打开 pull request 详情页
+* [go-auto-build](docs/go_auto_build.zh_CN.md)：自动构建一个基于 go mod 的 go 项目，支持自动探测多模块，自动 build
+* ...
 
-## Installation Guide
-#### MacOS 
+安装 cofx，使用 `cofx list` 命令查看所有默认内置的 workflow。
 
-```
-brew tap cofxlabs/tap
-brew install cofx
-```
+## 标准函数库
 
-#### Universal
-Download the appropriate latest version from Release and execute the following command to install:
+* command (运行命令或脚本)
+* print  
+                       打印到标准输出
+* time        
+                  读取当前时间并返回多个时间值相关的变量
+* event/event_cron  
+            基于 cron 语法格式的定时事件触发器
+* event/event_tick              固定间隔 X 秒时间的定时事件触发器
+* git/git_add_upstream          使用 'git remote add' 命令配置 upstream
+* git/git_check_merge           使用 'git merge-base/merge-tree' 命令检查两个分支是否存在冲突
+* git/git_fetch                 使用 'git fetch' 命令更新本地仓库
+* git/git_local_info            读取本地 git 仓库的常用基本信息
+* git/git_pull                  使用 'git pull' 命令更新本地仓库
+* git/git_push                  使用 'git push' 命令同步本地分支到远程
+* git/git_rebase                使用 'git rebase' 命令合并分支
+* github/gh_create_pr           向 upstream 创建 pull request
+* go/go_build                   分析 'go mod' 的 go 项目，并自动构建各个 module
+* go/go_generate                封装 go generate 命令
+* go/go_test                    封装 go test 单元测试工具
+* http/http_get                 发送 Http GET 请求
+* http/http_post                发送 Http POST 请求
+* ...
 
-```
-tar zxvf cofx-<your-os-arch>.tar.gz
-cd <your-os-arch>
-sudo ./install.sh
-```
+安装 cofx，使用 `cofx std` 命令查看标准库所有函数；使用 `cofx std 函数名` 查看函数的参数和返回值等具体用法。
 
-## CLI
-```
-// cofx -h
-
-A powerful automation workflow engine based on low code programming language
-
-Environment variables:
-  COFX_HOME=<path of a directory>           // Default $HOME/.cofx
-
-Examples:
-  cofx
-  cofx list
-  cofx run  helloworld.flowl
-  cofx run  helloworld
-  cofx run  fc5e038d38a57032085441e7fe7010b0
-
-Usage:
-  cofx [flags]
-  cofx [command]
-
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  help        Help about any command
-  list        List all flows that you coded in the flow source directory
-  log         View the execution log of the function
-  prun        Prettily run a flowl
-  run         Run a flowl
-  std         List all functions in the standard library or show the manifest of a function
-
-Flags:
-  -h, --help   help for cofx
-```
-
-## FlowL - A small language
+## flowL - A small language
 Flowl is a small language that be used to `function fabric`; The syntax is very minimal and simple. Currently, it supports function load, function configuration, function operation, variable definition and operation, embedded variable into string, for loop, switch conditional statement, etc.
 
-### Hello World
+#### Hello World
 helloworld.flowl code content:
 ```go
 // cat examples/helloworld.flowl
@@ -100,254 +72,26 @@ Run the code:
 
 ![](./docs/assets/hello.png)
 
-The flowl source file needs to use the `.flowl` extension to be executed.
+The flowL source file needs to use the `.flowl` extension to be executed.
 
-### Grammar Introduction
-#### Comment
-Use `//` to add code comments. :warning: Note that only exclusive line comments are provided, not support end-of-line comments.
+[FlowL Grammar Introduction](docs/flowl_guide.md)
 
-#### load
-load is used to load a function, for example: load the function 'print'
-
-```go
-// go is a function driver, which means that the function print is a piece of Go code and needs to be run by the go driver
-// print is the function name
-load go:print
-```
-
-All functions need to be loaded before they can be used.
-
-#### var
-The `var` keyword can define a variable, :warning: Note: The variable itself has no type, but the built-in default distinguishes between strings and numbers, and numeric variables can perform arithmetic operations.
-
-```go
-var a = "Hello World!"
-// $(a) means to get the value of the variable a
-var b = $(a)
-var c = (1 + 1) * 2
-var d = $(c) * 2
-``` 
-
-> `var` can only be used in global and fn scopes
-
-The `<-` operator is used for variable rewriting (usually called assignment in other languages)
-
-```go
-var a = "foo"
-a <- "bar"
-// <- Rewriting the variable, the value of the variable 'a' becomes bar
-```
-
-> `<-` can be used in global, fn, for scopes
-
-#### fn
-fn configures a function and configures the parameters required for the function to run, such as:
-
-```go
-// t is the function alias
-// time is the real function name
-fn t = time {
-    args = {
-        "format": "YYYY-MM-DD hh:mm:ss"
-    }
-}
-``` 
-
-args is a built-in function configuration item, which represents the parameters passed to the function when the function is running. The fixed type of function parameters is string-to-string KVs, which corresponds to map[string]string in Go language, and the same for other languages. :warning: Note: The parameter KV received by each function is different, you need to check the specific usage of the function.
-
-> * In the definition of `fn`, the function alias and the real function name cannot be the same
-> * `fn` can only be used in the global scope
-
-#### co
-co is taken from the prefix of coroutine, and is also similar to the go keyword of the Go language. The co keyword is to start running a function. For example: use co to run the print function, output Hello World!
-
-```go
-fn p = print {
-    args = {
-         "_" : "Hello World!" 
-    }
-}
-
-co p
+## Installation
+#### MacOS 
 
 ```
-About function arguments, in the above example function p, `fn + args` is used to pass arguments to the function; in addition to using args in fn to pass in arguments, you can also pass arguments to the function directly in the co statement, e.g.:
-
-````go
-fn p = print {
-}
-
-co p {
-    "_": "Hello World!"
-}
-````
-
-:warning: Note: The functions do not necessarily to be defined first with fn statement, When using co to execute them (the purpose of fn is to change the default running behavior of the function through configuration), e.g.:
-
-````go
-// The print here is not the function alias defined by fn, but the real function name
-co print {
-    "_": "Hello World!"
-}
-````
-
-About the return value of function execution, the return value of the function is the same as the arguments of the function, it is a string-to-string KVs structure, that is to say, each function will store its own return value in a map[string]string-like in the structure.
-
-An example of getting the return value of a function:
-````go
-// set an out variable to receive the return value
-var out
-// The '->' operator represents the return of the function, so here we can think that out is a variable similar to map[string]string (actually not)
-co time -> out
-
-co print {
-    // $(out.now) is the value whose key is now in the out KVs (now is a kv of the return value of the time function)
-    "_": "$(out.now)"
-}
-````
-
-Multiple functions can be combined in a flowl source file, so co provides the ability to execute multiple functions serially and in parallel.
-
-```go
-// serial execution
-co funciton1
-co function2
-co function3
+brew tap cofxlabs/tap
+brew install cofx
 ```
 
-```go
-// parallel execution
-co {
-    function1
-    function2
-    function3
-}
+#### Universal
+Download the appropriate latest version from Release and execute the following command to install:
+
+```
+tar zxvf cofx-<your-os-arch>.tar.gz
+cd <your-os-arch>
+sudo ./install.sh
 ```
 
-```go
-// Serial-parallel hybrid
-co function1
-co {
-    function2
-    function3
-}
-```
-
-> `co` can only be used in global, for, switch scopes
-
-#### switch
-
-`switch + case` can choose to execute `co` according to the condition. A case statement contains a conditional expression and a co statement. The following switch statement has two cases:
-
-```go
-switch { 
-    case $(build) == "true" { 
-        co print {
-            "go build": "starting to run ..."
-        }
-    }
-    case $(test) == "true" {
-        co print {
-            "go test": "starting to run ..."
-        }
-    }
-}
-```
-
-:warning: Note: As long as the case condition in switch is true, it will be executed, which means that multiple case statements may be executed at one time, or even all of them; it does not stop when matching a case.
-
-> `switch` can be used in global and for scopes
-
-#### event
-The `event` statement is used to define an event trigger. When the trigger generates an event, it will trigger the entire flowl to be executed.
-
-```go
-event {
-    co event_tick -> ev {
-        "duration": "10s"
-    }
-    co event_cron -> ev {
-        "expr": "*/5 * * * * *"
-    }
-}
-```
-
-In the event statement, use the co statement to start one or more event functions, which will always wait for the event to occur.
-
-#### for loop
-In theory, the `for` statement in flowl, the frequency of using is not too high. In a Flow, we can use the `for` statement to control a function to be executed multiple times.
-
-A for example with condition:
-```go
-var counter = 0
-
-for $(counter) < 10 {
-     // counter increments by 1
-     counter <- $(counter) + 1
-
-     // print the value of counter
-     co print {
-         "_": "$(counter)"
-     }
-
-     // execute function sleep, default sleep 1s
-     co sleep
-}
-```
-
-The for statement can also implement an infinite loop without a conditional expression:
-```go
-for {
-
-}
-```
-
-## Standard Library
-
-![](./docs/assets/std.png)
-
-TODOs:
--  git
--  github
--  HTTP Request
--  MySQL
--  PostgreSQL
--  Redis
--  DingTalk
--  Wechat
--  Slack
-- ...
-
-## TODOs
-Driver
-* Support Javascript driver
-* Support Rust driver
-* Support Docker driver
-* Support Kubernetes driver
-* ...
-
-tool
-* function development helper
-* cofx-server
-* repository
-
-## Architecture Design
-
-<div align=center><img width="50%" height="50%" src="docs/assets/arch.png"/></div>
-
-### Runtime Core Concepts
-
-<div align=center><img width="50%" height="50%" src="docs/assets/cofunc-core-concept.png"/></div>
-
-There are 4 core concepts in cofx architecture design when it's running, namely `Flow`, `Node`, `Driver` and `Function`
-
-* `Flow` is a process that's defined through a `.flowl` file
-* `Node` is the entity that makes up a Flow, the node entity executes and manages a Function
-* `Driver` is the place where the function code is actually executed. It defines how a function is developed, how to run, where to run, etc. For example, when we need to add Rust language to develop functions, then we need to implement a Rust driver first
-* `Function` is the real function, it maybe a Go package code, a binary program, a shell script, or a Docker image, etc.
-
-### flowl
-
-<div align=center><img width="70%" height="70%" src="docs/assets/flowl-parser.png"/></div>
-
-flowl adopts the implementation method of lexical and grammar separation. After the grammar, it will output an AST tree, the AST is converted into a run queue of functions. Based on the run queue, functions can be executed in order.
+## Develop&Contribition
+* [Archtecture Desigh](docs/arch.md)
