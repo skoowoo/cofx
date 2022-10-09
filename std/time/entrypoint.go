@@ -69,7 +69,7 @@ var (
 
 var _manifest = manifest.Manifest{
 	Name:        "time",
-	Description: "Used to get the current time information",
+	Description: "Read the current time and return multiple time value related variables",
 	Driver:      "go",
 	Args: map[string]string{
 		"format":        "YYYY-MM-DD hh:mm:ss",

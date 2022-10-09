@@ -38,7 +38,7 @@ var cookiesArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "http",
 	Name:           "http_get",
-	Description:    "Send a http GET request to a service, and then handle the response",
+	Description:    "Send a HTTP GET request",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

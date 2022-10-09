@@ -33,7 +33,7 @@ var (
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_check_merge",
-	Description:    "Use 'git merge-base/merge-tree' to check two branches are conflict or not",
+	Description:    "Use 'git merge-base/merge-tree' command to check two branches for conflict",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

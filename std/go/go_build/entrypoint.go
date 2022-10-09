@@ -37,7 +37,7 @@ var (
 var _manifest = manifest.Manifest{
 	Category:    "go",
 	Name:        "go_build",
-	Description: "For building go project that based on 'go mod'",
+	Description: "Analyze the go project of 'go mod' and automatically build each module",
 	Driver:      "go",
 	Args: map[string]string{
 		binFormatArg.Name: "bin/",

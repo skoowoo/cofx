@@ -36,7 +36,7 @@ var (
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_local_info",
-	Description:    "Get some base infromation about the current git repo",
+	Description:    "Read common basic information of local git repository",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

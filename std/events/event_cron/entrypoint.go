@@ -18,7 +18,7 @@ var exprArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "event",
 	Name:           "event_cron",
-	Description:    "Used to trigger an event based on a cron expression",
+	Description:    "Timing event trigger based on cron syntax format",
 	Driver:         "go",
 	Entrypoint:     "",
 	Args:           map[string]string{},

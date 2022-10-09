@@ -51,7 +51,7 @@ var (
 var _manifest = manifest.Manifest{
 	Category:       "github",
 	Name:           "gh_create_pr",
-	Description:    "Create a pull request automatically by calling github api",
+	Description:    "Create a pull request to upstream",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

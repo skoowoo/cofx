@@ -16,7 +16,7 @@ var durationArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:    "event",
 	Name:        "event_tick",
-	Description: "Used to trigger an event every X seconds",
+	Description: "Timing event trigger at fixed interval X seconds",
 	Driver:      "go",
 	Args: map[string]string{
 		"duration": "10s",

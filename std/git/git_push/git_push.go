@@ -22,7 +22,7 @@ var remoteBranchArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_push",
-	Description:    "Use 'git push' to sync local branch to remote branch",
+	Description:    "Sync local branch to remote using 'git push' command",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
