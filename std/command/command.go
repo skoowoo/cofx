@@ -54,7 +54,7 @@ var queryWhereArg = manifest.UsageDesc{
 
 var _manifest = manifest.Manifest{
 	Name:           "command",
-	Description:    "Used to run a command",
+	Description:    "Run a command or script",
 	Driver:         "go",
 	Entrypoint:     "",
 	Args:           map[string]string{},

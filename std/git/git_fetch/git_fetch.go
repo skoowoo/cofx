@@ -17,7 +17,7 @@ var targetArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_fetch",
-	Description:    "Use 'git fetch' to fetch remote repo",
+	Description:    "Use the 'git fetch' command to update the local repository",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

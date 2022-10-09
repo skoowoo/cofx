@@ -52,7 +52,7 @@ var (
 var _manifest = manifest.Manifest{
 	Category:       "http",
 	Name:           "http_post",
-	Description:    "Send a http POST request to a service, and then handle the response",
+	Description:    "Send a http POST request",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

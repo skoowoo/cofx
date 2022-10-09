@@ -15,7 +15,7 @@ import (
 var _manifest = manifest.Manifest{
 	Category:       "go",
 	Name:           "go_test",
-	Description:    "Go unit test tool",
+	Description:    "Wraps the 'go test' unit testing command",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

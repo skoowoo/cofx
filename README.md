@@ -7,7 +7,7 @@ CoFx is an automation engine that uses low-code programming to build personal au
 ![](./docs/assets/demo.gif)
 
 ## Features
-* Built-in function fabric langu age flowL
+* Built-in function fabric language flowL
 * Commonly used function standard library
 * CLI tool that conforms to programmer's habits
 * Use low-code to develop workflow through function fabric
@@ -27,7 +27,7 @@ Install cofx and use the `cofx list` command to view all default built-in workfl
 ## Standard Library Functions
 
 | Function Name        | Explain                                                      |
-| -------------------- | ------------------------------------------------------------ |
+| :------------------- | :----------------------------------------------------------- |
 | command              | Run a command or script                                      |
 | print                | Print to stdout                                              |
 | time                 | Read the current time and return multiple time value related variables |
@@ -93,4 +93,4 @@ sudo ./install.sh
 ```
 
 ## Develop&Contribition
-* [Archtecture Desigh](docs/arch.md)
+* [Archtecture Design](docs/arch.md)

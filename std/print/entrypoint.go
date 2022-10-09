@@ -13,7 +13,7 @@ import (
 var _manifest = manifest.Manifest{
 	Name:        "print",
 	Driver:      "go",
-	Description: "Output string to stdout",
+	Description: "Print to stdout",
 }
 
 func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {

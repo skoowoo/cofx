@@ -17,7 +17,7 @@ var upstreamUrlArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_add_upstream",
-	Description:    "Use 'git remote add' to add a remote upstream repo.",
+	Description:    "Use the 'git remote add' command to configure upstream",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

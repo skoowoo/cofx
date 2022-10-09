@@ -13,7 +13,7 @@ import (
 var _manifest = manifest.Manifest{
 	Category:       "go",
 	Name:           "go_generate",
-	Description:    "A function that packaging 'go generate' command",
+	Description:    "Wraps the 'go generate' command",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

@@ -17,7 +17,7 @@ var branchArg = manifest.UsageDesc{
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_rebase",
-	Description:    "Use 'git rebase' to merge branch",
+	Description:    "Merge branches using 'git rebase' command",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,

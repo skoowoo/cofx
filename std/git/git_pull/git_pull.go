@@ -12,7 +12,7 @@ import (
 var _manifest = manifest.Manifest{
 	Category:       "git",
 	Name:           "git_pull",
-	Description:    "Use 'git pull' to update local repository from remote.",
+	Description:    "Update the local repository with the 'git pull' command",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
