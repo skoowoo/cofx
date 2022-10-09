@@ -1,6 +1,6 @@
 # github-3way-sync 介绍
 
-![](/Users/skoo/go/src/github.com/cofxlabs/cofx/docs/assets/3way-sync.png)
+![](assets/3way-sync.png)
 
 ## 场景
 
@@ -20,7 +20,7 @@ cofx run github-3way-sync
 
 示范：
 
-<img src="/Users/skoo/go/src/github.com/cofxlabs/cofx/docs/assets/3way-sync-demo.png" style="zoom:80%;" />
+<img src="assets/3way-sync-demo.png" style="zoom:80%;" />
 
 ## FlowL 代码
 
