@@ -1,6 +1,6 @@
 # Github-3way-sync Introduction
 
-![](/Users/skoo/go/src/github.com/cofxlabs/cofx/docs/assets/3way-sync.png)
+![](assets/3way-sync.png)
 
 ## Scenes
 
@@ -20,7 +20,7 @@ Note: By default, only the main or master branch is supported for synchronizatio
 
 Demonstration:
 
-<img src="/Users/skoo/go/src/github.com/cofxlabs/cofx/docs/assets/3way-sync-demo.png" style="zoom:80%;" />
+<img src="assets/3way-sync-demo.png" style="zoom:80%;" />
 
 ## FlowL Code
 
