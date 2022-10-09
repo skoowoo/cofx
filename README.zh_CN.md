@@ -1,4 +1,4 @@
-![](./docs/assets/logo.png)
+<img src="./docs/assets/logo.png" style="zoom:80%;" />
 
 CoFx 是一个自动化引擎，用低代码编程的方式构建个人自动化工作流，让一切无聊的事情都代码化、自动化的被解决。CoFx 框架引擎由编程语言和标准功能函数库两部分组成。
 
@@ -23,25 +23,27 @@ CoFx 是一个自动化引擎，用低代码编程的方式构建个人自动化
 安装 cofx，使用 `cofx list` 命令查看所有默认内置的 workflow。
 
 ## 标准函数库
-* command                       运行命令或脚本
-* print                         打印到标准输出
-* time                          读取当前时间并返回多个时间值相关的变量
-* event/event_cron              基于 cron 语法格式的定时事件触发器
-* event/event_tick              固定间隔 X 秒时间的定时事件触发器
-* git/git_add_upstream          使用 'git remote add' 命令配置 upstream
-* git/git_check_merge           使用 'git merge-base/merge-tree' 命令检查两个分支是否存在冲突
-* git/git_fetch                 使用 'git fetch' 命令更新本地仓库
-* git/git_local_info            读取本地 git 仓库的常用基本信息
-* git/git_pull                  使用 'git pull' 命令更新本地仓库
-* git/git_push                  使用 'git push' 命令同步本地分支到远程
-* git/git_rebase                使用 'git rebase' 命令合并分支
-* github/gh_create_pr           向 upstream 创建 pull request
-* go/go_build                   分析 'go mod' 的 go 项目，并自动构建各个 module
-* go/go_generate                封装 go generate 命令
-* go/go_test                    封装 go test 单元测试工具
-* http/http_get                 发送 Http GET 请求
-* http/http_post                发送 Http POST 请求
-* ...
+| 函数名               | 说明                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| command              | 运行命令或脚本                                               |
+| print                | 打印到标准输出                                               |
+| time                 | 读取当前时间并返回多个时间值相关的变量                       |
+| event/event_cron     | 基于 cron 语法格式的定时事件触发器                           |
+| event/event_tick     | 固定间隔 X 秒时间的定时事件触发器                            |
+| git/git_add_upstream | 使用 'git remote add' 命令配置 upstream                      |
+| git/git_check_merge  | 使用 'git merge-base/merge-tree' 命令检查两个分支是否存在冲突 |
+| git/git_fetch        | 使用 'git fetch' 命令更新本地仓库                            |
+| git/git_local_info   | 读取本地 git 仓库的常用基本信息                              |
+| git/git_pull         | 使用 'git pull' 命令更新本地仓库                             |
+| git/git_push         | 使用 'git push' 命令同步本地分支到远程                       |
+| git/git_rebase       | 使用 'git rebase' 命令合并分支                               |
+| github/gh_create_pr  | 向 upstream 创建 pull request                                |
+| go/go_build          | 分析 'go mod' 的 go 项目，并自动构建各个 module              |
+| go/go_generate       | 封装 go generate 命令                                        |
+| go/go_test           | 封装 go test 单元测试工具                                    |
+| http/http_get        | 发送 Http GET 请求                                           |
+| http/http_post       | 发送 Http POST 请求                                          |
+| ...                  |                                                              |
 
 安装 cofx，使用 `cofx std` 命令查看标准库所有函数；使用 `cofx std 函数名` 查看函数的参数和返回值等具体用法。
 
