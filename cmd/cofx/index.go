@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/cofxlabs/cofx/config"
-	"github.com/cofxlabs/cofx/pkg/uidesign"
+	pretty "github.com/cofxlabs/cofx/pkg/pretty"
 	"github.com/cofxlabs/cofx/service"
 )
 
@@ -72,12 +72,12 @@ func (m indexModel) View() string {
 		Width(m.width).
 		Align(lipgloss.Center)
 	slogan := "Turn boring stuff into low code ..."
-	slogan = sloganStyle.Render(uidesign.ShadeText(slogan, 0))
+	slogan = sloganStyle.Render(pretty.ShadeText(slogan, 0))
 
 	// metrics
-	functions := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.functions), uidesign.ColorGrey1.Render("Standard Functions"))
-	flows := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.flows), uidesign.ColorGrey1.Render("Available Flows"))
-	homeDir := lipgloss.JoinVertical(lipgloss.Left, m.homeDir, uidesign.ColorGrey1.Render("CoFx Home Directory"))
+	functions := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.functions), pretty.ColorGrey1.Render("Standard Functions"))
+	flows := lipgloss.JoinVertical(lipgloss.Left, strconv.Itoa(m.flows), pretty.ColorGrey1.Render("Available Flows"))
+	homeDir := lipgloss.JoinVertical(lipgloss.Left, m.homeDir, pretty.ColorGrey1.Render("CoFx Home Directory"))
 
 	maxWidth := max(lipgloss.Width(functions), lipgloss.Width(flows), lipgloss.Width(homeDir))
 	blockStyle := lipgloss.NewStyle().
@@ -109,7 +109,7 @@ func (m indexModel) View() string {
 	from := "https://github.com/cofxlabs/cofx"
 	help := "Press any key to exit"
 	version = version + " " + from + " • " + help
-	version = versionStyle.Render(uidesign.ColorGrey3.Render(version))
+	version = versionStyle.Render(pretty.ColorGrey3.Render(version))
 
 	return name + slogan + metrics + version
 }

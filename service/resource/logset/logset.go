@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/cofxlabs/cofx/pkg/output"
-	"github.com/cofxlabs/cofx/pkg/uidesign"
+	pretty "github.com/cofxlabs/cofx/pkg/pretty"
 )
 
 type LogsetOption func(*Logset)
@@ -286,13 +286,13 @@ func (l *logStdout) Reset() error {
 }
 
 func (l *logStdout) WriteTitle(primary, secondary string) {
-	s := uidesign.IconCycle.String() + uidesign.ColorGrey1.Render(primary+" ➜ "+secondary) + "\n"
+	s := pretty.IconCycle.String() + pretty.ColorGrey1.Render(primary+" ➜ "+secondary) + "\n"
 	fmt.Fprint(l.w, s)
 }
 
 func (l *logStdout) WriteSummary(lines []string) {
 	for _, s := range lines {
-		fmt.Fprint(l.w, uidesign.IconRight.String()+s+"\n")
+		fmt.Fprint(l.w, pretty.IconRight.String()+s+"\n")
 	}
 	fmt.Fprint(l.w, " \n") // add a blank line
 }

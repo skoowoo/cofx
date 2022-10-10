@@ -30,6 +30,6 @@ fn build_local = go_build {
 fn build_cross = go_build {
     args = {
 		"find_mainpkg_dirs": "cmd"
-        "bin_format":        "bin/darwin-amd64/,bin/linux-amd64/"
+        "bin_format":        "bin/darwin-amd64/,bin/darwin-arm64/,bin/linux-amd64/"
     }
 }

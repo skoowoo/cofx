@@ -101,6 +101,10 @@ func parseBinFormat(format string) (binaryOutFormat, error) {
 		`\Warm\W`: "arm",
 		`^arm\W`:  "arm",
 		`\Warm$`:  "arm",
+
+		`\Warm64\W`: "arm64",
+		`^arm64\W`:  "arm64",
+		`\Warm64$`:  "arm64",
 	}
 	for pattern, arch := range archpattern {
 		if match, err := regexp.MatchString(pattern, format); err != nil {
