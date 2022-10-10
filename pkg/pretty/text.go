@@ -1,4 +1,4 @@
-package uidesign
+package pretty
 
 import (
 	"strings"
@@ -11,6 +11,8 @@ var (
 	ColorGrey1 = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 	ColorGrey2 = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	ColorGrey3 = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+	ColorGreen = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+	ColorRed   = lipgloss.NewStyle().Foreground(lipgloss.Color("160"))
 )
 
 func ColorGrid(xSteps, ySteps int) [][]string {

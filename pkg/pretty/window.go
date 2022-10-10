@@ -1,4 +1,4 @@
-package uidesign
+package pretty
 
 import (
 	"strings"
@@ -28,6 +28,7 @@ func NewWindow(h, w int) *Window {
 		Height: h,
 		Width:  w,
 		Style:  lipgloss.NewStyle(),
+		Grid:   make([]Row, 1),
 	}
 }
 
@@ -52,6 +53,13 @@ func (w *Window) AppendBlock(b Blocker) (int, int) {
 	return len(w.Grid) - 1, len(w.LastRow()) - 1
 }
 
+// AppendNewRow append a new line into the window.
+func (w *Window) AppendNewRow(n int) {
+	for i := 0; i < n; i++ {
+		w.Grid = append(w.Grid, Row{})
+	}
+}
+
 // LastRow returns the last row of the window.
 func (w *Window) LastRow() Row {
 	return w.Grid[len(w.Grid)-1]
@@ -60,11 +68,25 @@ func (w *Window) LastRow() Row {
 // Render renders the window.
 func (w *Window) Render() string {
 	var buf strings.Builder
-	buf.WriteString(w.Title.Render())
+	// render title
+	title := w.Title.Render()
+	title = lipgloss.NewStyle().
+		Align(lipgloss.Left).
+		MarginTop(1).
+		MarginBottom(2).Render(title)
+	buf.WriteString(title)
+	buf.WriteString("\n")
+
+	// render grid
 	for _, r := range w.Grid {
 		buf.WriteString(r.Render())
+		buf.WriteString("\n")
 	}
-	buf.WriteString(w.Footer.Render())
+
+	// render footer
+	footer := w.Footer.Render()
+	buf.WriteString(footer)
+
 	return w.Style.Render(buf.String())
 }
 
@@ -90,9 +112,13 @@ func (r Row) Height() int {
 }
 
 func (r Row) Render() string {
-	var buf strings.Builder
+	style := lipgloss.NewStyle().
+		MarginLeft(1).
+		MarginRight(1)
+
+	var bs []string
 	for _, b := range r {
-		buf.WriteString(b.Render())
+		bs = append(bs, style.Render(b.Render()))
 	}
-	return buf.String()
+	return lipgloss.JoinHorizontal(lipgloss.Bottom, bs...)
 }

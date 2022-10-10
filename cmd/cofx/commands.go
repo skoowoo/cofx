@@ -78,8 +78,7 @@ func initCmd() {
 						os.Setenv(kv[0], kv[1])
 					}
 				}
-				fullscreen := false
-				return prunEntry(nameid.NameOrID(args[0]), fullscreen)
+				return prunEntry(nameid.NameOrID(args[0]))
 			},
 		}
 		rootCmd.AddCommand(prunCmd)

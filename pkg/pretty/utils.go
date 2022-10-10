@@ -1,4 +1,4 @@
-package uidesign
+package pretty
 
 func max(nums ...int) int {
 	var max int
