@@ -20,16 +20,25 @@ type Window struct {
 	Footer Row
 	// Style defines the style of the window.
 	Style lipgloss.Style
+	// IsAltScreen indicates whether the window is in the alternate screen.
+	IsAltScreen bool
 }
 
 // NewWindow create a new window instance.
-func NewWindow(h, w int) *Window {
-	return &Window{
-		Height: h,
-		Width:  w,
-		Style:  lipgloss.NewStyle(),
-		Grid:   make([]Row, 1),
+func NewWindow(h, w int, alt bool) *Window {
+	win := &Window{
+		Height:      h,
+		Width:       w,
+		Style:       lipgloss.NewStyle().Width(w),
+		Grid:        make([]Row, 1),
+		IsAltScreen: alt,
 	}
+	if alt {
+		win.Style.Align(lipgloss.Center)
+	} else {
+		win.Style.Align(lipgloss.Left)
+	}
+	return win
 }
 
 // SetTitle sets the title for the window.
@@ -67,25 +76,70 @@ func (w *Window) LastRow() Row {
 
 // Render renders the window.
 func (w *Window) Render() string {
+	if w.IsAltScreen {
+		return w.RenderAltScreen()
+	}
+
 	var buf strings.Builder
 	// render title
-	title := w.Title.Render()
-	title = lipgloss.NewStyle().
-		Align(lipgloss.Left).
-		MarginTop(1).
-		MarginBottom(2).Render(title)
-	buf.WriteString(title)
-	buf.WriteString("\n")
-
-	// render grid
-	for _, r := range w.Grid {
-		buf.WriteString(r.Render())
+	{
+		title := w.Title.Render()
+		title = lipgloss.NewStyle().
+			MarginTop(1).
+			MarginBottom(2).Render(title)
+		buf.WriteString(title)
 		buf.WriteString("\n")
 	}
 
+	// render grid
+	{
+		for _, r := range w.Grid {
+			buf.WriteString(r.Render())
+			buf.WriteString("\n")
+		}
+	}
+
 	// render footer
-	footer := w.Footer.Render()
-	buf.WriteString(footer)
+	{
+		footer := w.Footer.Render()
+		buf.WriteString(footer)
+	}
+
+	return w.Style.Render(buf.String())
+}
+
+func (w *Window) RenderAltScreen() string {
+	var buf strings.Builder
+	// render title
+	{
+		style := lipgloss.NewStyle().MarginTop(w.Height / 10)
+		title := style.Render(w.Title.Render())
+		buf.WriteString(title)
+		buf.WriteString("\n")
+	}
+
+	// render grid
+	{
+		style := lipgloss.NewStyle()
+
+		for i, r := range w.Grid {
+			var s string
+			if i == 0 {
+				s = style.Copy().MarginTop(int(float64(w.Height) * 0.18)).Render(r.Render())
+			} else {
+				s = style.Copy().Render(r.Render())
+			}
+			buf.WriteString(s)
+			buf.WriteString("\n")
+		}
+	}
+
+	// render footer
+	{
+		style := lipgloss.NewStyle().MarginTop(w.Height - lipgloss.Height(buf.String()) - 1)
+		footer := style.Render(w.Footer.Render())
+		buf.WriteString(footer)
+	}
 
 	return w.Style.Render(buf.String())
 }

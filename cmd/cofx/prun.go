@@ -174,8 +174,8 @@ func (m prunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m prunModel) View() string {
-	window := pretty.NewWindow(m.height, m.width)
-	window.SetTitle(pretty.NewTitleBlock("Pretty Run Flow: "+m.fi.Name, "Flow ID: "+m.fi.ID))
+	window := pretty.NewWindow(m.height, m.width, false)
+	window.SetTitle(pretty.NewTitleBlock("Pretty Run Flow: "+m.fi.Name, m.fi.ID))
 
 	headers := []string{pretty.IconSpace.String(), "STEP", "SEQ", "NAME", "DRIVER", "RUNS", "DURATION"}
 	var values [][]string
@@ -223,7 +223,7 @@ func (m prunModel) View() string {
 		s := "\n" + pretty.IconOK.String() + fmt.Sprintf("Done! Duration: %dms", m.fi.Duration)
 		window.AppendBlock(pretty.NewTextBlock(s))
 	} else {
-		s := "\n" + m.spinner.View() + fmt.Sprintf("Running... Duration: %dms", m.fi.Duration)
+		s := "\n" + m.spinner.View() + fmt.Sprintf(" Running... Duration: %dms", m.fi.Duration)
 		window.AppendBlock(pretty.NewTextBlock(s))
 	}
 

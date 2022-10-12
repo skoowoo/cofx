@@ -18,18 +18,21 @@ type TitleBlock struct {
 	result string
 }
 
-func NewTitleBlock(title, desc string) TitleBlock {
+func NewTitleBlock(title, desc string, alt ...bool) TitleBlock {
 	b := TitleBlock{}
-	width := max(lipgloss.Width(title), lipgloss.Width(desc))
 
 	ts := lipgloss.NewStyle().
-		Width(width).
 		Bold(true).
 		Italic(true).
 		Foreground(lipgloss.Color("15"))
-	ds := ColorGrey1.Copy().Width(width)
+	ds := ColorGrey1.Copy()
 
-	s := lipgloss.JoinVertical(lipgloss.Left, ts.Render(title), ds.Render(desc))
+	var s string
+	if len(alt) > 0 && alt[0] {
+		s = lipgloss.JoinVertical(lipgloss.Center, ts.Render(title), ds.MarginTop(1).Render(desc))
+	} else {
+		s = lipgloss.JoinVertical(lipgloss.Left, ts.Render(title), ds.Render(desc))
+	}
 	b.result = s
 	return b
 }
@@ -74,16 +77,13 @@ func (f FooterBlock) Render() string {
 
 // KvsBlock used to render key-value pairs as a block.
 type KvsBlock struct {
-	kstyle lipgloss.Style
-	vstyle lipgloss.Style
 	result string
 }
 
 func NewKvsBlock(kvs ...[]string) KvsBlock {
-	b := KvsBlock{
-		kstyle: ColorGrey1.Copy(),
-		vstyle: lipgloss.NewStyle(),
-	}
+	b := KvsBlock{}
+	kstyle := ColorGrey1.Copy()
+
 	var buf []string
 	for _, kv := range kvs {
 		if len(kv) != 2 {
@@ -92,13 +92,13 @@ func NewKvsBlock(kvs ...[]string) KvsBlock {
 		k := kv[0]
 		v := kv[1]
 
-		s := lipgloss.JoinVertical(lipgloss.Left, b.vstyle.Render(v), b.kstyle.Render(k))
+		s := lipgloss.JoinVertical(lipgloss.Left, v, kstyle.Render(k))
 		s = lipgloss.NewStyle().
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("99")).
 			Align(lipgloss.Left).
-			MarginLeft(0).MarginRight(1).
+			MarginLeft(2).MarginRight(2).
 			Width(lipgloss.Width(s)).Render(s)
 
 		buf = append(buf, s)
