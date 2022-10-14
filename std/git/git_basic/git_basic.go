@@ -1,4 +1,4 @@
-package gitlocalinfo
+package gitbasic
 
 import (
 	"context"
@@ -19,6 +19,10 @@ var (
 		Name: "upstream",
 		Desc: "The upstream url of the git local repo",
 	}
+	localLocationRet = manifest.UsageDesc{
+		Name: "local_location",
+		Desc: "Repo directory of the git local repo",
+	}
 	branchRet = manifest.UsageDesc{
 		Name: "current_branch",
 		Desc: "The current branch name of the git local repo",
@@ -35,14 +39,21 @@ var (
 
 var _manifest = manifest.Manifest{
 	Category:       "git",
-	Name:           "git_local_info",
+	Name:           "git_basic",
 	Description:    "Read common basic information of local git repository",
 	Driver:         "go",
 	Args:           map[string]string{},
 	RetryOnFailure: 0,
 	Usage: manifest.Usage{
-		Args:         []manifest.UsageDesc{},
-		ReturnValues: []manifest.UsageDesc{originRet, upstreamRet, branchRet, orgRet, repoRet},
+		Args: []manifest.UsageDesc{},
+		ReturnValues: []manifest.UsageDesc{
+			originRet,
+			upstreamRet,
+			localLocationRet,
+			branchRet,
+			orgRet,
+			repoRet,
+		},
 	},
 }
 
@@ -82,8 +93,8 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		if strings.Contains(origin, "https://github.com") {
 			fields := strings.Split(origin, "/")
 			if len(fields) == 5 {
-				m["github_org"] = fields[3]
-				m["github_repo"] = strings.TrimSuffix(fields[4], ".git")
+				m[orgRet.Name] = fields[3]
+				m[repoRet.Name] = strings.TrimSuffix(fields[4], ".git")
 			}
 		}
 	}
@@ -104,7 +115,26 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			return nil, fmt.Errorf("%w: in git_local_info function", err)
 		}
 		for _, v := range rets {
-			m["current_branch"] = v
+			m[branchRet.Name] = v
+			break
+		}
+	}
+	// Get local location (directory)
+	{
+		_args := spec.EntrypointArgs{
+			"cmd":            "git rev-parse --show-toplevel",
+			"split":          "",
+			"extract_fields": "0",
+			"query_columns":  "c0",
+			"query_where":    "",
+		}
+		_, ep, _ := command.New()
+		rets, err := ep(ctx, bundle, _args)
+		if err != nil {
+			return nil, fmt.Errorf("%w: in git_local_info function", err)
+		}
+		for _, v := range rets {
+			m[localLocationRet.Name] = v
 			break
 		}
 	}

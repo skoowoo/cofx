@@ -37,7 +37,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		target = "--all"
 	}
 	_args := spec.EntrypointArgs{
-		"cmd":            fmt.Sprintf("git fetch %s", target),
+		"cmd":            fmt.Sprintf("git fetch -ap %s", target),
 		"split":          "",
 		"extract_fields": "",
 		"query_columns":  "",

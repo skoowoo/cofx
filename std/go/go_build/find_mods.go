@@ -1,15 +1,15 @@
 package gobuild
 
 import (
+	"context"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
-	"unicode"
 
-	"github.com/cofxlabs/cofx/pkg/textline"
+	"github.com/cofxlabs/cofx/pkg/textparse"
 )
 
 type modinfo struct {
@@ -27,7 +27,7 @@ func findMods(rootDir string, mainDirs []string) (map[string]*modinfo, error) {
 		}
 		if !info.IsDir() {
 			if info.Name() == "go.mod" {
-				module, err := textline.FindFileLine(path, splitSpace, getPrefix)
+				module, err := parseModuleName(path)
 				if err != nil {
 					return err
 				}
@@ -90,14 +90,15 @@ func findMainPkg(mods map[string]*modinfo, dir string) error {
 	return nil
 }
 
-func splitSpace(c rune) bool {
-	return unicode.IsSpace(c)
-}
-
-// getPrefix read 'module' field from go.mod file
-func getPrefix(fields []string) (string, bool) {
-	if len(fields) == 2 && fields[0] == "module" {
-		return fields[1], true
+func parseModuleName(filepath string) (string, error) {
+	nst, err := textparse.New("go.mod", "", []int{0, 1})
+	if err != nil {
+		return "", err
 	}
-	return "", false
+	ctx := context.Background()
+	if err := nst.ParseFile(ctx, filepath); err != nil {
+		return "", err
+	}
+	defer nst.Clear(ctx)
+	return nst.String(ctx, "c1", "c0 = 'module'")
 }

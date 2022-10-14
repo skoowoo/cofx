@@ -1,4 +1,4 @@
-package stringutil
+package textparse
 
 import "strings"
 

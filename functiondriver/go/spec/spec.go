@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/stringutil"
+	"github.com/cofxlabs/cofx/pkg/textparse"
 	"github.com/cofxlabs/cofx/service/resource"
 )
 
@@ -57,7 +57,7 @@ func (e EntrypointArgs) GetIntSlice(name string) ([]int, error) {
 }
 
 func (e EntrypointArgs) GetStringSlice(name string) []string {
-	return stringutil.String2Slice(e.GetString(name))
+	return textparse.String2Slice(e.GetString(name))
 }
 
 func (e EntrypointArgs) GetString(name string) string {

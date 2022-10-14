@@ -2,7 +2,7 @@
 load "go:git_check_merge"
 load "go:git_push"
 load "go:git_fetch"
-load "go:git_local_info"
+load "go:git_basic"
 load "go:gh_create_pr"
 load "go:http_get"
 load "go:command"
@@ -12,7 +12,7 @@ var main_branch = "main"
 if_none_exit $(github_token) "not set GITHUB_TOKEN env var"
 
 var info
-co git_local_info -> info
+co git_basic -> info
 if_none_exit $(info.current_branch) "not found current branch"
 
 var resp 
