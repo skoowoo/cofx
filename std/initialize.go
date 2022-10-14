@@ -10,9 +10,10 @@ import (
 	eventcron "github.com/cofxlabs/cofx/std/events/event_cron"
 	eventtick "github.com/cofxlabs/cofx/std/events/event_tick"
 	gitaddupstream "github.com/cofxlabs/cofx/std/git/git_add_upstream"
+	gitbasic "github.com/cofxlabs/cofx/std/git/git_basic"
 	gitcheckmerge "github.com/cofxlabs/cofx/std/git/git_check_merge"
 	gitfetch "github.com/cofxlabs/cofx/std/git/git_fetch"
-	gitlocalinfo "github.com/cofxlabs/cofx/std/git/git_local_info"
+	gitinsight "github.com/cofxlabs/cofx/std/git/git_insight"
 	gitpull "github.com/cofxlabs/cofx/std/git/git_pull"
 	gitpush "github.com/cofxlabs/cofx/std/git/git_push"
 	gitrebase "github.com/cofxlabs/cofx/std/git/git_rebase"
@@ -87,7 +88,8 @@ func init() {
 		gitrebase.New,
 		gitpull.New,
 		gitaddupstream.New,
-		gitlocalinfo.New,
+		gitbasic.New,
+		gitinsight.New,
 		// github
 		ghcreatepr.New,
 		// event trigger function

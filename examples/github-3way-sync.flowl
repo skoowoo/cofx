@@ -6,11 +6,11 @@ load "go:git_fetch"
 load "go:git_rebase"
 load "go:git_pull"
 load "go:git_add_upstream"
-load "go:git_local_info"
+load "go:git_basic"
 
 // Get some base information from local git repo
 var info 
-co git_local_info -> info
+co git_basic -> info
 if_none_exit $(info.github_org) "not found github_org in local git repo"
 if_none_exit $(info.github_repo) "not found github_repo in local git repo"
 
