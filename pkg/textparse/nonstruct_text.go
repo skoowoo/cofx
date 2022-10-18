@@ -90,7 +90,7 @@ func (t *NonStructText) ParseLine(ctx context.Context, line string) error {
 }
 
 // Query get the column values that wanted by the where condition.
-func (t *NonStructText) Qeury(ctx context.Context, columns []string, where ...string) ([][]string, error) {
+func (t *NonStructText) Query(ctx context.Context, columns []string, where ...string) ([][]string, error) {
 	if len(where) == 0 {
 		return t.tbl.Query(ctx, columns, "")
 	} else {
@@ -100,7 +100,7 @@ func (t *NonStructText) Qeury(ctx context.Context, columns []string, where ...st
 
 // String get the specified column value as string to return.
 func (t *NonStructText) String(ctx context.Context, column string, where string) (string, error) {
-	rows, err := t.Qeury(ctx, []string{column}, where)
+	rows, err := t.Query(ctx, []string{column}, where)
 	if err != nil {
 		return "", err
 	}
@@ -129,7 +129,7 @@ func (t *NonStructText) Int(ctx context.Context, column string, where string) (i
 
 // Row get the result of the query as one row.
 func (t *NonStructText) Row(ctx context.Context, column []string, where string) ([]string, error) {
-	rows, err := t.Qeury(ctx, column, where)
+	rows, err := t.Query(ctx, column, where)
 	if err != nil {
 		return nil, err
 	}
@@ -140,4 +140,40 @@ func (t *NonStructText) Row(ctx context.Context, column []string, where string) 
 	} else {
 		return nil, ErrNotfound
 	}
+}
+
+type Rows [][]string
+
+// Row2Slice converts the row that be specified by 'n' in the result to a slice.
+func (rs Rows) Row2Slice(n int) []string {
+	if len(rs) == 0 || n >= len(rs) {
+		return nil
+	}
+	return rs[n]
+}
+
+// Column2Slice converts the column that be specified by 'n' in the result to a slice.
+func (rs Rows) Column2Slice(n int) []string {
+	if len(rs) == 0 || n >= len(rs[0]) {
+		return nil
+	}
+	var s []string
+	for _, r := range rs {
+		s = append(s, r[n])
+	}
+	return s
+}
+
+// String get the specified position value as string to return.
+func (rs Rows) String(r, c int) string {
+	if len(rs) == 0 || r >= len(rs) || c >= len(rs[r]) {
+		return ""
+	}
+	return rs[r][c]
+}
+
+// Int get the specified position value as int to return.
+func (rs Rows) Int(r, c int) (int, error) {
+	s := rs.String(r, c)
+	return strconv.Atoi(s)
 }
