@@ -8,6 +8,7 @@ import (
 	"github.com/cofxlabs/cofx/functiondriver/go/spec"
 	"github.com/cofxlabs/cofx/manifest"
 	"github.com/cofxlabs/cofx/std/command"
+	"github.com/cofxlabs/cofx/std/git"
 )
 
 var (
@@ -76,7 +77,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		_, ep, _ := command.New()
 		rets, err := ep(ctx, bundle, _args)
 		if err != nil {
-			return nil, fmt.Errorf("%w: in git_local_info function", err)
+			return nil, fmt.Errorf("%w: in git_basic function", err)
 		}
 		for _, v := range rets {
 			fields := strings.Fields(v)
@@ -112,7 +113,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 		_, ep, _ := command.New()
 		rets, err := ep(ctx, bundle, _args)
 		if err != nil {
-			return nil, fmt.Errorf("%w: in git_local_info function", err)
+			return nil, fmt.Errorf("%w: in git_basic function", err)
 		}
 		for _, v := range rets {
 			m[branchRet.Name] = v
@@ -121,22 +122,11 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 	// Get local location (directory)
 	{
-		_args := spec.EntrypointArgs{
-			"cmd":            "git rev-parse --show-toplevel",
-			"split":          "",
-			"extract_fields": "0",
-			"query_columns":  "c0",
-			"query_where":    "",
-		}
-		_, ep, _ := command.New()
-		rets, err := ep(ctx, bundle, _args)
+		dir, err := git.GetGitDir(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("%w: in git_local_info function", err)
+			return nil, fmt.Errorf("%w: in git_basic function", err)
 		}
-		for _, v := range rets {
-			m[localLocationRet.Name] = v
-			break
-		}
+		m[localLocationRet.Name] = dir
 	}
 	return m, nil
 }

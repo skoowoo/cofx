@@ -54,13 +54,13 @@ require (
 		}
 
 		{
-			rows, err := nst.Qeury(context.Background(), []string{"c1"})
+			rows, err := nst.Query(context.Background(), []string{"c1"})
 			assert.NoError(t, err)
 			assert.Equal(t, 9, len(rows))
 		}
 
 		{
-			rows, err := nst.Qeury(context.Background(), []string{"c1"}, "c0 = 'github.com'")
+			rows, err := nst.Query(context.Background(), []string{"c1"}, "c0 = 'github.com'")
 			assert.NoError(t, err)
 			assert.Equal(t, 5, len(rows))
 		}
