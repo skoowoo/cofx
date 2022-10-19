@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/cofxlabs/cofx/functiondriver/go/spec"
+	"github.com/cofxlabs/cofx/pkg/sqlite"
 	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/cofxlabs/cofx/service/resource/db"
 	"github.com/cofxlabs/cofx/service/resource/labels"
-	"github.com/cofxlabs/cofx/service/resource/sqlitedb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,11 +19,11 @@ func TestCommandFunction(t *testing.T) {
 		"node_seq":  "1000",
 		"node_name": "command",
 	}
-	db, err := sqlitedb.NewMemDB()
+	mdb, err := sqlite.NewMemDB()
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
-	tbl, err := db.CreateTable(context.Background(), sqlitedb.StatementCreateOutputParsingTable)
+	tbl, err := mdb.CreateTable(context.Background(), db.StatementCreateOutputParsingTable)
 	if err != nil {
 		assert.FailNow(t, err.Error())
 	}
