@@ -12,14 +12,15 @@ import (
 	co "github.com/cofxlabs/cofx"
 	"github.com/cofxlabs/cofx/config"
 	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/cofxlabs/cofx/pkg/sqlite"
 	"github.com/cofxlabs/cofx/runtime"
 	"github.com/cofxlabs/cofx/runtime/actuator"
 	"github.com/cofxlabs/cofx/service/exported"
 	"github.com/cofxlabs/cofx/service/resource"
 	"github.com/cofxlabs/cofx/service/resource/crontrigger"
+	"github.com/cofxlabs/cofx/service/resource/db"
 	"github.com/cofxlabs/cofx/service/resource/labels"
 	"github.com/cofxlabs/cofx/service/resource/logset"
-	"github.com/cofxlabs/cofx/service/resource/sqlitedb"
 	"github.com/cofxlabs/cofx/std"
 )
 
@@ -34,8 +35,8 @@ type SVC struct {
 	// cron service for flow and function
 	cron *crontrigger.CronTrigger
 	// mdb and outbl service for parsing the output of commands
-	mdb   *sqlitedb.DB
-	outbl *sqlitedb.Table
+	mdb   *sqlite.DB
+	outbl *sqlite.Table
 }
 
 // New create a service layer instance
@@ -59,11 +60,11 @@ func New() *SVC {
 	// TODO: Create http trigger service
 
 	// Create mdb service
-	mdb, err := sqlitedb.NewMemDB()
+	mdb, err := sqlite.NewMemDB()
 	if err != nil {
 		panic(err)
 	}
-	tbl, err := mdb.CreateTable(context.Background(), sqlitedb.StatementCreateOutputParsingTable)
+	tbl, err := mdb.CreateTable(context.Background(), db.StatementCreateOutputParsingTable)
 	if err != nil {
 		panic(err)
 	}
