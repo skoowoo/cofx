@@ -35,8 +35,9 @@ type SVC struct {
 	// cron service for flow and function
 	cron *crontrigger.CronTrigger
 	// mdb and outbl service for parsing the output of commands
-	mdb   *sqlite.DB
-	outbl *sqlite.Table
+	mdb     *sqlite.DB
+	outbl   *sqlite.Table
+	outcome *sqlite.Table
 }
 
 // New create a service layer instance
@@ -68,6 +69,10 @@ func New() *SVC {
 	if err != nil {
 		panic(err)
 	}
+	outcome, err := mdb.CreateTable(context.Background(), db.StatementCreateOutcomeTable)
+	if err != nil {
+		panic(err)
+	}
 
 	return &SVC{
 		rt:         runtime.New(),
@@ -77,6 +82,7 @@ func New() *SVC {
 		cron:       cron,
 		mdb:        mdb,
 		outbl:      &tbl,
+		outcome:    &outcome,
 	}
 }
 
@@ -204,6 +210,7 @@ func (s *SVC) ReadyFlow(ctx context.Context, id nameid.ID, out io.Writer) (expor
 		return resource.Resources{
 			CronTrigger:  s.cron,
 			OutputParser: s.outbl,
+			Outcome:      s.outcome,
 			Labels:       make(labels.Labels),
 		}
 	}

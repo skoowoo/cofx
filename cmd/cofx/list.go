@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/cofxlabs/cofx/config"
+	pretty "github.com/cofxlabs/cofx/pkg/pretty"
 	"github.com/cofxlabs/cofx/service"
 )
 
@@ -45,13 +46,13 @@ func listFlows() error {
 	for _, f := range availables {
 		var s string
 		if f.Total == -1 {
-			s = iconCircleFailed.String() +
+			s = pretty.IconMinCircleFailed.String() +
 				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(f.Source) +
 				colorRed.MaxWidth(30).Render(f.Desc)
 		} else {
-			s = iconCircleOk.String() +
+			s = pretty.IconMinCircleOk.String() +
 				flowNameStyle.Foreground(lipgloss.Color("222")).Render(f.Name) +
 				flowIDStyle.Render(f.ID) +
 				sourceStyle.Render(f.Source) +

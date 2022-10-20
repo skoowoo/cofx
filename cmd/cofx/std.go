@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
+	pretty "github.com/cofxlabs/cofx/pkg/pretty"
 	"github.com/cofxlabs/cofx/service"
 )
 
@@ -33,7 +34,7 @@ func listStd() error {
 		if f.Category != "" {
 			name = f.Category + "/" + name
 		}
-		s := iconCircleOk.String() +
+		s := pretty.IconMinCircleOk.String() +
 			funcNameStyle.Foreground(lipgloss.Color("222")).Render(name) +
 			lipgloss.NewStyle().MaxWidth(100).Render(f.Desc)
 		fmt.Fprintln(os.Stdout, s)

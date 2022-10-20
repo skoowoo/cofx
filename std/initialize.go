@@ -23,6 +23,7 @@ import (
 	"github.com/cofxlabs/cofx/std/go/gotest"
 	httpget "github.com/cofxlabs/cofx/std/http/http_get"
 	httppost "github.com/cofxlabs/cofx/std/http/http_post"
+	"github.com/cofxlabs/cofx/std/outcome"
 	"github.com/cofxlabs/cofx/std/print"
 	stdtime "github.com/cofxlabs/cofx/std/time"
 )
@@ -74,6 +75,7 @@ func init() {
 		print.New,
 		command.New,
 		stdtime.New,
+		outcome.New,
 		// go
 		gobuild.New,
 		gogenerate.New,
