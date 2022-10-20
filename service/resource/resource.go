@@ -20,6 +20,7 @@ type Resources struct {
 	CronTrigger  CronTrigger
 	HttpTrigger  HttpTrigger
 	OutputParser TableOperation
+	Outcome      TableOperation
 	Labels       LabelManger
 }
 
@@ -27,6 +28,12 @@ type Resources struct {
 type LabelManger interface {
 	Get(key string) string
 	Set(key, value string)
+	// GetFlowID returns the value of the label 'flow_id'.
+	GetFlowID() string
+	// GetNodeSeq returns the value of the label 'node_seq'.
+	GetNodeSeq() string
+	// GetNodeName returns the value of the label 'node_name'.
+	GetNodeName() string
 }
 
 // CronTrigger add and remove the cron job by trigger function, the CronTrigger is a resource for trigger.

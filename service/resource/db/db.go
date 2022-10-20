@@ -6,7 +6,20 @@ import (
 
 const (
 	output_parsing_table = "cmd_output_parsing_table"
+	outcome_table        = "outcome_table"
 )
+
+func StatementCreateOutcomeTable() (string, string) {
+	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		flow_id 	TEXT NOT NULL,
+		node_seq    INT  NOT NULL,
+		node_name   TEXT NOT NULL,
+		key 		TEXT NOT NULL,
+		value 		TEXT
+	);`, outcome_table)
+	return stmt, outcome_table
+}
 
 // StatementCreateOutputParsingTable returns a statement to create a table and the table name.
 func StatementCreateOutputParsingTable() (string, string) {
@@ -36,6 +49,6 @@ func StatementCreateOutputParsingTable() (string, string) {
 		c18		TEXT,
 		c19		TEXT,
 		c20 	TEXT
-	 );`, output_parsing_table)
+	);`, output_parsing_table)
 	return stmt, output_parsing_table
 }

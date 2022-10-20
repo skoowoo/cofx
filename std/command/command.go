@@ -96,9 +96,9 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	queryColumns := args.GetStringSlice(queryColumnArg.Name)
 	queryWhere := args.GetString(queryWhereArg.Name)
 
-	flowId := bundle.Resources.Labels.Get("flow_id")
-	nodeSeq := bundle.Resources.Labels.Get("node_seq")
-	nodeName := bundle.Resources.Labels.Get("node_name")
+	flowId := bundle.Resources.Labels.GetFlowID()
+	nodeSeq := bundle.Resources.Labels.GetNodeSeq()
+	nodeName := bundle.Resources.Labels.GetNodeName()
 
 	// user defer to delete db data
 	defer func() {
