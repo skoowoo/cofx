@@ -1,0 +1,25 @@
+load "go:git_basic"
+load "go:git_insight"
+load "go:outcome"
+
+var basic 
+var insight 
+
+co git_basic -> basic
+co git_insight -> insight
+
+fn index_outcome = outcome {
+    args = {
+        "Origin":           "$(basic.origin)"
+        "Upstream":         "$(basic.upstream)"
+        "Dir":              "$(basic.local_location)"
+        "Branch":           "$(basic.current_branch)"
+        "BranchCount":      "$(insight.branch_count)"
+        "StashCount":       "$(insight.stash_count)"
+        "CommitCount":      "$(insight.commit_count)"
+        "CommitOrigin":     "$(insight.last_commit_origin)"
+        "CommitUpstream":   "$(insight.last_commit_upstream)"
+        "CommitMain":       "$(insight.last_commit_main)"
+        "CommitHead":       "$(insight.last_commit_head)"
+    }
+}
