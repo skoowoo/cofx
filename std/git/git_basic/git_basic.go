@@ -88,7 +88,7 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 	}
 
 	// Get github org and repo name
-	// e.g. https://github.com/skoo87/cofx.git
+	// e.g. https://github.com/skoo87/cofx.git or git@github.com:skoo87/cofx.git
 	origin, ok := m["origin"]
 	if ok {
 		if strings.Contains(origin, "https://github.com") {
@@ -96,6 +96,16 @@ func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.Ent
 			if len(fields) == 5 {
 				m[orgRet.Name] = fields[3]
 				m[repoRet.Name] = strings.TrimSuffix(fields[4], ".git")
+			}
+		}
+		if strings.Contains(origin, "git@github.com") {
+			fields := strings.Split(origin, ":")
+			if len(fields) == 2 {
+				fields = strings.Split(fields[1], "/")
+				if len(fields) == 2 {
+					m[orgRet.Name] = fields[0]
+					m[repoRet.Name] = strings.TrimSuffix(fields[1], ".git")
+				}
 			}
 		}
 	}
