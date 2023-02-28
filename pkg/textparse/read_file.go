@@ -40,7 +40,7 @@ func ReadFile(filepath string, files ...string) FileResult {
 
 // String returns the file content as string, returns the file path at the same time.
 func (r FileResult) String() (string, string, error) {
-	if r.err != nil {
+	if r.err != nil && !os.IsNotExist(r.err) {
 		return "", "", r.err
 	}
 	return r.path, strings.TrimSpace(string(r.value)), nil
