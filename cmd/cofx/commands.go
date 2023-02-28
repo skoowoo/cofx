@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/pkg/nameid"
+
 	"github.com/spf13/cobra"
 )
 

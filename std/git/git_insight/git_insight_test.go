@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/service/resource"
+
 	"github.com/stretchr/testify/assert"
 )
 

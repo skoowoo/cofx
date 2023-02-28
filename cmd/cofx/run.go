@@ -14,11 +14,11 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	"github.com/cofxlabs/cofx/pkg/output"
-	"github.com/cofxlabs/cofx/runtime"
-	"github.com/cofxlabs/cofx/service"
-	"github.com/cofxlabs/cofx/service/exported"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/pkg/output"
+	"github.com/skoowoo/cofx/runtime"
+	"github.com/skoowoo/cofx/service"
+	"github.com/skoowoo/cofx/service/exported"
 )
 
 func runCompletionEntry() []string {

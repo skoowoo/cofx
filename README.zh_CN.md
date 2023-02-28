@@ -76,7 +76,7 @@ flowL 代码文件需要使用 `.flowl` 扩展后缀才能够被执行。
 #### MacOS 
 
 ```
-brew tap cofxlabs/tap
+brew tap skoowoo/tap
 brew install cofx
 ```
 

@@ -1,4 +1,4 @@
-module github.com/cofxlabs/cofx
+module github.com/skoowoo/cofx
 
 go 1.18
 

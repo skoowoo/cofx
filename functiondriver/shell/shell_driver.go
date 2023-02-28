@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofxlabs/cofx/config"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/pkg/output"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/config"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/pkg/output"
+	"github.com/skoowoo/cofx/service/resource"
 )
 
 const Name = "shell"

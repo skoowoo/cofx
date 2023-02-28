@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	"github.com/cofxlabs/cofx/service"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/service"
 )
 
 func viewLog(nameorid nameid.NameOrID, seq int) error {

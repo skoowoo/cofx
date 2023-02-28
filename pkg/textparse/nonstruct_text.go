@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/sqlite"
+	"github.com/skoowoo/cofx/pkg/sqlite"
 )
 
 type NonStructText struct {

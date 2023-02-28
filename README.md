@@ -79,7 +79,7 @@ The flowL source file needs to use the `.flowl` extension to be executed.
 #### MacOS 
 
 ```
-brew tap cofxlabs/tap
+brew tap skoowoo/tap
 brew install cofx
 ```
 

@@ -29,4 +29,4 @@ Demonstration:
 
 The flowl program for github auto pr is at:
 
-[https://github.com/cofxlabs/cofx/blob/main/examples/github-auto-pr.flowl](https://github.com/cofxlabs/cofx/blob/main/examples/github-auto-pr.flowl)
+[https://github.com/skoowoo/cofx/blob/main/examples/github-auto-pr.flowl](https://github.com/skoowoo/cofx/blob/main/examples/github-auto-pr.flowl)

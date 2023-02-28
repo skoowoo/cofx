@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofxlabs/cofx/parser"
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	"github.com/cofxlabs/cofx/runtime/actuator"
-	"github.com/cofxlabs/cofx/service/exported"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/parser"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/runtime/actuator"
+	"github.com/skoowoo/cofx/service/exported"
+	"github.com/skoowoo/cofx/service/resource"
 )
 
 type StatusType string
@@ -29,7 +29,6 @@ const (
 type FlowOption func(*FlowBody)
 
 // Flow
-//
 type Flow struct {
 	sync.RWMutex
 	FlowBody

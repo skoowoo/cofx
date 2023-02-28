@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/textparse"
+	"github.com/skoowoo/cofx/pkg/textparse"
 )
 
 type modinfo struct {

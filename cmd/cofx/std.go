@@ -7,8 +7,8 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
-	pretty "github.com/cofxlabs/cofx/pkg/pretty"
-	"github.com/cofxlabs/cofx/service"
+	pretty "github.com/skoowoo/cofx/pkg/pretty"
+	"github.com/skoowoo/cofx/service"
 )
 
 func listStd() error {

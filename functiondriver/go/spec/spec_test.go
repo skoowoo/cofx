@@ -14,5 +14,5 @@ func IsAFunction(ctx context.Context, bundle EntrypointBundle, args EntrypointAr
 func TestFunc2Name(t *testing.T) {
 	f := IsAFunction
 	name := Func2Name(f)
-	assert.Equal(t, "github.com/cofxlabs/cofx/functiondriver/go/spec.IsAFunction", name)
+	assert.Equal(t, "github.com/skoowoo/cofx/functiondriver/go/spec.IsAFunction", name)
 }

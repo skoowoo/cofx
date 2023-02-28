@@ -3,7 +3,7 @@ package git
 import (
 	"context"
 
-	"github.com/cofxlabs/cofx/pkg/runcmd"
+	"github.com/skoowoo/cofx/pkg/runcmd"
 )
 
 // GetGitDir returns the root directory of the current git project.

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/textparse"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/pkg/textparse"
+	"github.com/skoowoo/cofx/service/resource"
 )
 
 const (

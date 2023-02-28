@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/pkg/runcmd"
-	"github.com/cofxlabs/cofx/pkg/textparse"
-	"github.com/cofxlabs/cofx/std/git"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/pkg/runcmd"
+	"github.com/skoowoo/cofx/pkg/textparse"
+	"github.com/skoowoo/cofx/std/git"
 )
 
 var (

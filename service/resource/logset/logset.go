@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/cofxlabs/cofx/pkg/output"
-	pretty "github.com/cofxlabs/cofx/pkg/pretty"
+	"github.com/skoowoo/cofx/pkg/output"
+	pretty "github.com/skoowoo/cofx/pkg/pretty"
 )
 
 type LogsetOption func(*Logset)

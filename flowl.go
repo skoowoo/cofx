@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cofxlabs/cofx/config"
+	"github.com/skoowoo/cofx/config"
 )
 
 const filesuffix = ".flowl"

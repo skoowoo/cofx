@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/is"
+	"github.com/skoowoo/cofx/pkg/is"
 )
 
 const (

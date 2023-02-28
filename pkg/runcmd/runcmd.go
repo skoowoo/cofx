@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofxlabs/cofx/pkg/output"
-	"github.com/cofxlabs/cofx/pkg/textparse"
+	"github.com/skoowoo/cofx/pkg/output"
+	"github.com/skoowoo/cofx/pkg/textparse"
 )
 
 type Wrap struct {

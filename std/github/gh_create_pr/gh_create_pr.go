@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/service/resource"
-	"github.com/cofxlabs/cofx/std/command"
-	httppost "github.com/cofxlabs/cofx/std/http/http_post"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/service/resource"
+	"github.com/skoowoo/cofx/std/command"
+	httppost "github.com/skoowoo/cofx/std/http/http_post"
 )
 
 var (

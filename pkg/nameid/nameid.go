@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	co "github.com/cofxlabs/cofx"
+	co "github.com/skoowoo/cofx"
 )
 
 type NameOrID string

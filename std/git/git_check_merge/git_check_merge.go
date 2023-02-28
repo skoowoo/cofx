@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/std/command"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/std/command"
 )
 
 var (

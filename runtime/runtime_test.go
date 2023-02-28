@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 

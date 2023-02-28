@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/std/command"
-	"github.com/cofxlabs/cofx/std/git"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/std/command"
+	"github.com/skoowoo/cofx/std/git"
 )
 
 var (
@@ -65,7 +65,7 @@ func New() (*manifest.Manifest, spec.EntrypointFunc, spec.CreateCustomFunc) {
 func Entrypoint(ctx context.Context, bundle spec.EntrypointBundle, args spec.EntrypointArgs) (map[string]string, error) {
 	m := make(map[string]string)
 	// Get remotes
-	// upstream	https://github.com/cofxlabs/cofx.git (fetch)
+	// upstream	https://github.com/skoowoo/cofx.git (fetch)
 	{
 		_args := spec.EntrypointArgs{
 			"cmd":            "git remote -v",

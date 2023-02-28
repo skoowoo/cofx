@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/cofxlabs/cofx/manifest"
+	"github.com/skoowoo/cofx/manifest"
 )
 
 type ListStdFunctions struct {

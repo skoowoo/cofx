@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/enabled"
-	"github.com/cofxlabs/cofx/pkg/is"
+	"github.com/skoowoo/cofx/pkg/enabled"
+	"github.com/skoowoo/cofx/pkg/is"
 )
 
 type lexstate int

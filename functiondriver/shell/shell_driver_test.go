@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/service/resource"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofxlabs/cofx/config"
-	pretty "github.com/cofxlabs/cofx/pkg/pretty"
-	"github.com/cofxlabs/cofx/service"
+	"github.com/skoowoo/cofx/config"
+	pretty "github.com/skoowoo/cofx/pkg/pretty"
+	"github.com/skoowoo/cofx/service"
 )
 
 func listFlows() error {

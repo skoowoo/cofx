@@ -6,10 +6,10 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofxlabs/cofx/functiondriver/go/spec"
-	"github.com/cofxlabs/cofx/manifest"
-	"github.com/cofxlabs/cofx/service/resource"
-	"github.com/cofxlabs/cofx/std"
+	"github.com/skoowoo/cofx/functiondriver/go/spec"
+	"github.com/skoowoo/cofx/manifest"
+	"github.com/skoowoo/cofx/service/resource"
+	"github.com/skoowoo/cofx/std"
 )
 
 const Name = "go"

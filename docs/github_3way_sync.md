@@ -26,4 +26,4 @@ Demonstration:
 
 The flowl program for github-3way-sync is at:
 
-[https://github.com/cofxlabs/cofx/blob/main/examples/github-3way-sync.flowl](https://github.com/cofxlabs/cofx/blob/main/examples/github-3way-sync.flowl)
+[https://github.com/skoowoo/cofx/blob/main/examples/github-3way-sync.flowl](https://github.com/skoowoo/cofx/blob/main/examples/github-3way-sync.flowl)

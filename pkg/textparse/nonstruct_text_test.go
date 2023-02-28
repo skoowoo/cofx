@@ -11,7 +11,7 @@ import (
 func TestNonStructParse(t *testing.T) {
 	{
 		text := `
-module github.com/cofxlabs/cofx
+module github.com/skoowoo/cofx
 
 	`
 
@@ -24,7 +24,7 @@ module github.com/cofxlabs/cofx
 		}
 		v, err := nst.String(context.Background(), "c1", "c0 = 'module'")
 		assert.NoError(t, err)
-		assert.Equal(t, "github.com/cofxlabs/cofx", v)
+		assert.Equal(t, "github.com/skoowoo/cofx", v)
 
 		// clear
 		err = nst.Clear(context.Background())

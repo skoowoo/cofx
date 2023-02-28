@@ -73,8 +73,8 @@ func TestColumnFunc(t *testing.T) {
 	testingdata := `
 origin  https://github.com/skoo87/cofx.git (fetch)
 origin  https://github.com/skoo87/cofx.git (push)
-upstream        https://github.com/cofxlabs/cofx.git (fetch)
-upstream        https://github.com/cofxlabs/cofx.git (push)	
+upstream        https://github.com/skoowoo/cofx.git (fetch)
+upstream        https://github.com/skoowoo/cofx.git (push)	
 `
 
 	var (

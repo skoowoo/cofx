@@ -13,10 +13,10 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	pretty "github.com/cofxlabs/cofx/pkg/pretty"
-	"github.com/cofxlabs/cofx/service"
-	"github.com/cofxlabs/cofx/service/exported"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	pretty "github.com/skoowoo/cofx/pkg/pretty"
+	"github.com/skoowoo/cofx/service"
+	"github.com/skoowoo/cofx/service/exported"
 )
 
 func prunEntry(nameorid nameid.NameOrID) error {

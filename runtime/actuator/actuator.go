@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cofxlabs/cofx/functiondriver"
-	"github.com/cofxlabs/cofx/parser"
-	"github.com/cofxlabs/cofx/service/resource"
+	"github.com/skoowoo/cofx/functiondriver"
+	"github.com/skoowoo/cofx/parser"
+	"github.com/skoowoo/cofx/service/resource"
 )
 
 // RunQueue
@@ -313,7 +313,6 @@ func (r *RunQueue) getConfigured(nodename string) *TaskNode {
 }
 
 // Node
-//
 type Node interface {
 	FormatString() string
 	Name() string

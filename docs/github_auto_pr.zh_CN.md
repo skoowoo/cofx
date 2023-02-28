@@ -29,5 +29,5 @@ cofx run github-auto-pr -e GITHUB_TOKEN=<YOUR-TOKEN>
 
 github auto pr 的 flowl 程序位于：
 
-[https://github.com/cofxlabs/cofx/blob/main/examples/github-auto-pr.flowl](https://github.com/cofxlabs/cofx/blob/main/examples/github-auto-pr.flowl)
+[https://github.com/skoowoo/cofx/blob/main/examples/github-auto-pr.flowl](https://github.com/skoowoo/cofx/blob/main/examples/github-auto-pr.flowl)
 

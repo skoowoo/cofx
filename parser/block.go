@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cofxlabs/cofx/pkg/enabled"
+	"github.com/skoowoo/cofx/pkg/enabled"
 )
 
 type Block struct {

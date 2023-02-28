@@ -7,10 +7,11 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/skoowoo/cofx/config"
+	pretty "github.com/skoowoo/cofx/pkg/pretty"
+	"github.com/skoowoo/cofx/service"
+
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/cofxlabs/cofx/config"
-	pretty "github.com/cofxlabs/cofx/pkg/pretty"
-	"github.com/cofxlabs/cofx/service"
 )
 
 func indexEntry() error {
@@ -58,7 +59,7 @@ func (m indexModel) View() string {
 	window.SetTitle(pretty.NewTitleBlock("CoFx", pretty.ShadeText("Turn boring stuff into low code ...", 0), true))
 
 	version := "v0.0.2"
-	help := version + " https://github.com/cofxlabs/cofx • Press any key to exit"
+	help := version + " https://github.com/skoowoo/cofx • Press any key to exit"
 	window.SetFooter(pretty.NewFooterBlock(help))
 
 	kvs := [][]string{

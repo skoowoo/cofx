@@ -26,4 +26,4 @@ cofx run github-3way-sync
 
 github 3way sync 的 flowl 程序位于：
 
-[https://github.com/cofxlabs/cofx/blob/main/examples/github-3way-sync.flowl](https://github.com/cofxlabs/cofx/blob/main/examples/github-3way-sync.flowl)
+[https://github.com/skoowoo/cofx/blob/main/examples/github-3way-sync.flowl](https://github.com/skoowoo/cofx/blob/main/examples/github-3way-sync.flowl)

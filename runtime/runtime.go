@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cofxlabs/cofx/pkg/nameid"
-	"github.com/cofxlabs/cofx/runtime/actuator"
+	"github.com/skoowoo/cofx/pkg/nameid"
+	"github.com/skoowoo/cofx/runtime/actuator"
 )
 
 // Event is from the event trigger, it will be used to make the flow run
